@@ -34,8 +34,7 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      # Buggy step removed
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
