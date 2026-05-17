@@ -1,0 +1,28 @@
+{
+  "name": "playeriq",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "cross-env FFMPEG_PATH=\"C:\\Users\\suyog\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1-full_build\\bin\\ffmpeg.exe\" node server.js",
+    "bridge": "python python_bridge/server.py",
+    "start": "concurrently \"npm run dev\" \"npm run server\" \"npm run bridge\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "vite": "^6.3.0"
+  },
+  "dependencies": {
+    "@consumet/extensions": "^1.8.8",
+    "axios": "^1.7.0",
+    "cheerio": "^1.0.0",
+    "concurrently": "^9.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "firebase": "^12.13.0",
+    "hls.js": "^1.5.0"
+  }
+}

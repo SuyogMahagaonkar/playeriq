@@ -1,0 +1,380 @@
+/* ========================================
+   PlayerIQ — Responsive Design System
+   Breakpoints:
+     xl  : > 1200px  (desktop)
+     lg  : ≤ 1199px  (small desktop / large tablet)
+     md  : ≤ 991px   (tablet)
+     sm  : ≤ 767px   (large phone)
+     xs  : ≤ 480px   (phone)
+     xxs : ≤ 360px   (small phone)
+   ======================================== */
+
+/* ================================================
+   LARGE TABLET / SMALL DESKTOP  (≤ 1199px)
+   Sidebar auto-collapses to icon-only
+   ================================================ */
+@media (max-width: 1199px) {
+  /* Sidebar */
+  .sidebar { width: var(--sidebar-collapsed); }
+  .sidebar-logo-text,
+  .sidebar-link-text,
+  .sidebar-section-label,
+  .sidebar-footer-text { opacity: 0; width: 0; overflow: hidden; }
+  .sidebar:hover { width: var(--sidebar-width); }
+  .sidebar:hover .sidebar-logo-text,
+  .sidebar:hover .sidebar-link-text,
+  .sidebar:hover .sidebar-section-label,
+  .sidebar:hover .sidebar-footer-text { opacity: 1; width: auto; }
+
+  /* Layout */
+  .main-content { margin-left: var(--sidebar-collapsed); }
+  .navbar       { left: var(--sidebar-collapsed); }
+
+  /* Cards: 3 columns max on content grid */
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+  /* Search bar slightly smaller */
+  .search-input-wrapper { width: 220px; }
+}
+
+/* ================================================
+   TABLET  (≤ 991px)
+   Sidebar becomes a drawer (hidden off-screen)
+   ================================================ */
+@media (max-width: 991px) {
+  /* Sidebar becomes off-canvas drawer */
+  .sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-width);
+    transition: transform var(--transition-smooth);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar .sidebar-logo-text,
+  .sidebar .sidebar-link-text,
+  .sidebar .sidebar-section-label,
+  .sidebar .sidebar-footer-text { opacity: 1; width: auto; }
+
+  /* Layout resets - no sidebar margin */
+  .main-content { margin-left: 0; }
+  .navbar       { left: 0; }
+  .navbar-hamburger { display: flex; }
+
+  /* Hero */
+  .hero-banner { height: 450px; min-height: 400px; }
+  .hero-title  { font-size: var(--text-3xl); }
+  .hero-content { max-width: 420px; bottom: 60px; left: var(--space-lg); }
+  .hero-overview { -webkit-line-clamp: 2; }
+
+  /* Detail Page */
+  .detail-main           { flex-direction: column; align-items: center; padding: 0 var(--space-lg); }
+  .detail-poster-wrapper { width: 200px; }
+  .detail-info           { padding-top: var(--space-md); text-align: center; }
+  .detail-genres         { justify-content: center; }
+  .detail-actions        { justify-content: center; }
+  .detail-title          { font-size: var(--text-2xl); }
+  .detail-section        { padding: var(--space-lg); }
+  .trailer-container     { margin: var(--space-lg); }
+
+  /* Content rows */
+  .content-row-scroll { padding-left: var(--space-lg); padding-right: var(--space-lg); }
+
+  /* Movie grid */
+  .movie-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+  /* Search */
+  .search-input-wrapper { width: 200px; }
+  .search-input-wrapper:focus-within { width: 280px; }
+
+  /* Player */
+  .player-info          { padding: var(--space-lg); }
+  .player-related       { padding: var(--space-lg); }
+  .player-related-grid  { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+  /* Profile dropdown: wider on tablet */
+  .profile-dropdown { width: 240px; }
+
+  /* Login page: hide backdrop on tablet */
+  .login-backdrop { display: none; }
+  .login-panel    { max-width: 100%; }
+}
+
+/* ================================================
+   LARGE PHONE  (≤ 767px)
+   ================================================ */
+@media (max-width: 767px) {
+  /* ---- Hero ---- */
+  .hero-banner   { height: 320px; min-height: 300px; }
+  .hero-title    { font-size: var(--text-2xl); }
+  .hero-overview { display: none; }
+  .hero-content  { bottom: 44px; left: var(--space-md); max-width: 85%; }
+  .hero-btn      {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-xs);
+  }
+  .hero-indicators { left: var(--space-md); bottom: 20px; }
+  .hero-nav     { width: 36px; height: 36px; }
+  .hero-nav svg { width: 18px; height: 18px; }
+
+  /* ---- Navbar ---- */
+  .navbar        { padding: 0 var(--space-md); gap: var(--space-xs); }
+  .navbar-right  { gap: var(--space-xs); }
+  .navbar-btn    { width: 34px; height: 34px; }
+  .search-input-wrapper         { width: 140px; }
+  .search-input-wrapper:focus-within { width: 200px; }
+  /* Hide notification bell on small screens */
+  #navbar-notif { display: none; }
+
+  /* ---- Content Rows ---- */
+  .content-row-header { padding: 0 var(--space-md); }
+  .content-row-scroll { padding: var(--space-xs) var(--space-md); gap: var(--space-xs); }
+  /* Slightly smaller cards */
+  .content-row-scroll .movie-card { width: 130px; }
+
+  /* ---- Movie Grid ---- */
+  .movie-grid-page { padding: var(--space-md); }
+  .movie-grid      { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-xs); }
+
+  /* ---- Detail Page ---- */
+  .detail-main           { margin-top: -100px; padding: 0 var(--space-md); }
+  .detail-poster-wrapper { width: 150px; }
+  .detail-backdrop-container { height: 320px; }
+  .detail-section        { padding: var(--space-md); }
+  .trailer-container     { margin: var(--space-md); }
+  .detail-cast-grid      { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+
+  /* ---- Player ---- */
+  .player-info         { padding: var(--space-md); }
+  .player-related      { padding: var(--space-md); }
+  .player-related-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .episode-still       { width: 110px; min-width: 110px; }
+  /* Episode selector tabs: scroll horizontally */
+  .episode-season-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+
+  /* ---- Search ---- */
+  .search-suggestions { left: auto; right: 0; width: 90vw; max-width: 340px; }
+
+  /* ---- Profile Dropdown ---- */
+  .profile-dropdown {
+    right: -8px;
+    width: calc(100vw - 32px);
+    max-width: 320px;
+  }
+  .profile-dropdown::before { right: 20px; }
+
+  /* ---- Login page ---- */
+  .login-panel { padding: var(--space-xl) var(--space-md); }
+  .login-heading h1 { font-size: var(--text-2xl); }
+
+  /* ---- Rankings ---- */
+  .ranking-table th,
+  .ranking-table td { padding: var(--space-xs) var(--space-sm); font-size: var(--text-xs); }
+  .ranking-poster   { width: 40px !important; height: 56px !important; }
+}
+
+/* ================================================
+   PHONE  (≤ 480px)
+   ================================================ */
+@media (max-width: 480px) {
+  /* ---- CSS variable overrides for mobile ---- */
+  :root {
+    --navbar-height: 56px;
+  }
+
+  /* ---- Hero ---- */
+  .hero-banner   { height: 260px; min-height: 240px; }
+  .hero-title    { font-size: var(--text-xl); }
+  .hero-badge    { font-size: 0.6rem; }
+  .hero-meta     { gap: var(--space-xs); font-size: var(--text-xs); }
+  .hero-content  { bottom: 36px; left: var(--space-sm); max-width: 90%; }
+  .hero-actions  { gap: var(--space-xs); }
+  .hero-btn      { padding: 6px 12px; font-size: 0.7rem; }
+  .hero-nav      { display: none; } /* Too small for nav arrows */
+
+  /* ---- Navbar ---- */
+  .navbar-avatar { width: 30px; height: 30px; font-size: 0.7rem; }
+  .search-input-wrapper { width: 120px; }
+  .search-input-wrapper:focus-within { width: 170px; }
+  .search-input  { font-size: 0.8rem; }
+
+  /* ---- Content Rows ---- */
+  .content-row-scroll { gap: var(--space-xs); }
+  .content-row-scroll .movie-card { width: 110px; }
+  .content-row-title { font-size: var(--text-md); }
+
+  /* ---- Movie Grid ---- */
+  .movie-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+  /* ---- Detail Page ---- */
+  .detail-backdrop-container { height: 260px; }
+  .detail-poster-wrapper     { width: 120px; }
+  .detail-main               { margin-top: -80px; padding: 0 var(--space-sm); }
+  .detail-title              { font-size: var(--text-xl); }
+  .detail-actions .btn       { padding: var(--space-xs) var(--space-md); font-size: var(--text-xs); }
+  .detail-section            { padding: var(--space-sm); }
+
+  /* ---- Player ---- */
+  .episode-still { width: 90px; min-width: 90px; }
+
+  /* ---- Profile dropdown: full-width on phone ---- */
+  .profile-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    transform: translateY(100%) scale(1);
+    transform-origin: bottom center;
+  }
+  .profile-dropdown.open {
+    transform: translateY(0) scale(1);
+  }
+  /* Hide the arrow pointer on mobile bottom sheet */
+  .profile-dropdown::before { display: none; }
+
+  /* ---- Login page ---- */
+  .login-panel         { padding: var(--space-lg) var(--space-md); }
+  .login-brand-name    { font-size: var(--text-xl); }
+  .login-heading h1    { font-size: var(--text-xl); }
+  .login-benefits      { gap: var(--space-xs); }
+  .login-benefit-item  { font-size: var(--text-xs); }
+  .login-google-btn    { padding: var(--space-sm) var(--space-lg); font-size: var(--text-sm); }
+
+  /* ---- Sidebar overlay ---- */
+  .sidebar-overlay.active { display: block; }
+}
+
+/* ================================================
+   SMALL PHONE  (≤ 360px)
+   ================================================ */
+@media (max-width: 360px) {
+  .hero-banner { height: 220px; min-height: 200px; }
+  .movie-grid  { grid-template-columns: repeat(2, 1fr); }
+  .content-row-scroll .movie-card { width: 100px; }
+  .search-input-wrapper { width: 100px; }
+  .search-input-wrapper:focus-within { width: 150px; }
+  .detail-poster-wrapper { width: 100px; }
+  .login-heading h1 { font-size: var(--text-lg); }
+}
+
+/* ================================================
+   TOUCH-DEVICE ENHANCEMENTS
+   ================================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Show play button always on touch (can't hover) */
+  .movie-card-play {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.85);
+    background: rgba(229, 9, 20, 0.85);
+  }
+
+  /* Always show nav arrows on touch */
+  .hero-nav { opacity: 0.7; }
+
+  /* Delete button always visible on touch */
+  .card-delete-btn { opacity: 1; }
+
+  /* Bigger tap targets */
+  .sidebar-link   { padding: var(--space-md) var(--space-sm); }
+  .hero-btn       { padding: var(--space-sm) var(--space-xl); }
+  .navbar-btn     { width: 40px; height: 40px; }
+
+  /* Disable hover scale on cards (causes layout jitter on touch) */
+  .movie-card:hover { transform: none; }
+
+  /* Content row: enable native smooth scroll */
+  .content-row-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  .content-row-scroll .movie-card {
+    scroll-snap-align: start;
+  }
+}
+
+/* ================================================
+   LANDSCAPE PHONE  (short + wide screens)
+   ================================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero-banner  { height: 220px; min-height: 200px; }
+  .hero-content { bottom: 20px; }
+  .hero-overview { display: none; }
+  .login-page   { overflow-y: auto; }
+  .login-panel  { justify-content: flex-start; padding-top: var(--space-xl); }
+}
+
+/* ================================================
+   SAFE AREA INSETS (iPhone notch / Dynamic Island)
+   ================================================ */
+@supports (padding: max(0px)) {
+  .navbar {
+    padding-left: max(var(--space-md), env(safe-area-inset-left));
+    padding-right: max(var(--space-md), env(safe-area-inset-right));
+  }
+  .sidebar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Bottom-sheet dropdown on iPhone */
+  @media (max-width: 480px) {
+    .profile-dropdown {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+/* ================================================
+   FOOTER  (kept here with responsive context)
+   ================================================ */
+.footer {
+  padding: var(--space-2xl) var(--space-xl);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+}
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+.footer-link { color: var(--text-muted); transition: color var(--transition-fast); }
+.footer-link:hover { color: var(--accent); }
+.footer-brand {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+.footer-brand span { color: var(--accent); }
+
+@media (max-width: 480px) {
+  .footer { padding: var(--space-xl) var(--space-md); }
+  .footer-links { gap: var(--space-md); }
+}
+
+/* ================================================
+   EMPTY STATE
+   ================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4xl) var(--space-xl);
+  color: var(--text-dim);
+  text-align: center;
+}
+.empty-state svg             { width: 64px; height: 64px; margin-bottom: var(--space-md); opacity: 0.3; }
+.empty-state-title           { font-family: var(--font-display); font-size: var(--text-xl); font-weight: var(--weight-bold); color: var(--text-muted); margin-bottom: var(--space-xs); }
+.empty-state-text            { font-size: var(--text-sm); max-width: 400px; }
+
+@media (max-width: 480px) {
+  .empty-state               { padding: var(--space-2xl) var(--space-md); }
+  .empty-state svg           { width: 48px; height: 48px; }
+  .empty-state-title         { font-size: var(--text-lg); }
+}

@@ -1,0 +1,227 @@
+/* ========================================
+   PlayerIQ — Detail Page
+   ======================================== */
+.detail-page { min-height: 100vh; }
+.detail-backdrop-container { position: relative; width: 100%; height: 500px; }
+.detail-backdrop {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.detail-backdrop-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--bg-primary) 0%, rgba(10,10,15,0.6) 50%, rgba(10,10,15,0.4) 100%);
+}
+.detail-backdrop-overlay-left {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, var(--bg-primary) 0%, transparent 50%);
+}
+.detail-main {
+  position: relative;
+  margin-top: -200px;
+  padding: 0 var(--space-2xl);
+  z-index: 2;
+  display: flex;
+  gap: var(--space-xl);
+}
+.detail-poster-wrapper {
+  flex-shrink: 0;
+  width: 260px;
+}
+.detail-poster {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+  aspect-ratio: 2/3;
+  object-fit: cover;
+}
+.detail-info { flex: 1; padding-top: var(--space-xl); }
+.detail-title {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-tight);
+  margin-bottom: var(--space-xs);
+}
+.detail-tagline {
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: var(--space-md);
+}
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.detail-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--rating-high);
+  font-weight: var(--weight-bold);
+}
+.detail-rating svg { width: 18px; height: 18px; fill: var(--rating-high); stroke: none; }
+.detail-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.detail-genres {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+.detail-genre-tag {
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border: 1px solid var(--border-hover);
+  color: var(--text-secondary);
+}
+.detail-overview-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-xs);
+}
+.detail-overview {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-width: 700px;
+  margin-bottom: var(--space-lg);
+}
+.detail-actions {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+.detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+.detail-btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: var(--shadow-glow-sm);
+}
+.detail-btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-glow); transform: translateY(-2px); }
+.detail-btn-primary svg { width: 20px; height: 20px; }
+.detail-btn-secondary {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hover);
+}
+.detail-btn-secondary:hover { background: rgba(255,255,255,0.14); }
+.detail-btn-secondary svg { width: 18px; height: 18px; }
+/* Cast */
+.detail-section { padding: var(--space-lg) var(--space-2xl); }
+.detail-section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-md);
+}
+.cast-scroll {
+  display: flex;
+  gap: var(--space-md);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: var(--space-xs);
+}
+.cast-scroll::-webkit-scrollbar { display: none; }
+.cast-card {
+  flex-shrink: 0;
+  text-align: center;
+  width: 110px;
+}
+.cast-photo {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto var(--space-xs);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+}
+.cast-name { font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--text-primary); }
+.cast-character { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; }
+/* Trailer */
+.trailer-container {
+  margin: var(--space-lg) var(--space-2xl);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  max-width: 900px;
+  background: var(--bg-card);
+}
+.trailer-container iframe { width: 100%; height: 100%; border: none; }
+/* Seasons */
+.seasons-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.seasons-tabs::-webkit-scrollbar { display: none; }
+.season-tab {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.season-tab.active { background: var(--accent); color: white; }
+.episode-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.episode-card {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.episode-card:hover { background: var(--bg-card-hover); }
+.episode-still {
+  width: 180px;
+  min-width: 180px;
+  aspect-ratio: 16/9;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg-tertiary);
+}
+.episode-info { flex: 1; }
+.episode-number { font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 2px; }
+.episode-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin-bottom: 4px; }
+.episode-overview {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

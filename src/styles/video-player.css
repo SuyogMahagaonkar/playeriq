@@ -1,0 +1,279 @@
+/* ========================================
+   PlayerIQ — Custom Video Player Styles
+   ======================================== */
+
+.vp-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: var(--font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vp-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---- Loading Spinner ---- */
+.vp-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 10;
+}
+.vp-loader-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: vp-spin 1s linear infinite;
+}
+@keyframes vp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Big Play Button ---- */
+.vp-big-play {
+  position: absolute;
+  inset: 0;
+  display: none; /* Flex when active */
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  cursor: pointer;
+  background: rgba(0,0,0,0.3);
+}
+.vp-big-play svg {
+  width: 80px;
+  height: 80px;
+  color: #fff;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+  opacity: 0.8;
+  transition: all 0.2s;
+}
+.vp-big-play:hover svg {
+  opacity: 1;
+  transform: scale(1.1);
+  color: var(--accent);
+}
+
+/* ---- Provider Badge ---- */
+.vp-provider {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 15;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.vp-player:hover .vp-provider {
+  opacity: 1;
+}
+
+/* ---- Controls Overlay ---- */
+.vp-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 40px 20px 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 100%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.vp-controls.vp-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* ---- Progress Bar ---- */
+.vp-progress-wrap {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.vp-progress-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 5;
+  margin: 0;
+}
+.vp-progress-wrap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  transition: height 0.1s;
+}
+.vp-progress-wrap:hover::before { height: 6px; }
+
+.vp-progress-buffer {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 2px;
+  transition: height 0.1s;
+}
+.vp-progress-wrap:hover .vp-progress-buffer { height: 6px; }
+
+.vp-progress-played {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: height 0.1s;
+}
+.vp-progress-wrap:hover .vp-progress-played { height: 6px; }
+.vp-progress-played::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  transition: transform 0.1s;
+}
+.vp-progress-wrap:hover .vp-progress-played::after {
+  transform: translateY(-50%) scale(1);
+}
+
+.vp-progress-tooltip {
+  position: absolute;
+  bottom: 25px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #fff;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+}
+
+/* ---- Bottom Bar ---- */
+.vp-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vp-left-controls, .vp-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ---- Buttons ---- */
+.vp-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgba(255,255,255,0.9);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+  width: 28px;
+  height: 28px;
+}
+.vp-btn:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+.vp-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ---- Volume ---- */
+.vp-volume-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vp-volume-slider {
+  width: 0;
+  opacity: 0;
+  transition: all 0.2s;
+  accent-color: #fff;
+  cursor: pointer;
+  height: 4px;
+}
+.vp-volume-group:hover .vp-volume-slider {
+  width: 60px;
+  opacity: 1;
+}
+
+/* ---- Time Display ---- */
+.vp-time {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  font-variant-numeric: tabular-nums;
+  margin-left: 8px;
+}
+
+/* ---- Selectors (Speed/Quality) ---- */
+.vp-select {
+  background: transparent;
+  color: rgba(255,255,255,0.9);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px;
+  outline: none;
+}
+.vp-select:hover { color: #fff; }
+.vp-select option {
+  background: rgba(20,20,25,0.95);
+  color: #fff;
+}
+
+/* ---- Fullscreen Adjustments ---- */
+.vp-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}

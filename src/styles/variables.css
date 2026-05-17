@@ -1,0 +1,120 @@
+/* ========================================
+   PlayerIQ — Design Tokens
+   ======================================== */
+
+:root {
+  /* ---- Colors ---- */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #10101a;
+  --bg-tertiary: #16162a;
+  --bg-card: #1a1a2e;
+  --bg-card-hover: #222240;
+  --bg-surface: #1e1e36;
+  --bg-overlay: rgba(10, 10, 15, 0.85);
+
+  --accent: #e50914;
+  --accent-hover: #ff2a2a;
+  --accent-glow: rgba(229, 9, 20, 0.35);
+  --accent-soft: rgba(229, 9, 20, 0.12);
+
+  --secondary: #6c5ce7;
+  --secondary-hover: #8577ed;
+
+  --text-primary: #e8e8ed;
+  --text-secondary: #b8b8cc;
+  --text-muted: #6b6b82;
+  --text-dim: #4a4a5e;
+
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+
+  --success: #00c853;
+  --warning: #ffc107;
+  --danger: #ff5252;
+  --info: #40c4ff;
+
+  /* Rating colors */
+  --rating-high: #21d07a;
+  --rating-mid: #d2d531;
+  --rating-low: #db2360;
+
+  /* ---- Gradients ---- */
+  --gradient-hero: linear-gradient(to right, rgba(10, 10, 15, 0.98) 0%, rgba(10, 10, 15, 0.7) 40%, transparent 70%);
+  --gradient-hero-bottom: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+  --gradient-card: linear-gradient(180deg, transparent 30%, rgba(10, 10, 15, 0.95) 100%);
+  --gradient-sidebar: linear-gradient(180deg, rgba(16, 16, 26, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+  --gradient-accent: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+  --gradient-purple: linear-gradient(135deg, #6c5ce7 0%, #a855f7 100%);
+
+  /* ---- Spacing (4px base) ---- */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+
+  /* ---- Typography ---- */
+  --font-display: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.925rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.65rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.75rem;
+  --text-5xl: 3.5rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --weight-light: 300;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 30px var(--accent-glow);
+  --shadow-glow-sm: 0 0 15px var(--accent-glow);
+
+  /* ---- Borders ---- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ---- Transitions ---- */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-smooth: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---- Layout ---- */
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 72px;
+  --navbar-height: 64px;
+  --content-max-width: 1400px;
+
+  /* ---- Z-Index ---- */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sidebar: 200;
+  --z-navbar: 300;
+  --z-modal: 400;
+  --z-splash: 1000;
+}

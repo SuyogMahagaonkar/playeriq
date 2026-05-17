@@ -1,0 +1,122 @@
+/* ========================================
+   PlayerIQ — Content Row (Carousel)
+   ======================================== */
+
+.content-row {
+  padding: var(--space-md) 0;
+}
+
+.content-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+  margin-bottom: var(--space-sm);
+}
+
+.content-row-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Icon inside section titles */
+.content-row-title i[data-lucide],
+.search-section-icon {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  color: var(--accent);
+  stroke-width: 2;
+}
+
+.content-row-more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.content-row-more:hover { color: var(--accent); }
+.content-row-more i { width: 16px; height: 16px; }
+
+/* ---- Container (relative, for arrow positioning) ---- */
+.content-row-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ---- Scroll Track ---- */
+.content-row-scroll {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-xl) var(--space-lg);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+}
+
+.content-row-scroll::-webkit-scrollbar { display: none; }
+.content-row-scroll > * { scroll-snap-align: start; flex-shrink: 0; }
+
+/* ---- Navigation Arrows ---- */
+.content-row-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: rgba(10, 10, 15, 0.9);
+  backdrop-filter: blur(16px);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 1;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.content-row-arrow:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-50%) scale(1.12);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+.content-row-arrow svg {
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.content-row-arrow-left  { left: 6px; }
+.content-row-arrow-right { right: 6px; }
+
+.content-row-arrow.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---- Grab cursor during drag ---- */
+.content-row-scroll.dragging { cursor: grabbing; }

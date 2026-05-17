@@ -1,0 +1,145 @@
+/* ========================================
+   PlayerIQ — Animations
+   ======================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(229, 9, 20, 0.15);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes rotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* Animation Utility Classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease both;
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  animation: fadeInUp 0.5s ease both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 550ms; }
+.stagger-children > *:nth-child(13) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(14) { animation-delay: 650ms; }
+.stagger-children > *:nth-child(15) { animation-delay: 700ms; }
+.stagger-children > *:nth-child(16) { animation-delay: 750ms; }
+.stagger-children > *:nth-child(17) { animation-delay: 800ms; }
+.stagger-children > *:nth-child(18) { animation-delay: 850ms; }
+.stagger-children > *:nth-child(19) { animation-delay: 900ms; }
+.stagger-children > *:nth-child(20) { animation-delay: 950ms; }
+
+/* Page transition */
+.page-enter {
+  animation: fadeInUp 0.4s ease both;
+}
