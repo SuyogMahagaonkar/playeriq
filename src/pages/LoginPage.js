@@ -5,15 +5,15 @@
 import { login, onUserChange } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 
-// Popular movie posters for the card fan decoration
+// Popular Avengers movie posters for the card fan decoration
 const POSTER_URLS = [
-  'https://image.tmdb.org/t/p/w185/qNBAXBIQlnOThrVvA6mA2B5ggV6.jpg',  // Interstellar
-  'https://image.tmdb.org/t/p/w185/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',  // Inception
-  'https://image.tmdb.org/t/p/w185/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg',  // Oppenheimer
-  'https://image.tmdb.org/t/p/w185/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg',  // The Dark Knight
+  'https://image.tmdb.org/t/p/w185/cez0njtC7tXjKkK58n14Lp6mBvA.jpg',  // The Avengers
+  'https://image.tmdb.org/t/p/w185/t90Y3G4glQp0fujgN0WoH9b7R2z.jpg',  // Avengers: Age of Ultron
+  'https://image.tmdb.org/t/p/w185/7WsyChQLEtHDOJ1g9Vn0wN62N1V.jpg',  // Avengers: Infinity War
+  'https://image.tmdb.org/t/p/w185/or06FN3Dka5tukK1e9sl16pB3iy.jpg',  // Avengers: Endgame
 ];
 
-const BACKDROP_URL = 'https://image.tmdb.org/t/p/original/qqHQsStV6exghCM7zbObuYBiYxw.jpg';
+const BACKDROP_URL = 'https://image.tmdb.org/t/p/original/mDfJG3LC3Dqb67AZ52x3Z0jU0uB.jpg';
 
 const BENEFITS = [
   { icon: '☁️', text: 'Sync your watch history across all devices' },
