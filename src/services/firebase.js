@@ -79,15 +79,44 @@ export function getCurrentUser() {
  */
 export async function saveProgressToCloud(userId, media) {
   try {
-    const docId = media.type === 'tv'
-      ? `${media.id}_s${media.season}_e${media.episode}`
-      : String(media.id);
+    if (media.type === 'tv') {
+      const showId = String(media.id);
+      const seasonNum = String(media.season);
+      const episodeNum = String(media.episode);
 
-    const ref = doc(db, 'users', userId, 'watch_history', docId);
-    await setDoc(ref, {
-      ...media,
-      timestamp: serverTimestamp()
-    }, { merge: true });
+      // 1. Set main TV Show document
+      const showRef = doc(db, 'users', userId, 'watch_history', showId);
+      await setDoc(showRef, {
+        id: media.id,
+        title: media.title,
+        type: 'tv',
+        poster_path: media.poster_path,
+        backdrop_path: media.backdrop_path,
+        timestamp: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Set Season document
+      const seasonRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`);
+      await setDoc(seasonRef, {
+        season: Number(seasonNum),
+        timestamp: serverTimestamp()
+      }, { merge: true });
+
+      // 3. Set Episode document
+      const epRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`, 'episodes', `episode_${episodeNum}`);
+      await setDoc(epRef, {
+        ...media,
+        timestamp: serverTimestamp()
+      }, { merge: true });
+
+    } else {
+      // Movie
+      const ref = doc(db, 'users', userId, 'watch_history', String(media.id));
+      await setDoc(ref, {
+        ...media,
+        timestamp: serverTimestamp()
+      }, { merge: true });
+    }
   } catch (err) {
     console.error('[Firebase] Failed to save progress:', err);
   }
@@ -100,8 +129,35 @@ export async function saveProgressToCloud(userId, media) {
  */
 export async function removeProgressFromCloud(userId, mediaId) {
   try {
-    const ref = doc(db, 'users', userId, 'watch_history', String(mediaId));
-    await deleteDoc(ref);
+    if (typeof mediaId === 'string' && mediaId.includes('_s') && mediaId.includes('_e')) {
+      const parts = mediaId.split('_s');
+      const showId = parts[0];
+      const rest = parts[1].split('_e');
+      const seasonNum = rest[0];
+      const episodeNum = rest[1];
+
+      const epRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`, 'episodes', `episode_${episodeNum}`);
+      await deleteDoc(epRef);
+
+      // Clean up season if empty
+      const epsColRef = collection(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`, 'episodes');
+      const epsSnap = await getDocs(epsColRef);
+      if (epsSnap.empty) {
+        const seasonRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`);
+        await deleteDoc(seasonRef);
+      }
+
+      // Clean up show if empty
+      const seasonsColRef = collection(db, 'users', userId, 'watch_history', showId, 'seasons');
+      const seasonsSnap = await getDocs(seasonsColRef);
+      if (seasonsSnap.empty) {
+        const showRef = doc(db, 'users', userId, 'watch_history', showId);
+        await deleteDoc(showRef);
+      }
+    } else {
+      const ref = doc(db, 'users', userId, 'watch_history', String(mediaId));
+      await deleteDoc(ref);
+    }
   } catch (err) {
     console.error('[Firebase] Failed to remove progress:', err);
   }
@@ -117,14 +173,45 @@ export async function fetchWatchHistory(userId) {
     const colRef = collection(db, 'users', userId, 'watch_history');
     const snapshot = await getDocs(colRef);
     const items = [];
+    const tvShowDocs = [];
+
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      items.push({ 
-        ...data, 
-        id: data.id || docSnap.id, // Keep the original TMDB ID or fall back to docSnap.id
-        docId: docSnap.id 
-      });
+      if (data.type === 'tv') {
+        tvShowDocs.push({ docId: docSnap.id, ...data });
+      } else {
+        items.push({ 
+          ...data, 
+          id: data.id || docSnap.id, 
+          docId: docSnap.id 
+        });
+      }
     });
+
+    if (tvShowDocs.length > 0) {
+      await Promise.all(tvShowDocs.map(async (show) => {
+        const seasonsColRef = collection(db, 'users', userId, 'watch_history', show.docId, 'seasons');
+        const seasonsSnap = await getDocs(seasonsColRef);
+
+        await Promise.all(seasonsSnap.docs.map(async (seasonDoc) => {
+          const episodesColRef = collection(db, 'users', userId, 'watch_history', show.docId, 'seasons', seasonDoc.id, 'episodes');
+          const episodesSnap = await getDocs(episodesColRef);
+
+          episodesSnap.forEach(epDoc => {
+            const epData = epDoc.data();
+            items.push({
+              ...epData,
+              id: show.id,
+              docId: `${show.docId}_s${epData.season}_e${epData.episode}`,
+              showDocId: show.docId,
+              seasonDocId: seasonDoc.id,
+              episodeDocId: epDoc.id
+            });
+          });
+        }));
+      }));
+    }
+
     // Sort by timestamp descending (most recent first)
     items.sort((a, b) => {
       const ta = a.timestamp?.toMillis?.() ?? 0;
@@ -300,7 +387,26 @@ export async function clearAllWatchHistory(userId) {
     const colRef = collection(db, 'users', userId, 'watch_history');
     const snapshot = await getDocs(colRef);
     const deletions = [];
-    snapshot.forEach(docSnap => deletions.push(deleteDoc(docSnap.ref)));
+
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      if (data.type === 'tv') {
+        const seasonsColRef = collection(db, 'users', userId, 'watch_history', docSnap.id, 'seasons');
+        const seasonsSnap = await getDocs(seasonsColRef);
+
+        for (const seasonDoc of seasonsSnap.docs) {
+          const episodesColRef = collection(db, 'users', userId, 'watch_history', docSnap.id, 'seasons', seasonDoc.id, 'episodes');
+          const episodesSnap = await getDocs(episodesColRef);
+
+          episodesSnap.forEach(epDoc => {
+            deletions.push(deleteDoc(epDoc.ref));
+          });
+          deletions.push(deleteDoc(seasonDoc.ref));
+        }
+      }
+      deletions.push(deleteDoc(docSnap.ref));
+    }
+
     await Promise.all(deletions);
   } catch (err) {
     console.error('[Firebase] Failed to clear watch history:', err);

@@ -40,6 +40,65 @@ export async function renderWatchHistoryPage({ container }) {
   }
 }
 
+function groupTVHistoryItems(historyItems) {
+  const groupedList = [];
+  const tvGroups = {};
+
+  historyItems.forEach(item => {
+    if (item.type === 'tv') {
+      if (!tvGroups[item.id]) {
+        tvGroups[item.id] = [];
+      }
+      tvGroups[item.id].push(item);
+    } else {
+      groupedList.push({
+        type: 'movie',
+        item: item
+      });
+    }
+  });
+
+  Object.keys(tvGroups).forEach(tvId => {
+    const eps = tvGroups[tvId];
+    if (eps.length === 1) {
+      groupedList.push({
+        type: 'single-tv',
+        item: eps[0]
+      });
+    } else {
+      eps.sort((a, b) => {
+        if (Number(a.season) !== Number(b.season)) {
+          return Number(a.season) - Number(b.season);
+        }
+        return Number(a.episode) - Number(b.episode);
+      });
+
+      const distinctSeasons = new Set(eps.map(ep => Number(ep.season)));
+
+      if (distinctSeasons.size === 1) {
+        const seasonNum = [...distinctSeasons][0];
+        groupedList.push({
+          type: 'folder-tv',
+          id: `${tvId}_season_${seasonNum}`,
+          title: `${eps[0].title || eps[0].name} (Season ${seasonNum})`,
+          poster_path: eps[0].poster_path,
+          episodes: eps
+        });
+      } else {
+        groupedList.push({
+          type: 'folder-tv',
+          id: tvId,
+          title: eps[0].title || eps[0].name,
+          poster_path: eps[0].poster_path,
+          episodes: eps
+        });
+      }
+    }
+  });
+
+  return groupedList;
+}
+
 function renderPage(container, items, user) {
   const count = items.length;
 
@@ -51,47 +110,8 @@ function renderPage(container, items, user) {
     return !item.watched && !(item.duration > 0 && (item.duration - item.currentTime <= 300));
   });
 
-  // Group completed TV shows together if there are multiple episodes
-  const completedGroups = [];
-  const tvGroups = {};
-
-  completedItems.forEach(item => {
-    if (item.type === 'tv') {
-      if (!tvGroups[item.id]) {
-        tvGroups[item.id] = [];
-      }
-      tvGroups[item.id].push(item);
-    } else {
-      completedGroups.push({
-        type: 'movie',
-        item: item
-      });
-    }
-  });
-
-  Object.keys(tvGroups).forEach(tvId => {
-    const eps = tvGroups[tvId];
-    if (eps.length === 1) {
-      completedGroups.push({
-        type: 'single-tv',
-        item: eps[0]
-      });
-    } else {
-      eps.sort((a, b) => {
-        if (Number(a.season) !== Number(b.season)) {
-          return Number(a.season) - Number(b.season);
-        }
-        return Number(a.episode) - Number(b.episode);
-      });
-      completedGroups.push({
-        type: 'folder-tv',
-        id: tvId,
-        title: eps[0].title || eps[0].name,
-        poster_path: eps[0].poster_path,
-        episodes: eps
-      });
-    }
-  });
+  const completedGroups = groupTVHistoryItems(completedItems);
+  const inProgressGroups = groupTVHistoryItems(inProgressItems);
 
   container.innerHTML = `
     <div class="user-page">
@@ -130,7 +150,15 @@ function renderPage(container, items, user) {
               Recently Watched
             </h2>
             <div class="user-media-grid" style="margin-bottom: var(--space-2xl);">
-              ${inProgressItems.map(item => renderHistoryCard(item, false)).join('')}
+              ${inProgressGroups.map(group => {
+                if (group.type === 'folder-tv') {
+                  return renderFolderCard(group);
+                } else if (group.type === 'single-tv') {
+                  return renderHistoryCard(group.item, false);
+                } else {
+                  return renderHistoryCard(group.item, false);
+                }
+              }).join('')}
             </div>
           ` : ''}
 
@@ -143,6 +171,8 @@ function renderPage(container, items, user) {
               ${completedGroups.map(group => {
                 if (group.type === 'folder-tv') {
                   return renderFolderCard(group);
+                } else if (group.type === 'single-tv') {
+                  return renderHistoryCard(group.item, true);
                 } else {
                   return renderHistoryCard(group.item, true);
                 }
@@ -161,6 +191,7 @@ function renderPage(container, items, user) {
   // Wire standard cards
   container.querySelectorAll('[data-history-card]').forEach(card => {
     const id = card.dataset.id;
+    const tmdbId = card.dataset.tmdbId || id;
     const type = card.dataset.mediaType;
     const season = card.dataset.season;
     const episode = card.dataset.episode;
@@ -169,8 +200,8 @@ function renderPage(container, items, user) {
     card.addEventListener('click', (e) => {
       if (e.target.closest('.user-media-remove') || e.target.closest('.user-media-checkbox')) return;
       const route = type === 'tv'
-        ? `/watch/tv/${id}?s=${season}&e=${episode}`
-        : `/watch/movie/${id}`;
+        ? `/watch/tv/${tmdbId}?s=${season}&e=${episode}`
+        : `/watch/movie/${tmdbId}`;
       navigate(route);
     });
 
