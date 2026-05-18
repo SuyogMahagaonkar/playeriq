@@ -312,8 +312,8 @@ app.get('/api/moviebox/home', async (req, res) => {
     const { data } = await axios.get(bridgeUrl, { timeout: 15000 });
     
     if (data.items) {
-      // 1. Filter out unwanted categories (WWE, Skill & Courses, Cricket, Anime, Hentai)
-      const unwantedRowRegex = /wwe|skill|course|cricket|anime|hentai|18\+/i;
+      // 1. Filter out unwanted categories (WWE, Skill & Courses, Cricket, Anime, Hentai, Kids & Learning)
+      const unwantedRowRegex = /wwe|skill|course|cricket|anime|hentai|18\+|kids|learning|high-ctr/i;
       data.items = data.items.filter(row => {
         const title = (row.title || '').toLowerCase();
         return !unwantedRowRegex.test(title);

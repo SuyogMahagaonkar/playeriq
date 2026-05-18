@@ -39,6 +39,7 @@ import { renderWatchHistoryPage } from './pages/WatchHistoryPage.js';
 import { renderWatchlistPage } from './pages/WatchlistPage.js';
 import { renderSettingsPage } from './pages/SettingsPage.js';
 import { render18PlusPage } from './pages/18PlusPage.js';
+import { renderCategoryPage } from './pages/CategoryPage.js';
 
 // ---- Boot App ----
 function initApp() {
@@ -143,6 +144,11 @@ function initApp() {
   addRoute('/18plus', async (ctx) => {
     updateSidebarActive();
     return await render18PlusPage(ctx);
+  });
+
+  addRoute('/category', async (ctx) => {
+    updateSidebarActive();
+    return await renderCategoryPage(ctx);
   });
 
   // Start routing
