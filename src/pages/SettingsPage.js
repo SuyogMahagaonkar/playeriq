@@ -97,7 +97,10 @@ export async function renderSettingsPage({ container }) {
             <div class="settings-row">
               <div class="settings-row-label">
                 <div class="settings-row-title">Safe Search</div>
-                <div class="settings-row-desc">Hide explicitly adult and erotic content from search and browse</div>
+                <div class="settings-row-desc">
+                  Hide explicitly adult and erotic content from search and browse
+                  <div id="parental-pin-actions" style="margin-top: 5px;"></div>
+                </div>
               </div>
               <label class="settings-toggle">
                 <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
@@ -153,24 +156,255 @@ export async function renderSettingsPage({ container }) {
     ${createFooter()}`;
 
   // ---- Live preference saving ----
+  let parentalPin = prefs.parentalPin || '';
+
+  // Inject PIN modal styles
+  if (!document.getElementById('pin-modal-styles')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'pin-modal-styles';
+    styleEl.innerHTML = `
+      .pin-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.25s ease;
+      }
+      .pin-modal-card {
+        background: rgba(20, 20, 25, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        width: 90%;
+        max-width: 360px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .pin-modal-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .pin-modal-icon {
+        font-size: 36px;
+      }
+      .pin-modal-card h3 {
+        margin: 0;
+        font-size: 20px;
+        color: #fff;
+      }
+      .pin-modal-card p {
+        color: var(--text-dim);
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0 0 20px;
+      }
+      .pin-input-row {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+      }
+      .pin-input-row input {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #fff !important;
+        font-size: 28px !important;
+        letter-spacing: 8px !important;
+        text-align: center !important;
+        padding: 10px !important;
+        border-radius: 8px !important;
+        width: 160px !important;
+        outline: none !important;
+        transition: all 0.2s !important;
+      }
+      .pin-input-row input:focus {
+        border-color: #ff0055 !important;
+        background: rgba(255, 0, 85, 0.05) !important;
+        box-shadow: 0 0 10px rgba(255, 0, 85, 0.2) !important;
+      }
+      .pin-error-msg {
+        color: #ff3366;
+        font-size: 13px;
+        margin-bottom: 15px;
+        min-height: 18px;
+        font-weight: 500;
+      }
+      .pin-modal-actions {
+        display: flex;
+        gap: 12px;
+      }
+      .pin-modal-actions button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+      }
+      .pin-btn-cancel {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: #fff !important;
+      }
+      .pin-btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+      }
+      .pin-btn-confirm {
+        background: #ff0055 !important;
+        color: #fff !important;
+      }
+      .pin-btn-confirm:hover {
+        background: #e6004c !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  const showPinModal = (hasPin, correctPin) => {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'pin-modal-overlay';
+      
+      overlay.innerHTML = `
+        <div class="pin-modal-card">
+          <div class="pin-modal-header">
+            <span class="pin-modal-icon">🔒</span>
+            <h3>${hasPin ? 'Enter Parental PIN' : 'Create Parental PIN'}</h3>
+          </div>
+          <p>${hasPin ? 'Please enter your 4-digit parental PIN to disable SafeSearch.' : 'Create a 4-digit PIN to lock SafeSearch and adult content.'}</p>
+          <div class="pin-input-row">
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" id="parental-pin-input" autocomplete="off" autofocus />
+          </div>
+          <div class="pin-error-msg" id="pin-error-msg"></div>
+          <div class="pin-modal-actions">
+            <button class="pin-btn-cancel" id="pin-btn-cancel">Cancel</button>
+            <button class="pin-btn-confirm" id="pin-btn-confirm">${hasPin ? 'Confirm' : 'Create'}</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      const input = overlay.querySelector('#parental-pin-input');
+      const errorMsg = overlay.querySelector('#pin-error-msg');
+      const btnCancel = overlay.querySelector('#pin-btn-cancel');
+      const btnConfirm = overlay.querySelector('#pin-btn-confirm');
+
+      input?.focus();
+
+      const close = (value) => {
+        overlay.remove();
+        resolve(value);
+      };
+
+      btnCancel?.addEventListener('click', () => close(null));
+
+      const submit = () => {
+        const pinVal = input.value.trim();
+        if (!/^\d{4}$/.test(pinVal)) {
+          errorMsg.textContent = 'PIN must be exactly 4 digits.';
+          input.value = '';
+          input.focus();
+          return;
+        }
+
+        if (hasPin) {
+          if (pinVal === correctPin) {
+            close(pinVal);
+          } else {
+            errorMsg.textContent = 'Incorrect Parental PIN. Access denied.';
+            input.value = '';
+            input.focus();
+          }
+        } else {
+          close(pinVal);
+        }
+      };
+
+      btnConfirm?.addEventListener('click', submit);
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submit();
+      });
+    });
+  };
+
   const save = async () => {
     const newPrefs = {
       autoplay: document.getElementById('pref-autoplay')?.checked ?? true,
       quality:  document.getElementById('pref-quality')?.value  ?? 'auto',
       language: document.getElementById('pref-language')?.value ?? 'all',
-      safeSearch: document.getElementById('pref-safesearch')?.checked ?? true
+      safeSearch: document.getElementById('pref-safesearch')?.checked ?? true,
+      parentalPin: parentalPin
     };
     await saveSettings(user.uid, newPrefs);
-    // Also save safeSearch to localStorage for synchronous access in api.js
     localStorage.setItem('piq_safesearch', newPrefs.safeSearch ? 'true' : 'false');
     refreshSidebarNav();
     showToast('✓ Settings saved');
   };
 
+  const updatePinActions = () => {
+    const containerActions = container.querySelector('#parental-pin-actions');
+    if (!containerActions) return;
+    containerActions.innerHTML = parentalPin 
+      ? `<a href="#" id="change-parental-pin" style="color: #ff0055; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block;">Change Parental PIN</a>`
+      : '';
+    
+    container.querySelector('#change-parental-pin')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (parentalPin) {
+        const verifyPin = await showPinModal(true, parentalPin);
+        if (verifyPin === parentalPin) {
+          const newPin = await showPinModal(false, '');
+          if (newPin) {
+            parentalPin = newPin;
+            await save();
+            updatePinActions();
+            showToast('✓ Parental PIN updated');
+          }
+        }
+      }
+    });
+  };
+
+  // Wire event listeners
   container.querySelector('#pref-autoplay')?.addEventListener('change', save);
   container.querySelector('#pref-quality')?.addEventListener('change', save);
   container.querySelector('#pref-language')?.addEventListener('change', save);
-  container.querySelector('#pref-safesearch')?.addEventListener('change', save);
+
+  const safesearchCheckbox = container.querySelector('#pref-safesearch');
+  safesearchCheckbox?.addEventListener('change', async () => {
+    const isChecked = safesearchCheckbox.checked;
+
+    if (!isChecked) {
+      // Temporarily revert checked state during PIN validation:
+      safesearchCheckbox.checked = true;
+
+      const userPin = await showPinModal(!!parentalPin, parentalPin);
+      if (userPin) {
+        if (!parentalPin) {
+          parentalPin = userPin;
+        }
+        safesearchCheckbox.checked = false;
+        await save();
+        updatePinActions();
+      } else {
+        safesearchCheckbox.checked = true;
+      }
+    } else {
+      await save();
+    }
+  });
+
+  // Setup initial link state
+  updatePinActions();
 
   // Clear history
   container.querySelector('#settings-clear-history')?.addEventListener('click', async () => {
