@@ -40,28 +40,50 @@ export function createSidebar() {
         ${hamburgerIcon}
       </button>
     </div>
-    <nav class="sidebar-nav">
-      <div class="sidebar-section-label">Menu</div>
-      ${NAV_ITEMS.map(item => `
-        <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
-          <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
-          <span class="sidebar-link-text">${item.label}</span>
-        </a>
-      `).join('')}
-      <div class="sidebar-section-label">Library</div>
-      ${SECONDARY_ITEMS.map(item => `
-        <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
-          <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
-          <span class="sidebar-link-text">${item.label}</span>
-        </a>
-      `).join('')}
-    </nav>
+    <nav class="sidebar-nav"></nav>
     <div class="sidebar-footer">
       <div class="sidebar-footer-text">© 2025 PlayerIQ</div>
     </div>
   `;
 
+  // Populate nav items in next tick once elements are loaded
+  setTimeout(() => {
+    refreshSidebarNav();
+  }, 0);
+
   return sidebar;
+}
+
+export function refreshSidebarNav() {
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+
+  const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+  const navItems = [...NAV_ITEMS];
+  if (!isSafe) {
+    // Insert 18+ right after TV Shows
+    navItems.splice(3, 0, { label: '18+ Catalog', icon: 'eye-off', path: '/18plus' });
+  }
+
+  nav.innerHTML = `
+    <div class="sidebar-section-label">Menu</div>
+    ${navItems.map(item => `
+      <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
+        <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
+        <span class="sidebar-link-text">${item.label}</span>
+      </a>
+    `).join('')}
+    <div class="sidebar-section-label">Library</div>
+    ${SECONDARY_ITEMS.map(item => `
+      <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
+        <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
+        <span class="sidebar-link-text">${item.label}</span>
+      </a>
+    `).join('')}
+  `;
+
+  if (window.lucide) window.lucide.createIcons();
+  updateSidebarActive();
 }
 
 export function initSidebarToggle() {

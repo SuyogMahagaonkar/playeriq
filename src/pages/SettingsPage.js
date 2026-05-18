@@ -6,6 +6,7 @@ import { getUser, login, logout } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import { getSettings, saveSettings, clearAllWatchHistory } from '../services/firebase.js';
 import { createFooter } from '../components/Footer.js';
+import { refreshSidebarNav } from '../components/Sidebar.js';
 
 export async function renderSettingsPage({ container }) {
   const user = getUser();
@@ -162,6 +163,7 @@ export async function renderSettingsPage({ container }) {
     await saveSettings(user.uid, newPrefs);
     // Also save safeSearch to localStorage for synchronous access in api.js
     localStorage.setItem('piq_safesearch', newPrefs.safeSearch ? 'true' : 'false');
+    refreshSidebarNav();
     showToast('✓ Settings saved');
   };
 

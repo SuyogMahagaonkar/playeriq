@@ -22,7 +22,7 @@ import './styles/user-pages.css';
 
 // Core
 import { addRoute, initRouter } from './services/router.js';
-import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle } from './components/Sidebar.js';
+import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar } from './components/Navbar.js';
 import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater } from './services/auth.js';
 import { renderLoginPage } from './pages/LoginPage.js';
@@ -38,6 +38,7 @@ import { renderRankingPage } from './pages/RankingPage.js';
 import { renderWatchHistoryPage } from './pages/WatchHistoryPage.js';
 import { renderWatchlistPage } from './pages/WatchlistPage.js';
 import { renderSettingsPage } from './pages/SettingsPage.js';
+import { render18PlusPage } from './pages/18PlusPage.js';
 
 // ---- Boot App ----
 function initApp() {
@@ -76,6 +77,9 @@ function initApp() {
 
   // Bootstrap Firebase auth listener
   initAuth();
+  onUserChange(() => {
+    refreshSidebarNav();
+  });
 
   // Boot collapsible sidebar toggle
   initSidebarToggle();
@@ -134,6 +138,11 @@ function initApp() {
   addRoute('/settings', async (ctx) => {
     updateSidebarActive();
     return await renderSettingsPage(ctx);
+  });
+
+  addRoute('/18plus', async (ctx) => {
+    updateSidebarActive();
+    return await render18PlusPage(ctx);
   });
 
   // Start routing
