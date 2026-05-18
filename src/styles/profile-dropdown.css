@@ -1,5 +1,5 @@
 /* ========================================
-   PlayerIQ — Profile Dropdown
+   PlayerIQ — Overhauled Profile Dropdown
    ======================================== */
 
 /* Wrapper so the dropdown is positioned relative to the avatar */
@@ -7,73 +7,110 @@
   position: relative;
 }
 
-/* ---- Avatar ---- */
-.navbar-avatar {
-  width: 36px;
-  height: 36px;
+/* ---- Sleek Profile Pill Button ---- */
+.navbar-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px var(--space-sm) 4px 4px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  color: var(--text-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  align-self: center;
+  position: relative;
+  outline: none;
+}
+
+.navbar-profile-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 24px rgba(229, 9, 20, 0.15), 0 0 1px 1px rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.navbar-profile-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ---- Inner Avatar Container ---- */
+.navbar-avatar-inner {
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   background: var(--gradient-purple);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
   user-select: none;
   flex-shrink: 0;
-}
-
-.navbar-avatar:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 0 2.5px var(--accent);
-}
-
-.navbar-avatar.signed-in {
-  padding: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   overflow: hidden;
-  box-shadow: 0 0 0 2px #22c55e;
+  transition: border-color var(--transition-fast);
 }
 
-.navbar-avatar.signed-in:hover {
-  box-shadow: 0 0 0 2.5px #16a34a;
+.navbar-profile-btn:hover .navbar-avatar-inner {
+  border-color: var(--accent);
 }
 
-.navbar-avatar.signed-in::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #22c55e;
-  border: 1.5px solid var(--bg-primary);
-  pointer-events: none;
+.navbar-profile-btn.signed-in .navbar-avatar-inner {
+  border-color: #22c55e;
 }
 
-/* ---- Dropdown Panel ---- */
+.navbar-profile-btn.signed-in:hover .navbar-avatar-inner {
+  border-color: #16a34a;
+}
+
+/* Chevron indicator */
+.navbar-profile-btn .chevron-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  transition: transform var(--transition-normal), color var(--transition-fast);
+  stroke-width: 2.5;
+}
+
+.navbar-profile-btn:hover .chevron-icon {
+  color: var(--text-primary);
+}
+
+.navbar-profile-btn[aria-expanded="true"] .chevron-icon {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+/* ---- Overhauled Dropdown Panel (Premium Glassmorphism) ---- */
 .profile-dropdown {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 14px);
   right: 0;
-  width: 260px;
-  background: #1a1a2e;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+  width: 280px;
+  background: rgba(18, 18, 28, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.85), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 1px 1px rgba(255, 255, 255, 0.02);
   overflow: hidden;
   z-index: calc(var(--z-navbar) + 10);
 
-  /* hidden by default */
+  /* elegant spring entry */
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px) scale(0.97);
+  transform: translateY(-12px) scale(0.95);
   transform-origin: top right;
   transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease,
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .profile-dropdown.open {
@@ -82,19 +119,35 @@
   transform: translateY(0) scale(1);
 }
 
+/* ---- Premium Dropdown Arrow Pointer ---- */
+.profile-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: rgba(18, 18, 28, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  transform: rotate(45deg);
+  border-radius: 2px;
+  z-index: -1;
+}
+
 /* ---- User Header ---- */
 .profile-dropdown-header {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-md);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
+  padding: var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.01);
 }
 
 .profile-dropdown-avatar {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   background: var(--gradient-purple);
   display: flex;
@@ -104,7 +157,8 @@
   font-weight: var(--weight-bold);
   flex-shrink: 0;
   overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.25);
 }
 
 .profile-dropdown-avatar img {
@@ -120,11 +174,12 @@
 
 .profile-dropdown-name {
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.2px;
 }
 
 .profile-dropdown-email {
@@ -136,85 +191,106 @@
   margin-top: 2px;
 }
 
+/* Glowing Pro Badge */
 .profile-dropdown-badge {
-  font-size: 0.6rem;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: var(--weight-semibold);
+  font-size: 0.65rem;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ff0055 0%, #7000ff 100%);
+  color: white;
+  font-weight: var(--weight-extrabold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(255, 0, 85, 0.4);
+  animation: pulseBadge 2.5s infinite;
 }
 
-/* ---- Menu Items ---- */
+@keyframes pulseBadge {
+  0%, 100% { box-shadow: 0 0 12px rgba(255, 0, 85, 0.4); }
+  50% { box-shadow: 0 0 18px rgba(255, 0, 85, 0.7); }
+}
+
+/* ---- Overhauled Floating Pills Menu Items ---- */
 .profile-dropdown-menu {
-  padding: var(--space-xs) 0;
+  padding: var(--space-sm) 0;
 }
 
 .profile-dropdown-item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-md);
+  padding: 10px var(--space-md);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   border: none;
   background: none;
-  width: 100%;
+  margin: 2px 8px;
+  width: calc(100% - 16px);
+  box-sizing: border-box;
   text-align: left;
   font-family: var(--font-body);
+  border-radius: var(--radius-md);
 }
 
 .profile-dropdown-item:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
+  transform: translateX(6px);
 }
 
 .profile-dropdown-item svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.65;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity var(--transition-fast);
 }
 
 .profile-dropdown-item:hover svg {
   opacity: 1;
+  color: var(--accent);
+  transform: scale(1.1);
 }
 
+/* Specific item designs */
 .profile-dropdown-item.danger {
-  color: #ff6b6b;
+  color: #ff5252;
 }
 
 .profile-dropdown-item.danger:hover {
   background: rgba(229, 9, 20, 0.08);
-  color: #ff4444;
+  color: #ff3333;
 }
 
 .profile-dropdown-item.danger svg {
-  opacity: 1;
+  color: #ff5252;
+}
+
+.profile-dropdown-item.danger:hover svg {
+  transform: scale(1.1) rotate(-8deg);
+  color: #ff3333;
 }
 
 /* Separator */
 .profile-dropdown-sep {
   height: 1px;
   background: rgba(255,255,255,0.06);
-  margin: var(--space-xs) 0;
+  margin: var(--space-sm) 0;
 }
 
-/* ---- Guest Mode (Not Signed In) ---- */
+/* ---- Guest Mode Overhaul ---- */
 .profile-dropdown-guest-header {
   padding: var(--space-md);
   border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
+  background: rgba(255,255,255,0.01);
 }
 
 .profile-dropdown-guest-title {
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
   margin-bottom: var(--space-2xs);
 }
@@ -230,46 +306,32 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  width: calc(100% - var(--space-lg));
-  margin: var(--space-sm) var(--space-md);
-  padding: var(--space-xs) var(--space-md);
+  width: calc(100% - 24px);
+  margin: var(--space-md) 12px;
+  padding: var(--space-sm) var(--space-md);
   background: var(--gradient-accent);
   color: white;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   font-family: var(--font-body);
   cursor: pointer;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  transition: all var(--transition-normal);
   box-shadow: var(--shadow-glow-sm);
 }
 
 .profile-dropdown-signin-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  opacity: 0.92;
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--shadow-glow);
 }
 
 .profile-dropdown-signin-btn:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 .profile-dropdown-signin-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Arrow pointer */
-.profile-dropdown::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  right: 14px;
-  width: 12px;
-  height: 12px;
-  background: #1a1a2e;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  border-left: 1px solid rgba(255,255,255,0.08);
-  transform: rotate(45deg);
-  border-radius: 2px;
+  width: 18px;
+  height: 18px;
 }

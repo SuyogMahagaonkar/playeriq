@@ -49,7 +49,12 @@ export function createNavbar() {
 
       <!-- Profile Wrapper -->
       <div class="profile-wrapper" id="profile-wrapper">
-        <div class="navbar-avatar" id="navbar-avatar" title="Profile" role="button" aria-haspopup="true" aria-expanded="false">P</div>
+        <button class="navbar-profile-btn" id="navbar-avatar" title="Profile" aria-haspopup="true" aria-expanded="false">
+          <div class="navbar-avatar-inner">P</div>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
         <div class="profile-dropdown" id="profile-dropdown" role="menu">
           <!-- filled by JS -->
         </div>
@@ -239,18 +244,20 @@ export function updateNavbarAvatar(user) {
   const avatar = document.getElementById('navbar-avatar');
   if (!avatar) return;
 
+  const inner = avatar.querySelector('.navbar-avatar-inner') || avatar;
+
   if (user) {
     if (user.photoURL) {
-      avatar.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName ?? 'User'}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+      inner.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName ?? 'User'}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
     } else {
-      avatar.innerHTML = '';
-      avatar.textContent = user.displayName?.[0]?.toUpperCase() ?? 'U';
+      inner.innerHTML = '';
+      inner.textContent = user.displayName?.[0]?.toUpperCase() ?? 'U';
     }
     avatar.title = user.displayName ?? user.email ?? 'Profile';
     avatar.classList.add('signed-in');
   } else {
-    avatar.innerHTML = '';
-    avatar.textContent = 'P';
+    inner.innerHTML = '';
+    inner.textContent = 'P';
     avatar.title = 'Sign In';
     avatar.classList.remove('signed-in');
   }
