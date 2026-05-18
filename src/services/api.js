@@ -2,7 +2,9 @@
 // PlayerIQ — Native MovieBox API Service
 // ========================================
 
-export const NODE_PROXY = 'https://playerapi.suyogmahagaonkar.me';
+export const NODE_PROXY = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3000'
+  : 'https://playerapi.suyogmahagaonkar.me';
 
 // Image size helpers
 export const img = {
