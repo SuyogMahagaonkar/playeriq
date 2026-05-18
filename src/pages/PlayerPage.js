@@ -182,6 +182,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           iframe.setAttribute('webkitallowfullscreen', '');
           iframe.setAttribute('mozallowfullscreen', '');
           iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock');
           iframe.referrerPolicy = 'origin';
           iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
 
@@ -245,6 +246,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         iframe.setAttribute('webkitallowfullscreen', '');
         iframe.setAttribute('mozallowfullscreen', '');
         iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock');
         iframe.referrerPolicy = 'origin';
         iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
 
@@ -282,6 +284,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       iframe.setAttribute('webkitallowfullscreen', '');
       iframe.setAttribute('mozallowfullscreen', '');
       iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock');
       iframe.referrerPolicy = 'origin';
       iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
 
@@ -315,6 +318,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   iframe.setAttribute('webkitallowfullscreen', '');
   iframe.setAttribute('mozallowfullscreen', '');
   iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock');
   iframe.referrerPolicy = 'origin';
   iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
 
