@@ -54,7 +54,7 @@ app.get('/api/cache/clear', (req, res) => {
 });
 
 // ---- MovieBox Python Bridge ----
-const PYTHON_BRIDGE_URL = 'http://localhost:8789';
+const PYTHON_BRIDGE_URL = 'http://127.0.0.1:8789';
 
 async function getTMDBTitle(type, tmdbId) {
   try {
@@ -623,7 +623,9 @@ app.get('/api/proxy/transcode', async (req, res) => {
 
   const ffmpegArgs = [
     '-hide_banner', '-loglevel', 'error',
-    '-headers', `Referer: ${referer || ''}\r\nUser-Agent: Mozilla/5.0\r\n`,
+    '-headers', `Referer: ${referer || ''}\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n`,
+    '-analyzeduration', '100000',
+    '-probesize', '100000',
     // Seek input BEFORE decoding — very fast, jumps to nearest keyframe
     ...(startSeconds > 0 ? ['-ss', String(startSeconds)] : []),
     '-i', url,
