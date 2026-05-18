@@ -435,14 +435,15 @@ function openFolderModal(title, episodes) {
         <p class="folder-modal-desc">You have completed ${episodes.length} episodes of this show. Select an episode to watch it again:</p>
         <div class="folder-episodes-grid">
           ${episodes.map(ep => {
-            const epTitle = ep.title || `Episode ${ep.episode}`;
+            const epTitle = ep.episode_title || `Episode ${ep.episode}`;
+            const epPoster = ep.episode_still || ep.poster_path || '';
             const subtitle = `Season ${ep.season} · Episode ${ep.episode}`;
             return `
               <div class="folder-episode-item" data-route="/watch/tv/${ep.id}?s=${ep.season}&e=${ep.episode}">
                 <div class="folder-episode-poster">
-                  ${ep.poster_path 
-                    ? `<img src="${ep.poster_path}" alt="${epTitle}" loading="lazy" />` 
-                    : `<div class="folder-no-poster">No Poster</div>`
+                  ${epPoster 
+                    ? `<img src="${epPoster}" alt="${epTitle}" loading="lazy" />` 
+                    : `<div class="folder-no-poster">No Image</div>`
                   }
                   <div class="folder-episode-play">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
@@ -451,7 +452,14 @@ function openFolderModal(title, episodes) {
                 <div class="folder-episode-info">
                   <div class="folder-episode-code">${subtitle}</div>
                   <div class="folder-episode-name" title="${epTitle}">${epTitle}</div>
+                  ${ep.episode_overview 
+                    ? `<div class="folder-episode-desc" title="${ep.episode_overview}">${ep.episode_overview}</div>` 
+                    : ''
+                  }
                 </div>
+                <button class="folder-episode-delete" data-id="${ep.docId || ep.id}" title="Remove episode from history">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </div>
             `;
           }).join('')}
@@ -472,10 +480,33 @@ function openFolderModal(title, episodes) {
   });
 
   overlay.querySelectorAll('.folder-episode-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.folder-episode-delete')) return;
       close();
       const route = item.dataset.route;
       import('../services/router.js').then(({ navigate }) => navigate(route));
+    });
+  });
+
+  overlay.querySelectorAll('.folder-episode-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const docId = btn.dataset.id;
+      if (!confirm('Remove this episode from your watch history?')) return;
+
+      const row = btn.closest('.folder-episode-item');
+      row.style.opacity = '0.4';
+      row.style.pointerEvents = 'none';
+
+      await removeFromHistory(docId);
+      close();
+
+      // Refresh the page
+      const mainContainer = document.getElementById('main-content');
+      if (mainContainer) {
+        const freshItems = await getWatchHistory();
+        renderPage(mainContainer, freshItems, getUser());
+      }
     });
   });
 
