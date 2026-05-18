@@ -43,6 +43,14 @@ export async function renderWatchHistoryPage({ container }) {
 function renderPage(container, items, user) {
   const count = items.length;
 
+  const completedItems = items.filter(item => {
+    return item.watched || (item.duration > 0 && (item.duration - item.currentTime <= 300));
+  });
+
+  const inProgressItems = items.filter(item => {
+    return !item.watched && !(item.duration > 0 && (item.duration - item.currentTime <= 300));
+  });
+
   container.innerHTML = `
     <div class="user-page">
       <div class="user-page-header">
@@ -69,9 +77,26 @@ function renderPage(container, items, user) {
           <div class="user-page-toolbar">
             <span class="user-item-count">${count} item${count !== 1 ? 's' : ''}</span>
           </div>
-          <div class="user-media-grid" id="history-grid">
-            ${items.map(item => renderHistoryCard(item)).join('')}
-          </div>
+          
+          ${inProgressItems.length > 0 ? `
+            <h2 class="history-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px; color: var(--accent);"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Recently Watched
+            </h2>
+            <div class="user-media-grid" style="margin-bottom: var(--space-2xl);">
+              ${inProgressItems.map(item => renderHistoryCard(item, false)).join('')}
+            </div>
+          ` : ''}
+
+          ${completedItems.length > 0 ? `
+            <h2 class="history-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px; color: #22c55e;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Watch Again
+            </h2>
+            <div class="user-media-grid">
+              ${completedItems.map(item => renderHistoryCard(item, true)).join('')}
+            </div>
+          ` : ''}
         `}
       </div>
     </div>
@@ -105,8 +130,7 @@ function renderPage(container, items, user) {
       await removeFromHistory(id);
       card.remove();
       // Update count
-      const grid = document.getElementById('history-grid');
-      const remaining = grid?.querySelectorAll('[data-history-card]').length ?? 0;
+      const remaining = container.querySelectorAll('[data-history-card]').length;
       const countEl = container.querySelector('.user-item-count');
       if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
       if (remaining === 0) renderPage(container, [], getUser());
@@ -131,7 +155,7 @@ async function removeAllHistory(uid) {
   await clearAllWatchHistory(uid);
 }
 
-function renderHistoryCard(item) {
+function renderHistoryCard(item, isWatchAgain = false) {
   const progress = item.duration > 0 ? Math.round((item.currentTime / item.duration) * 100) : 0;
   const subtitle = item.type === 'tv' ? `S${item.season} · E${item.episode}` : 'Movie';
   const poster = item.poster_path || '';
@@ -156,7 +180,7 @@ function renderHistoryCard(item) {
           <span class="user-media-card-type">${item.type === 'tv' ? 'TV' : 'Movie'}</span>
           <span>${subtitle}</span>
         </div>
-        ${progress > 0 ? `
+        ${!isWatchAgain && progress > 0 ? `
           <div class="user-media-progress">
             <div class="user-media-progress-fill" style="width:${Math.min(progress, 100)}%"></div>
           </div>

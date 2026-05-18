@@ -574,3 +574,18 @@
   .settings-row     { flex-direction: column; align-items: flex-start; }
   .settings-select  { width: 100%; }
 }
+
+/* ---- Watch History Section Titles ---- */
+.history-section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: var(--space-xs);
+}
