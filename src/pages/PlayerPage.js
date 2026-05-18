@@ -30,6 +30,7 @@ let currentPlayerMode = localStorage.getItem('piq_player_mode') || 'custom'; // 
 let activePlayer = null;
 let tmdbRuntimeSeconds = null; // TMDB runtime in seconds — used as duration fallback for slider
 let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runtime in seconds
+let totalEpisodes = 0;
 
 function getEmbedUrl(tmdbId, isTV, season = 1, episode = 1, imdbId = null) {
   const source = SOURCES[currentSourceIndex] || SOURCES[0];
@@ -87,9 +88,86 @@ function _onFullscreenChange() {
 document.addEventListener('fullscreenchange', _onFullscreenChange);
 
 // ---- Player Loader (Custom + Fallback) ----
-async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null) {
+async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
+
+  function showNextEpisodeFloatingButton(nextEpNum) {
+    let btn = wrapper.querySelector('.vp-next-overlay-btn');
+    if (btn) return; // Already exists
+
+    btn = document.createElement('button');
+    btn.className = 'vp-next-overlay-btn';
+    btn.style.cssText = `
+      position: absolute;
+      bottom: 85px;
+      right: 24px;
+      background: rgba(15,15,20,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0;
+      transform: translateX(20px);
+    `;
+
+    btn.innerHTML = `
+      <span>Next Episode</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    `;
+
+    wrapper.appendChild(btn);
+
+    // Trigger visual entry transition
+    requestAnimationFrame(() => {
+      btn.style.opacity = '1';
+      btn.style.transform = 'none';
+    });
+
+    // Hover effects
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'var(--accent, #e50914)';
+      btn.style.borderColor = 'transparent';
+      btn.style.boxShadow = '0 8px 32px rgba(229, 9, 20, 0.4)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = 'rgba(15,15,20,0.85)';
+      btn.style.borderColor = 'rgba(255,255,255,0.15)';
+      btn.style.boxShadow = '0 8px 32px rgba(0,0,0,0.5)';
+    });
+
+    // Click trigger
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      btn.remove();
+      if (onNextEpisodeClick) {
+        onNextEpisodeClick();
+      } else if (onEnded) {
+        onEnded();
+      }
+    });
+  }
+
+  function hideNextEpisodeFloatingButton() {
+    const btn = wrapper.querySelector('.vp-next-overlay-btn');
+    if (btn) {
+      btn.style.opacity = '0';
+      btn.style.transform = 'translateX(20px)';
+      setTimeout(() => btn.remove(), 300);
+    }
+  }
 
   // Cleanup existing player
   if (activePlayer) {
@@ -222,6 +300,15 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
               currentTime,
               duration
             });
+
+            // Floating Next Episode button in last 30 seconds
+            const remaining = duration - currentTime;
+            const nextEpNum = episode + 1;
+            if (isTV && nextEpNum <= totalEpisodes && remaining <= 30 && remaining > 0) {
+              showNextEpisodeFloatingButton(nextEpNum);
+            } else {
+              hideNextEpisodeFloatingButton();
+            }
           },
           () => {
             // onFatalError callback
@@ -459,7 +546,7 @@ export async function renderPlayerPage({ params, container }) {
 
     // Build seasons sidebar for TV
     let seasonsSidebarHTML = '';
-    let totalEpisodes = 0;
+    totalEpisodes = 0;
     if (isTV && data.seasons?.length) {
       const validSeasons = data.seasons.filter(s => s.season_number > 0);
       const currentSeasonData = validSeasons.find(s => s.season_number === currentSeason);
@@ -562,9 +649,9 @@ export async function renderPlayerPage({ params, container }) {
     if (isTV) {
       const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     } else {
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     }
 
     // ---- Helper functions for episode navigation ----
@@ -575,7 +662,7 @@ export async function renderPlayerPage({ params, container }) {
       // Update progress
       saveProgress({ id, title, type: 'tv', poster_path: data.poster_path, backdrop_path: data.backdrop_path, season: currentSeason, episode: currentEpisode });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
       updateNowPlaying(currentSeason, currentEpisode);
       loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
     }
@@ -865,7 +952,7 @@ export async function renderPlayerPage({ params, container }) {
     document.getElementById('source-select')?.addEventListener('change', (e) => {
       currentSourceIndex = parseInt(e.target.value);
       localStorage.setItem('piq_source', currentSourceIndex);
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     });
 
     // Mode selector
@@ -878,7 +965,7 @@ export async function renderPlayerPage({ params, container }) {
         sourceSelect.style.display = currentPlayerMode === 'custom' ? 'none' : 'inline-block';
       }
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     });
 
     // TV season/episode handling
@@ -890,7 +977,7 @@ export async function renderPlayerPage({ params, container }) {
         currentEpisode = 1;
         // Update total episodes from the actual loaded season
         totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
         updateNowPlaying(currentSeason, currentEpisode);
       });
     }
