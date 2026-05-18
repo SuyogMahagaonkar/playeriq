@@ -160,19 +160,19 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
 function isSafeContent(item) {
   if (!item) return false;
   
-  // 1. Genre Check (expanded to catch softcore / R18 miscategorizations)
-  const badGenres = ['erotica', 'adult', 'softcore', 'porn', 'sensual', '18+'];
+  // 1. Genre Check (expanded to catch softcore / R18 / Vivamax miscategorizations)
+  const badGenres = ['erotica', 'adult', 'softcore', 'porn', 'sensual', '18+', 'vivamax', 'viva max', 'pinoy softcore', 'tagalog erotic'];
   const genreStr = (item.genre || '').toLowerCase();
   for (const bg of badGenres) {
     if (genreStr.includes(bg)) return false;
   }
 
-  // 2. Title & Series Check (Harden SafeSearch against low-budget erotic web series, channels, and platforms)
+  // 2. Title & Series Check (Harden SafeSearch against low-budget erotic web series, channels, Vivamax hits, and platforms)
   // We use precise word boundaries (\b) to target explicit content while ensuring 
   // safe mainstream titles (like "Sex Education" or "Sex and the City") are NOT blocked.
   const titleStr = (item.title || item.name || '').toLowerCase();
   
-  const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+|nude|nudity|naked|striptease|kamasutra|seduction|adultery|adult\s?movie|adult\s?show|hentai|fap|slut|bhabhi|bhabi|tharki|mastram|jalebi\s?bai|charmsukh|palang\s?tod|riti\s?riwaj|siskiyan|sursuri|gandii\s?baat|khuli\s?khidki|cuckold|swinger|intercourse|strip\s?club|playboy|sensual\s?desire|hot\s?scene|bedroom\s?scene|unrated\s?version|uncut\s?version|lust|ullu|kooku|nuefliks|hotshots|fliz|rabbit\s?movies|primeplay|neonx|hotmasti|fappot|glowmax|cinemadosti|chikooflix|gupchup|altbalaji|sex\s?movie|sex\s?scene|sex\s?video|sex\s?show|sex\s?tape|hardcore\s?sex|lesbian\s?sex|gay\s?sex|desi\s?hot|desi\s?sexy|desi\s?bhabhi|hot\s?web\s?series|18\+\s?web\s?series|adult\s?web\s?series|uncut\s?web\s?series|unrated\s?web\s?series)\b/i;
+  const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+|nude|nudity|naked|striptease|kamasutra|seduction|adultery|adult\s?movie|adult\s?show|hentai|fap|slut|bhabhi|bhabi|tharki|mastram|jalebi\s?bai|charmsukh|palang\s?tod|riti\s?riwaj|siskiyan|sursuri|gandii\s?baat|khuli\s?khidki|cuckold|swinger|intercourse|strip\s?club|playboy|sensual\s?desire|hot\s?scene|bedroom\s?scene|unrated\s?version|uncut\s?version|lust|ullu|kooku|nuefliks|hotshots|fliz|rabbit\s?movies|primeplay|neonx|hotmasti|fappot|glowmax|cinemadosti|chikooflix|gupchup|altbalaji|sex\s?movie|sex\s?scene|sex\s?video|sex\s?show|sex\s?tape|hardcore\s?sex|lesbian\s?sex|gay\s?sex|desi\s?hot|desi\s?sexy|desi\s?bhabhi|hot\s?web\s?series|18\+\s?web\s?series|adult\s?web\s?series|uncut\s?web\s?series|unrated\s?web\s?series|eks|seva|sexa|2x1|borders\s?of\s?love|room\s?service|higop|next\s?room\s?affair|cheaters|kuch\s?pal\s?pyar\s?ke|boss\s?ma'am|bula|vivamax|viva\s?max|selina's\s?gold|virgin\s?forest|pamasahe|lulu|siklo|kara\s?cruz|hugot|pantaxa|pabuya|isla|taya|salamat\s?daks)\b/i;
   
   // Catch cases where "xxx" might be attached directly to words (like MOMxxx)
   if (titleStr.includes('xxx') || badTitleRegex.test(titleStr)) {
