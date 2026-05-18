@@ -67,7 +67,7 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
       }
 
       // Extract episode metadata if TV
-      let epStill = posterPath;
+      let epStill = backdropPath || posterPath;
       let epTitle = '';
       let epOverview = '';
       if (isTV) {
@@ -416,7 +416,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           streamData,
           (currentTime, duration) => {
             // Extract episode metadata if TV
-            let epStill = posterPath;
+            let epStill = backdropPath || posterPath;
             let epTitle = '';
             let epOverview = '';
             if (isTV) {
@@ -805,7 +805,7 @@ export async function renderPlayerPage({ params, container }) {
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
 
       // Save initial TV progress with high-res episode screenshot and description
-      let epStill = data.poster_path;
+      let epStill = data.backdrop_path || data.poster_path;
       let epTitle = '';
       let epOverview = '';
       const details = episodeDetails.get(`S${currentSeason}E${currentEpisode}`);
@@ -843,7 +843,7 @@ export async function renderPlayerPage({ params, container }) {
       const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
 
-      let epStill = data.poster_path;
+      let epStill = data.backdrop_path || data.poster_path;
       let epTitle = '';
       let epOverview = '';
       const details = episodeDetails.get(`S${currentSeason}E${currentEpisode}`);
