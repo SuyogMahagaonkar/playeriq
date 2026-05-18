@@ -7,7 +7,7 @@ import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { navigate } from '../services/router.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 
-import { saveProgress } from '../services/storage.js';
+import { saveProgress, getWatchHistory } from '../services/auth.js';
 
 // Embed sources — using TMDB ID
 // Nontongo is the primary working source (user-verified)
@@ -87,10 +87,43 @@ function _onFullscreenChange() {
 }
 document.addEventListener('fullscreenchange', _onFullscreenChange);
 
+// ---- Fetch Saved Watch Progress ----
+async function getSavedPlaybackTime(id, isTV, season, episode) {
+  try {
+    const history = await getWatchHistory();
+    const match = history.find(item => {
+      if (isTV) {
+        return String(item.id) === String(id) && 
+               item.type === 'tv' && 
+               Number(item.season) === Number(season) && 
+               Number(item.episode) === Number(episode);
+      } else {
+        return String(item.id) === String(id) && 
+               item.type === 'movie';
+      }
+    });
+
+    if (match && match.currentTime > 0 && match.duration > 0) {
+      const percent = (match.currentTime / match.duration) * 100;
+      if (percent < 95 && match.currentTime > 5) {
+        return Math.floor(match.currentTime);
+      }
+    }
+  } catch (err) {
+    console.warn('[Playback Restore] Failed to fetch saved progress:', err);
+  }
+  return 0;
+}
+
 // ---- Player Loader (Custom + Fallback) ----
 async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
+
+  const startTime = await getSavedPlaybackTime(id, isTV, season, episode);
+  if (startTime > 0) {
+    console.log(`[Playback Restore] Resuming playback from ${startTime}s...`);
+  }
 
   function showNextEpisodeFloatingButton(nextEpNum) {
     let btn = wrapper.querySelector('.vp-next-overlay-btn');
@@ -323,7 +356,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             }
             loadIframeFallback();
           },
-          onEnded
+          onEnded,
+          startTime
         );
         return; // Success!
       } else {

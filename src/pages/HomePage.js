@@ -3,7 +3,7 @@ import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
-import { getProgress, removeProgress } from '../services/storage.js';
+import { getWatchHistory, removeFromHistory as removeProgress } from '../services/auth.js';
 
 export async function renderHomePage({ container }) {
   // Show base skeleton for hero
@@ -40,7 +40,7 @@ export async function renderHomePage({ container }) {
     const heroHTML = createHeroBanner(heroItems);
 
     // Continue Watching
-    const history = getProgress();
+    const history = await getWatchHistory();
     let continueWatchingHTML = '';
     if (history && history.length > 0) {
       const historyCards = history.map(item => {

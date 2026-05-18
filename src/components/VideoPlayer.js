@@ -11,7 +11,7 @@ import Hls from 'hls.js';
  * @param {Function} [onProgress] - Callback (currentTime, duration)
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null) {
+export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null, startTime = 0) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
@@ -189,16 +189,29 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       if (badge) badge.textContent = `${streamData.provider || 'MovieBox'} · H.264 ⚡`;
     }
 
-    // Play the stream
-    video.src = streamData.url;
-    loader.style.display = 'none';
-    video.play().catch(err => console.log('[Autoplay] Blocked or interrupted:', err));
-
     // ---- Time offset tracking ----
     // When we seek in a transcoded stream, FFmpeg restarts from seekTime but
     // video.currentTime resets to 0. seekOffset tracks how many real seconds
     // into the movie the current stream segment starts.
     let seekOffset = 0;
+
+    // Play the stream
+    if (startTime > 0 && isTranscoded) {
+      seekOffset = Math.max(0, Math.floor(startTime));
+      video.src = `${currentBaseUrl}&start=${seekOffset}`;
+    } else {
+      video.src = streamData.url;
+    }
+    
+    loader.style.display = 'none';
+
+    if (startTime > 0 && !isTranscoded) {
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = startTime;
+      }, { once: true });
+    }
+
+    video.play().catch(err => console.log('[Autoplay] Blocked or interrupted:', err));
 
     // ---- performSeek: restart FFmpeg from a specific timestamp ----
     window._playerPerformSeek = function performSeek(targetSeconds) {
@@ -259,6 +272,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
         qualitySelect.innerHTML += `<option value="${i}">${height}p (${bitrate}k)</option>`;
       });
       loader.style.display = 'none';
+      if (startTime > 0) {
+        video.currentTime = startTime;
+      }
       video.play().catch(err => console.log('[HLS Autoplay] Blocked or interrupted:', err));
     });
 
@@ -276,6 +292,11 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     // Native HLS (Safari)
     video.src = streamData.url;
     loader.style.display = 'none';
+    if (startTime > 0) {
+      video.addEventListener('loadedmetadata', () => {
+        video.currentTime = startTime;
+      }, { once: true });
+    }
     video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
   }
 
