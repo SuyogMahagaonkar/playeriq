@@ -166,11 +166,9 @@ export async function renderHomePage({ container }) {
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#ff0055;"></i> Top 10 Movies Today</h2>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
-            <button class="scroll-arrow scroll-arrow-left" style="z-index:10;"><i data-lucide="chevron-left"></i></button>
             <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
               ${topMoviesCards}
             </div>
-            <button class="scroll-arrow scroll-arrow-right" style="z-index:10;"><i data-lucide="chevron-right"></i></button>
           </div>
         </section>
       `;
@@ -238,11 +236,9 @@ export async function renderHomePage({ container }) {
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#00a8e1;"></i> Top 10 Shows Today</h2>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
-            <button class="scroll-arrow scroll-arrow-left" style="z-index:10;"><i data-lucide="chevron-left"></i></button>
             <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
               ${topSeriesCards}
             </div>
-            <button class="scroll-arrow scroll-arrow-right" style="z-index:10;"><i data-lucide="chevron-right"></i></button>
           </div>
         </section>
       `;
