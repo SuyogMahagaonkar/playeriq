@@ -345,12 +345,11 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
   // ---- Helper: get effective duration ----
   function getEffectiveDuration() {
-    // For MP4/transcoded streams: knownDuration (from API/TMDB) is ALWAYS
-    // preferred. video.duration on fMP4 streams is just the current buffer
-    // size (30s, 60s...) — never the real movie length.
-    if (isMP4 && knownDuration) return knownDuration;
+    // For transcoded streams: knownDuration (from API/TMDB) is preferred because
+    // video.duration on fMP4 streams is just the current buffer fragment size.
+    if (isTranscoded && knownDuration) return knownDuration;
 
-    // For HLS streams: video.duration is reliable
+    // For direct MP4 streams and HLS streams: the browser's video.duration is 100% reliable
     const vDur = video.duration;
     if (vDur && isFinite(vDur) && vDur > 0) return vDur;
 
@@ -413,11 +412,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     bigPlay.style.display = 'flex';
     if (onEnded) onEnded();
   });
-  // For HLS streams: update knownDuration when browser learns real duration.
-  // For MP4/transcoded streams: NEVER update from durationchange — the browser
-  // reports partial buffer sizes (30s, 60s...) as duration for fMP4 streams.
-  // The API-provided knownDuration is the only reliable source of truth for MP4.
-  if (!isMP4) {
+  // For HLS and direct non-transcoded MP4 streams: update when browser learns real duration.
+  // For transcoded streams: NEVER update from durationchange because fMP4 reports partial buffers.
+  if (!isTranscoded) {
     video.addEventListener('durationchange', () => {
       const d = video.duration;
       if (d && isFinite(d) && d > 0) {
