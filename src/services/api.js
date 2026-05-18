@@ -17,11 +17,20 @@ function isSafeSearchOn() {
   return pref !== 'false'; // default to true
 }
 
-export async function getMovieBoxHome() {
-  const safeParam = isSafeSearchOn() ? '?safe=true' : '?safe=false';
+let cachedHomeData = null;
+let cachedHomeSafeState = null;
+
+export async function getMovieBoxHome(forceRefresh = false) {
+  const currentSafe = isSafeSearchOn();
+  if (cachedHomeData && !forceRefresh && cachedHomeSafeState === currentSafe) {
+    return cachedHomeData;
+  }
+  const safeParam = currentSafe ? '?safe=true' : '?safe=false';
   const res = await fetch(`${NODE_PROXY}/api/moviebox/home${safeParam}`);
   if (!res.ok) throw new Error('Failed to fetch home');
-  return res.json();
+  cachedHomeData = await res.json();
+  cachedHomeSafeState = currentSafe;
+  return cachedHomeData;
 }
 
 export const getMovieDetails = async (id) => {
