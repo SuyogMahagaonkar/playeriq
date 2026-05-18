@@ -118,6 +118,10 @@ function renderPage(container, items, user) {
         ${count === 0 ? renderEmpty('history') : `
           <div class="user-page-toolbar">
             <span class="user-item-count">${count} item${count !== 1 ? 's' : ''}</span>
+            <button class="settings-danger-btn" id="delete-selected-btn" style="display: none; margin-left: auto;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              Delete Selected (<span id="delete-selected-count">0</span>)
+            </button>
           </div>
           
           ${inProgressItems.length > 0 ? `
@@ -161,9 +165,9 @@ function renderPage(container, items, user) {
     const season = card.dataset.season;
     const episode = card.dataset.episode;
 
-    // Navigate on card click (excluding the remove button)
+    // Navigate on card click (excluding check box or remove button)
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.user-media-remove')) return;
+      if (e.target.closest('.user-media-remove') || e.target.closest('.user-media-checkbox')) return;
       const route = type === 'tv'
         ? `/watch/tv/${id}?s=${season}&e=${episode}`
         : `/watch/movie/${id}`;
@@ -182,13 +186,14 @@ function renderPage(container, items, user) {
       const countEl = container.querySelector('.user-item-count');
       if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
       if (remaining === 0) renderPage(container, [], getUser());
+      updateDeleteSelectedButton();
     });
   });
 
   // Wire folder cards
   container.querySelectorAll('[data-history-folder]').forEach(folder => {
     folder.addEventListener('click', (e) => {
-      if (e.target.closest('.user-media-remove')) return;
+      if (e.target.closest('.user-media-remove') || e.target.closest('.user-media-checkbox')) return;
       const title = folder.dataset.title;
       const episodes = JSON.parse(folder.dataset.episodesJson);
       openFolderModal(title, episodes);
@@ -213,7 +218,77 @@ function renderPage(container, items, user) {
       const countEl = container.querySelector('.user-item-count');
       if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
       if (remaining === 0) renderPage(container, [], getUser());
+      updateDeleteSelectedButton();
     });
+  });
+
+  // Wire checkbox events
+  const updateDeleteSelectedButton = () => {
+    const checked = container.querySelectorAll('.bulk-delete-checkbox:checked');
+    const count = checked.length;
+    const btn = container.querySelector('#delete-selected-btn');
+    const countEl = container.querySelector('#delete-selected-count');
+
+    if (count > 0) {
+      if (btn) btn.style.display = 'inline-flex';
+      if (countEl) countEl.textContent = count;
+    } else {
+      if (btn) btn.style.display = 'none';
+    }
+  };
+
+  container.querySelectorAll('.bulk-delete-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const wrapper = cb.closest('.user-media-checkbox');
+      if (wrapper) {
+        wrapper.classList.toggle('checked-active', cb.checked);
+      }
+      updateDeleteSelectedButton();
+    });
+
+    cb.closest('.user-media-checkbox')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  });
+
+  // Wire Bulk Delete button click
+  container.querySelector('#delete-selected-btn')?.addEventListener('click', async () => {
+    const checked = container.querySelectorAll('.bulk-delete-checkbox:checked');
+    if (checked.length === 0) return;
+
+    if (!confirm(`Delete all ${checked.length} selected collections/items from watch history?`)) return;
+
+    const btn = container.querySelector('#delete-selected-btn');
+    btn.textContent = 'Deleting…';
+    btn.disabled = true;
+
+    for (const cb of checked) {
+      const id = cb.dataset.id;
+      const epsJson = cb.dataset.episodesJson;
+
+      if (epsJson) {
+        const episodes = JSON.parse(epsJson);
+        for (const ep of episodes) {
+          await removeFromHistory(ep.id);
+        }
+      } else {
+        await removeFromHistory(id);
+      }
+    }
+
+    // Refresh page
+    let freshItems = await getWatchHistory();
+    const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+    if (isSafe) {
+      const exactBlocks = ['romance', 'tl'];
+      const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+|nude|nudity|naked|striptease|kamasutra|seduction|adultery|adult\s?movie|adult\s?show|hentai|fap|slut|bhabhi|bhabi|tharki|mastram|jalebi\s?bai|charmsukh|palang\s?tod|riti\s?riwaj|siskiyan|sursuri|gandii\s?baat|khuli\s?khidki|cuckold|swinger|intercourse|strip\s?club|playboy|sensual\s?desire|hot\s?scene|bedroom\s?scene|unrated\s?version|uncut\s?version|lust|ullu|kooku|nuefliks|hotshots|fliz|rabbit\s?movies|primeplay|neonx|hotmasti|fappot|glowmax|cinemadosti|chikooflix|gupchup|altbalaji|sex\s?movie|sex\s?scene|sex\s?video|sex\s?show|sex\s?tape|hardcore\s?sex|lesbian\s?sex|gay\s?sex|desi\s?hot|desi\s?sexy|desi\s?bhabhi|hot\s?web\s?series|18\+\s?web\s?series|adult\s?web\s?series|uncut\s?web\s?series|unrated\s?web\s?series|eks|seva|sexa|2x1|borders\s?of\s?love|room\s?service|higop|next\s?room\s?affair|cheaters|kuch\s?pal\s?pyar\s?ke|boss\s?ma'am|bula|vivamax|viva\s?max|selina's\s?gold|virgin\s?forest|pamasahe|lulu|siklo|kara\s?cruz|hugot|pantaxa|pabuya|isla|taya|salamat\s?daks|mama\s?katsu|sulutan|kazuko|ala\s?ala|mayank|hatsukoi\s?jikan|seika|jav|papa\s?katsu|kiss\s?&\s?kill|kiss\s?and\s?kill|99\s?moons|female\s?hostel|megane\s?no\s?megami|jalwa|tubero|big\s?and\s?black|trauma|sex\s?weather|you\s?will\s?regret\s?this|date\s?for\s?hire|pihit|city\s?girl|white\s?lily|romance\s?and\s?cegrete|romance\s?&\s?cegrete|nurse\s?abi|isapad|x-deal\s?2|sexy\s?ghotala|kaam\s?sastra|high\s?on\s?sex|teens\s?love)\b/i;
+      freshItems = freshItems.filter(item => {
+        const titleStr = (item.title || '').toLowerCase();
+        if (exactBlocks.includes(titleStr)) return false;
+        return !titleStr.includes('xxx') && !badTitleRegex.test(titleStr);
+      });
+    }
+    renderPage(container, freshItems, user);
   });
 
   // Clear all history
@@ -241,6 +316,10 @@ function renderHistoryCard(item, isWatchAgain = false) {
 
   return `
     <div class="user-media-card" data-history-card data-id="${item.id}" data-media-type="${item.type}" data-season="${item.season || 1}" data-episode="${item.episode || 1}">
+      <div class="user-media-checkbox" title="Select for bulk delete">
+        <input type="checkbox" class="bulk-delete-checkbox" data-id="${item.id}" />
+        <div class="checkbox-visual"></div>
+      </div>
       ${poster
         ? `<img class="user-media-card-poster" src="${poster}" alt="${item.title}" loading="lazy" />`
         : `<div class="user-media-card-poster" style="background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;color:var(--text-dim)">No Poster</div>`
@@ -275,6 +354,10 @@ function renderFolderCard(group) {
 
   return `
     <div class="user-media-card folder-card" data-history-folder data-id="${group.id}" data-episodes-json='${JSON.stringify(group.episodes).replace(/'/g, "&apos;")}' data-title="${group.title}">
+      <div class="user-media-checkbox" title="Select entire collection for bulk delete">
+        <input type="checkbox" class="bulk-delete-checkbox" data-id="${group.id}" data-episodes-json='${JSON.stringify(group.episodes).replace(/'/g, "&apos;")}' />
+        <div class="checkbox-visual"></div>
+      </div>
       <div class="folder-stack-layer folder-stack-layer-1"></div>
       <div class="folder-stack-layer folder-stack-layer-2"></div>
       

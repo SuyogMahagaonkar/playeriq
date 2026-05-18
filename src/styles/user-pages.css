@@ -889,3 +889,98 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- High-Fidelity Custom Checkbox Styles ---- */
+.user-media-checkbox {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 12;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  cursor: pointer;
+}
+
+/* Show checkbox on card hover or when checked! */
+.user-media-card:hover .user-media-checkbox,
+.user-media-checkbox.checked-active {
+  opacity: 1;
+}
+
+/* Hide default checkbox input, build sleek check design */
+.bulk-delete-checkbox {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+}
+
+.checkbox-visual {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 8, 12, 0.75);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.user-media-checkbox:hover .checkbox-visual {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.bulk-delete-checkbox:checked + .checkbox-visual {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+.checkbox-visual::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform var(--transition-fast);
+  margin-bottom: 2px;
+}
+
+.bulk-delete-checkbox:checked + .checkbox-visual::after {
+  transform: rotate(45deg) scale(1);
+}
+
+/* Toolbar button adjustments */
+.user-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+#delete-selected-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glow-sm);
+  animation: pulseDeleteBtn 2s infinite;
+}
+
+@keyframes pulseDeleteBtn {
+  0%, 100% { box-shadow: 0 0 10px rgba(229, 9, 20, 0.3); }
+  50% { box-shadow: 0 0 16px rgba(229, 9, 20, 0.6); }
+}
