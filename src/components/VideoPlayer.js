@@ -11,7 +11,7 @@ import Hls from 'hls.js';
  * @param {Function} [onProgress] - Callback (currentTime, duration)
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, onProgress = null) {
+export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
@@ -101,6 +101,21 @@ export function createVideoPlayer(container, streamData, onProgress = null) {
   // ---- Elements ----
   const player = document.getElementById('vp-player');
   const video = document.getElementById('vp-video');
+
+  // ---- 15s Playback Watchdog ----
+  // If the video is still in loading state (hasn't started playing / currentTime === 0)
+  // after 15 seconds, trigger onFatalError to gracefully switch to the iframe fallback.
+  let watchdogTimeout = setTimeout(() => {
+    if (video.currentTime === 0 && video.paused) {
+      console.warn('[Player Watchdog] Video failed to start playing in 15s. Triggering fatal error.');
+      if (onFatalError) onFatalError();
+    }
+  }, 15000);
+
+  video.addEventListener('playing', () => {
+    clearTimeout(watchdogTimeout);
+  });
+
   const controls = document.getElementById('vp-controls');
   const loader = document.getElementById('vp-loader');
   const bigPlay = document.getElementById('vp-big-play');
@@ -205,6 +220,10 @@ export function createVideoPlayer(container, streamData, onProgress = null) {
         currentBaseUrl = getBaseUrl(nextStream.url);
         seekOffset = 0;
         video.src = nextStream.url;
+      } else {
+        console.error('[Player] No other streams to try. Triggering fatal error.');
+        clearTimeout(watchdogTimeout);
+        if (onFatalError) onFatalError();
       }
     }, { once: true });
 
@@ -607,6 +626,7 @@ export function createVideoPlayer(container, streamData, onProgress = null) {
       }
       window.removeEventListener('keydown', onKeyDown);
       clearTimeout(controlsTimeout);
+      clearTimeout(watchdogTimeout);
       container.innerHTML = '';
     }
   };

@@ -89,36 +89,65 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
     const { data } = await axios.get(bridgeUrl, { timeout: 25000 });
     if (!data.url) throw new Error('MovieBox returned no URL');
 
+    const allStreams = data.all_streams || [];
+    
+    // Prioritize H.264 streams to avoid client playback issues and VPS CPU overhead.
+    const h264Streams = allStreams.filter(s => {
+      const codec = s.codec || '';
+      return codec.toLowerCase().includes('h264') || codec.toLowerCase().includes('x264');
+    });
 
-    // Helper: pick the right proxy URL based on codec
-    // HEVC/H.265 → transcode to H.264 via FFmpeg on-the-fly
-    // H.264 → pass through directly (no transcoding needed)
-    function makeStreamUrl(rawUrl, codec, dur) {
+    let chosenStream = null;
+    if (h264Streams.length > 0) {
+      // Pick the highest resolution H.264 stream
+      chosenStream = h264Streams.reduce((prev, current) => {
+        const prevRes = parseInt(prev.resolution) || 0;
+        const currentRes = parseInt(current.resolution) || 0;
+        return currentRes > prevRes ? current : prev;
+      });
+      console.log(`[MovieBox] Prioritized H.264 stream: ${chosenStream.resolution}p`);
+    } else if (allStreams.length > 0) {
+      // No H.264 streams available, fallback to the highest resolution stream (HEVC/H.265)
+      chosenStream = allStreams.reduce((prev, current) => {
+        const prevRes = parseInt(prev.resolution) || 0;
+        const currentRes = parseInt(current.resolution) || 0;
+        return currentRes > prevRes ? current : prev;
+      });
+      console.log(`[MovieBox] Using HEVC/H.265 stream: ${chosenStream.resolution}p`);
+    } else {
+      // Default fallback
+      chosenStream = {
+        url: data.url,
+        resolution: data.resolution,
+        codec: data.codec || 'hevc',
+        format: data.format,
+        size: data.size,
+      };
+    }
+
+    // Helper: always route through the range-supporting segment proxy.
+    // Do NOT use on-the-fly transcoding on the VPS because H.265 -> H.264 encoding 
+    // requires massive CPU which will freeze a shared single-core VPS.
+    function makeStreamUrl(rawUrl) {
       if (!rawUrl) return null;
-      const isHEVC = !codec || codec.toLowerCase().includes('hevc') || codec.toLowerCase().includes('h265') || codec.toLowerCase().includes('hvc');
-      if (isHEVC) {
-        const durationParam = dur ? `&duration=${dur}` : '';
-        return `/api/proxy/transcode?url=${encodeURIComponent(rawUrl)}&referer=${durationParam}`;
-      }
       return `/api/proxy/segment?url=${encodeURIComponent(rawUrl)}&referer=`;
     }
 
-    const mainCodec = data.codec || (data.all_streams?.[0]?.codec) || 'hevc';
     const totalDuration = data.duration || null;
     return {
-      url: makeStreamUrl(data.url, mainCodec, totalDuration),
-      originalUrl: data.url,
+      url: makeStreamUrl(chosenStream.url),
+      originalUrl: chosenStream.url,
       type: 'mp4',
       provider: 'MovieBox',
-      resolution: data.resolution,
-      title: data.title,
-      codec: mainCodec,
+      resolution: chosenStream.resolution,
+      title: data.title || chosenStream.title,
+      codec: chosenStream.codec || 'hevc',
       duration: totalDuration,
-      transcoded: !mainCodec.toLowerCase().includes('h264'),
+      transcoded: false,
       subtitles: [],
-      all_streams: (data.all_streams || []).map(s => ({
+      all_streams: allStreams.map(s => ({
         ...s,
-        url: makeStreamUrl(s.url, s.codec, totalDuration),
+        url: makeStreamUrl(s.url),
       })),
     };
   } catch (err) {

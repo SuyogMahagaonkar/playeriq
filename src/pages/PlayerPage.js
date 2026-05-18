@@ -171,25 +171,99 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           }));
         }
 
+        const loadIframeFallback = () => {
+          console.warn('[Player] Loading fallback iframe embed...');
+          const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
+          const iframe = document.createElement('iframe');
+          iframe.id = 'player-iframe';
+          iframe.src = embedUrl;
+          iframe.title = title;
+          iframe.setAttribute('allowfullscreen', '');
+          iframe.setAttribute('webkitallowfullscreen', '');
+          iframe.setAttribute('mozallowfullscreen', '');
+          iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+          iframe.referrerPolicy = 'origin';
+          iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
+
+          iframe.onload = () => {
+            const loadingEl = document.getElementById('player-loading');
+            if (loadingEl) {
+              loadingEl.style.opacity = '0';
+              loadingEl.style.transition = 'opacity 0.4s';
+              setTimeout(() => loadingEl.remove(), 400);
+            }
+          };
+
+          wrapper.innerHTML = '';
+          wrapper.appendChild(iframe);
+
+          if (fsBtnClone) {
+            fsBtnClone.addEventListener('click', toggleFullscreen);
+            wrapper.appendChild(fsBtnClone);
+          }
+        };
+
         // Clear wrapper and init custom player
         wrapper.innerHTML = '';
-        activePlayer = createVideoPlayer(wrapper, streamData, (currentTime, duration) => {
-          // Save progress every 5 seconds (called by VideoPlayer)
-          saveProgress({
-            id,
-            title,
-            type: isTV ? 'tv' : 'movie',
-            poster_path: posterPath,
-            backdrop_path: backdropPath,
-            season,
-            episode,
-            currentTime,
-            duration
-          });
-        });
+        activePlayer = createVideoPlayer(
+          wrapper,
+          streamData,
+          (currentTime, duration) => {
+            // Save progress every 5 seconds (called by VideoPlayer)
+            saveProgress({
+              id,
+              title,
+              type: isTV ? 'tv' : 'movie',
+              poster_path: posterPath,
+              backdrop_path: backdropPath,
+              season,
+              episode,
+              currentTime,
+              duration
+            });
+          },
+          () => {
+            // onFatalError callback
+            console.warn('[Player] Custom player failed or timed out. Switching to iframe fallback...');
+            if (activePlayer) {
+              activePlayer.destroy();
+              activePlayer = null;
+            }
+            loadIframeFallback();
+          }
+        );
         return; // Success!
       } else {
         console.warn('Backend stream extraction failed, falling back to iframe');
+        // Let's execute fallback immediately
+        const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
+        const iframe = document.createElement('iframe');
+        iframe.id = 'player-iframe';
+        iframe.src = embedUrl;
+        iframe.title = title;
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('webkitallowfullscreen', '');
+        iframe.setAttribute('mozallowfullscreen', '');
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+        iframe.referrerPolicy = 'origin';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
+
+        iframe.onload = () => {
+          const loadingEl = document.getElementById('player-loading');
+          if (loadingEl) {
+            loadingEl.style.opacity = '0';
+            loadingEl.style.transition = 'opacity 0.4s';
+            setTimeout(() => loadingEl.remove(), 400);
+          }
+        };
+
+        wrapper.innerHTML = '';
+        wrapper.appendChild(iframe);
+
+        if (fsBtnClone) {
+          fsBtnClone.addEventListener('click', toggleFullscreen);
+          wrapper.appendChild(fsBtnClone);
+        }
       }
     } catch (err) {
       clearTimers();
@@ -198,10 +272,40 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       } else {
         console.warn('Backend server not reachable, falling back to iframe', err);
       }
+      // Let's execute fallback immediately
+      const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
+      const iframe = document.createElement('iframe');
+      iframe.id = 'player-iframe';
+      iframe.src = embedUrl;
+      iframe.title = title;
+      iframe.setAttribute('allowfullscreen', '');
+      iframe.setAttribute('webkitallowfullscreen', '');
+      iframe.setAttribute('mozallowfullscreen', '');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+      iframe.referrerPolicy = 'origin';
+      iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
+
+      iframe.onload = () => {
+        const loadingEl = document.getElementById('player-loading');
+        if (loadingEl) {
+          loadingEl.style.opacity = '0';
+          loadingEl.style.transition = 'opacity 0.4s';
+          setTimeout(() => loadingEl.remove(), 400);
+        }
+      };
+
+      wrapper.innerHTML = '';
+      wrapper.appendChild(iframe);
+
+      if (fsBtnClone) {
+        fsBtnClone.addEventListener('click', toggleFullscreen);
+        wrapper.appendChild(fsBtnClone);
+      }
     }
+    return;
   }
 
-  // Fallback to Iframe Embed
+  // Fallback to Iframe Embed (standard when player mode is 'embed')
   const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
   const iframe = document.createElement('iframe');
   iframe.id = 'player-iframe';
