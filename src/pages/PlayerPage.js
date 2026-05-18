@@ -28,6 +28,66 @@ if (currentSourceIndex >= SOURCES.length) currentSourceIndex = 0;
 
 let currentPlayerMode = localStorage.getItem('piq_player_mode') || 'custom'; // 'custom' or 'embed'
 let activePlayer = null;
+let iframeInterval = null;
+
+function clearIframeTracker() {
+  if (iframeInterval) {
+    clearInterval(iframeInterval);
+    iframeInterval = null;
+  }
+}
+
+function startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath) {
+  clearIframeTracker();
+
+  getSavedPlaybackTime(id, isTV, season, episode).then(startTime => {
+    let simulatedCurrentTime = startTime || 0;
+    let lastSaveTime = Date.now();
+
+    const duration = isTV 
+      ? (episodeRuntimes.get(`S${season}E${episode}`) || tmdbRuntimeSeconds || 1200)
+      : (tmdbRuntimeSeconds || 6000);
+
+    console.log(`[Iframe Tracker] Init: ${title} S${season}E${episode}. Saved startTime: ${simulatedCurrentTime}s, duration: ${duration}s`);
+
+    iframeInterval = setInterval(async () => {
+      // Accumulate watched time only if the tab is currently focused
+      if (!document.hasFocus()) return;
+
+      const now = Date.now();
+      const deltaSeconds = Math.round((now - lastSaveTime) / 1000);
+      lastSaveTime = now;
+
+      if (deltaSeconds <= 0) return;
+
+      simulatedCurrentTime += deltaSeconds;
+
+      if (simulatedCurrentTime >= duration) {
+        simulatedCurrentTime = duration;
+      }
+
+      await saveProgress({
+        id,
+        title,
+        type: isTV ? 'tv' : 'movie',
+        poster_path: posterPath,
+        backdrop_path: backdropPath,
+        season,
+        episode,
+        currentTime: simulatedCurrentTime,
+        duration
+      });
+
+      // Stop tracking if fully watched (under 5 min left)
+      if (duration - simulatedCurrentTime <= 300) {
+        console.log('[Iframe Tracker] Fully watched (under 5 min remaining). Clearing.');
+        clearInterval(iframeInterval);
+        iframeInterval = null;
+      }
+    }, 5000);
+  });
+}
+
 let tmdbRuntimeSeconds = null; // TMDB runtime in seconds — used as duration fallback for slider
 let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runtime in seconds
 let totalEpisodes = 0;
@@ -48,6 +108,7 @@ function enableRedirectGuard() {
 }
 
 function disableRedirectGuard() {
+  clearIframeTracker();
   _redirectGuardActive = false;
   window.removeEventListener('beforeunload', _onBeforeUnload);
   if (_redirectCheckInterval) clearInterval(_redirectCheckInterval);
@@ -125,6 +186,8 @@ async function getSavedPlaybackTime(id, isTV, season, episode) {
 async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
+
+  clearIframeTracker();
 
   const startTime = await getSavedPlaybackTime(id, isTV, season, episode);
   if (startTime > 0) {
@@ -323,6 +386,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             fsBtnClone.addEventListener('click', toggleFullscreen);
             wrapper.appendChild(fsBtnClone);
           }
+
+          startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
         };
 
         // Clear wrapper and init custom player
@@ -398,6 +463,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           fsBtnClone.addEventListener('click', toggleFullscreen);
           wrapper.appendChild(fsBtnClone);
         }
+
+        startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
       }
     } catch (err) {
       clearTimers();
@@ -436,6 +503,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         fsBtnClone.addEventListener('click', toggleFullscreen);
         wrapper.appendChild(fsBtnClone);
       }
+
+      startIframeTracker(id, isTV, season, episode, title, data.poster_path, data.backdrop_path);
     }
     return;
   }
@@ -470,6 +539,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     fsBtnClone.addEventListener('click', toggleFullscreen);
     wrapper.appendChild(fsBtnClone);
   }
+
+  startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
 }
 
 // ---- Keyboard shortcut handler ----
@@ -1032,6 +1103,7 @@ export async function renderPlayerPage({ params, container }) {
     // Cleanup function
     return () => {
       disableRedirectGuard();
+      clearIframeTracker();
       if (_keyHandler) {
         window.removeEventListener('keydown', _keyHandler);
         _keyHandler = null;
