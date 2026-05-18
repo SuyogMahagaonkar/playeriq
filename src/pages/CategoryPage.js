@@ -2,13 +2,14 @@
 // PlayerIQ — Dynamic Category Page
 // ========================================
 
-import { getMovieBoxHome, searchMovieBox } from '../services/api.js';
+import { getMovieBoxHome, searchMovieBox, getLatestNetflix, getLatestPrime } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
 
 let allItems = [];
 let filteredItems = [];
 let currentPage = 1;
+let tmdbPage = 1;
 const ITEMS_PER_PAGE = 12;
 
 function cleanStringForMatching(str) {
@@ -59,6 +60,11 @@ export async function renderCategoryPage({ container, query }) {
   allItems = [];
   filteredItems = [];
   currentPage = 1;
+  tmdbPage = 1;
+
+  const cleanTitle = cleanStringForMatching(categoryTitle);
+  const isNetflix = cleanTitle === 'latest from netflix' || cleanTitle === 'netflix';
+  const isPrime = cleanTitle === 'latest from prime' || cleanTitle === 'latest from prime video' || cleanTitle === 'prime';
 
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
@@ -104,79 +110,99 @@ export async function renderCategoryPage({ container, query }) {
     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><div class="load-more-spinner" style="margin: 0 auto 15px;"></div>Loading Catalog...</div>';
   }
 
-  try {
-    const homeData = await getMovieBoxHome();
-    const items = homeData.items || [];
-    
-    // Find the row matches by title robustly
-    const rowObj = items.find(i => {
-      if (!i.title) return false;
-      const cleanRowTitle = cleanStringForMatching(i.title);
-      const cleanTargetTitle = cleanStringForMatching(categoryTitle);
-      return cleanRowTitle === cleanTargetTitle;
-    });
-    
-    if (rowObj) {
-      let rawItems = [];
-      if (rowObj.type === 'SUBJECTS_MOVIE' || rowObj.type === 'APPOINTMENT_LIST') {
-        rawItems = rowObj.subjects || [];
-      } else if (rowObj.type === 'CUSTOM') {
-        rawItems = (rowObj.customData?.items || []).map(ci => ci.subject).filter(Boolean);
-      }
+  const fetchTMDBPage = async (page) => {
+    const data = isNetflix ? await getLatestNetflix(page) : await getLatestPrime(page);
+    return (data.results || []).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: item.media_type
+    }));
+  };
 
-      allItems = rawItems.map(mbItem => ({
-        id: `mb_${mbItem.subjectId || mbItem.id}`,
-        title: mbItem.title,
-        name: mbItem.title,
-        poster_path: mbItem.cover?.url || mbItem.cover_url || mbItem.poster_path,
-        backdrop_path: mbItem.cover?.url || mbItem.cover_url || mbItem.backdrop_path,
-        vote_average: mbItem.imdbRate || mbItem.rating ? parseFloat(mbItem.imdbRate || mbItem.rating) : null,
-        release_date: mbItem.releaseDate || mbItem.release_date,
-        media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
-      }));
+  try {
+    if (isNetflix || isPrime) {
+      console.log(`[CategoryPage] Fetching page 1 of live ${isNetflix ? 'Netflix' : 'Prime'} catalog...`);
+      const pageItems = await fetchTMDBPage(1);
+      allItems = [...pageItems];
+    } else {
+      const homeData = await getMovieBoxHome();
+      const items = homeData.items || [];
+      
+      // Find the row matches by title robustly
+      const rowObj = items.find(i => {
+        if (!i.title) return false;
+        const cleanRowTitle = cleanStringForMatching(i.title);
+        const cleanTargetTitle = cleanStringForMatching(categoryTitle);
+        return cleanRowTitle === cleanTargetTitle;
+      });
+      
+      if (rowObj) {
+        let rawItems = [];
+        if (rowObj.type === 'SUBJECTS_MOVIE' || rowObj.type === 'APPOINTMENT_LIST') {
+          rawItems = rowObj.subjects || [];
+        } else if (rowObj.type === 'CUSTOM') {
+          rawItems = (rowObj.customData?.items || []).map(ci => ci.subject).filter(Boolean);
+        }
+
+        allItems = rawItems.map(mbItem => ({
+          id: `mb_${mbItem.subjectId || mbItem.id}`,
+          title: mbItem.title,
+          name: mbItem.title,
+          poster_path: mbItem.cover?.url || mbItem.cover_url || mbItem.poster_path,
+          backdrop_path: mbItem.cover?.url || mbItem.cover_url || mbItem.backdrop_path,
+          vote_average: mbItem.imdbRate || mbItem.rating ? parseFloat(mbItem.imdbRate || mbItem.rating) : null,
+          release_date: mbItem.releaseDate || mbItem.release_date,
+          media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
+        }));
+      }
     }
 
     filteredItems = [...allItems];
-    renderGrid();
+    renderGrid(isNetflix || isPrime);
 
-    // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category ----
-    const enrichmentKeyword = getEnrichmentQuery(categoryTitle);
-    if (enrichmentKeyword) {
-      console.log(`[CategoryPage] Enriching catalog with search keyword: "${enrichmentKeyword}"`);
-      searchMovieBox(enrichmentKeyword).then(data => {
-        if (data.results && data.results.length > 0) {
-          const searchItems = data.results.map(m => ({
-            id: `mb_${m.subject_id || m.id || m.subjectId}`,
-            title: m.title,
-            name: m.title,
-            poster_path: m.cover?.url || m.cover_url || m.poster_path,
-            backdrop_path: m.backdrop_path || m.cover?.url || m.cover_url || m.poster_path,
-            vote_average: m.imdbRate || m.rating || null,
-            release_date: m.releaseDate || m.release_date || m.year,
-            media_type: m.media_type || (m.subjectType === 2 ? 'tv' : 'movie')
-          }));
+    // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category (Skipped for Netlix/Prime since they use live APIs!) ----
+    if (!isNetflix && !isPrime) {
+      const enrichmentKeyword = getEnrichmentQuery(categoryTitle);
+      if (enrichmentKeyword) {
+        searchMovieBox(enrichmentKeyword).then(data => {
+          if (data.results && data.results.length > 0) {
+            const searchItems = data.results.map(m => ({
+              id: `mb_${m.subject_id || m.id || m.subjectId}`,
+              title: m.title,
+              name: m.title,
+              poster_path: m.cover?.url || m.cover_url || m.poster_path,
+              backdrop_path: m.backdrop_path || m.cover?.url || m.cover_url || m.poster_path,
+              vote_average: m.imdbRate || m.rating || null,
+              release_date: m.releaseDate || m.release_date || m.year,
+              media_type: m.media_type || (m.subjectType === 2 ? 'tv' : 'movie')
+            }));
 
-          // Deduplicate items against already existing ones
-          const existingIds = new Set(allItems.map(i => i.id));
-          const newItems = searchItems.filter(item => !existingIds.has(item.id));
+            // Deduplicate items against already existing ones
+            const existingIds = new Set(allItems.map(i => i.id));
+            const newItems = searchItems.filter(item => !existingIds.has(item.id));
 
-          if (newItems.length > 0) {
-            console.log(`[CategoryPage] Found ${newItems.length} new related releases for enrichment.`);
-            allItems = [...allItems, ...newItems];
+            if (newItems.length > 0) {
+              allItems = [...allItems, ...newItems];
 
-            // Re-apply filter if user is currently searching
-            const currentQuery = inputEl ? inputEl.value.toLowerCase().trim() : '';
-            if (currentQuery) {
-              filteredItems = allItems.filter(item => (item.title || '').toLowerCase().includes(currentQuery));
-            } else {
-              filteredItems = [...allItems];
+              // Re-apply filter if user is currently searching
+              const currentQuery = inputEl ? inputEl.value.toLowerCase().trim() : '';
+              if (currentQuery) {
+                filteredItems = allItems.filter(item => (item.title || '').toLowerCase().includes(currentQuery));
+              } else {
+                filteredItems = [...allItems];
+              }
+              renderGrid(false);
             }
-            renderGrid();
           }
-        }
-      }).catch(err => {
-        console.warn('[CategoryPage] Silent background enrichment failed:', err);
-      });
+        }).catch(err => {
+          console.warn('[CategoryPage] Silent background enrichment failed:', err);
+        });
+      }
     }
 
     // Event listeners
@@ -188,12 +214,45 @@ export async function renderCategoryPage({ container, query }) {
         filteredItems = [...allItems];
       }
       currentPage = 1;
-      renderGrid();
+      renderGrid(isNetflix || isPrime);
     });
 
-    container.querySelector('#category-load-more-btn')?.addEventListener('click', () => {
-      currentPage++;
-      renderGrid(true);
+    container.querySelector('#category-load-more-btn')?.addEventListener('click', async (e) => {
+      if (isNetflix || isPrime) {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.innerHTML = 'Loading more...';
+        
+        try {
+          tmdbPage++;
+          console.log(`[CategoryPage] Fetching page ${tmdbPage} of live ${isNetflix ? 'Netflix' : 'Prime'} catalog...`);
+          const nextItems = await fetchTMDBPage(tmdbPage);
+          if (nextItems.length > 0) {
+            // Deduplicate
+            const existingIds = new Set(allItems.map(i => i.id));
+            const freshItems = nextItems.filter(item => !existingIds.has(item.id));
+            allItems = [...allItems, ...freshItems];
+            
+            const currentQuery = inputEl ? inputEl.value.toLowerCase().trim() : '';
+            if (currentQuery) {
+              filteredItems = allItems.filter(item => (item.title || '').toLowerCase().includes(currentQuery));
+            } else {
+              filteredItems = [...allItems];
+            }
+            renderGrid(true);
+          } else {
+            btn.style.display = 'none';
+          }
+        } catch (tmdbErr) {
+          console.error('[CategoryPage] Live API load more failed:', tmdbErr);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = 'Load More Releases';
+        }
+      } else {
+        currentPage++;
+        renderGrid(false);
+      }
     });
 
   } catch (err) {
@@ -204,14 +263,15 @@ export async function renderCategoryPage({ container, query }) {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function renderGrid(append = false) {
+function renderGrid(isLiveProvider = false) {
   const grid = document.getElementById('category-grid');
   const loadMoreBtn = document.getElementById('category-load-more-btn');
   if (!grid) return;
 
   const totalItems = filteredItems.length;
   const startIndex = 0;
-  const endIndex = currentPage * ITEMS_PER_PAGE;
+  // If live provider, render the entire allItems (since pagination is done in backend request)
+  const endIndex = isLiveProvider ? totalItems : currentPage * ITEMS_PER_PAGE;
   const pageItems = filteredItems.slice(startIndex, endIndex);
 
   if (totalItems === 0) {
@@ -225,6 +285,10 @@ function renderGrid(append = false) {
   attachCardClicks(grid);
 
   if (loadMoreBtn) {
-    loadMoreBtn.style.display = endIndex < totalItems ? 'block' : 'none';
+    if (isLiveProvider) {
+      loadMoreBtn.style.display = totalItems > 0 ? 'block' : 'none';
+    } else {
+      loadMoreBtn.style.display = endIndex < totalItems ? 'block' : 'none';
+    }
   }
 }

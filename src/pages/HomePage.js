@@ -1,8 +1,4 @@
-// ========================================
-// PlayerIQ — Native MovieBox Home Page
-// ========================================
-
-import { getMovieBoxHome } from '../services/api.js';
+import { getMovieBoxHome, getLatestNetflix, getLatestPrime } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -16,7 +12,12 @@ export async function renderHomePage({ container }) {
   `;
 
   try {
-    const homeData = await getMovieBoxHome();
+    const [homeData, netflixData, primeData] = await Promise.all([
+      getMovieBoxHome(),
+      getLatestNetflix().catch(() => ({ results: [] })),
+      getLatestPrime().catch(() => ({ results: [] }))
+    ]);
+    
     const items = homeData.items || [];
     
     // Find banner section
@@ -55,6 +56,50 @@ export async function renderHomePage({ container }) {
       );
     }
 
+    // 1. Netflix Row
+    const mappedNetflix = (netflixData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: item.media_type
+    }));
+    let netflixHTML = '';
+    if (mappedNetflix.length > 0) {
+      netflixHTML = createContentRow(
+        `<i data-lucide="tv" class="search-section-icon" style="color:#e50914;"></i> Latest from Netflix`,
+        mappedNetflix,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 2. Prime Video Row
+    const mappedPrime = (primeData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: item.media_type
+    }));
+    let primeHTML = '';
+    if (mappedPrime.length > 0) {
+      primeHTML = createContentRow(
+        `<i data-lucide="film" class="search-section-icon" style="color:#00a8e1;"></i> Latest from Prime`,
+        mappedPrime,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
     // Extract lists from the home payload
     const validRows = items.filter(i => 
       (i.type === 'SUBJECTS_MOVIE' && i.subjects && i.subjects.length > 0 && i.title) ||
@@ -88,7 +133,7 @@ export async function renderHomePage({ container }) {
       return createContentRow(`<i data-lucide="${icon}" class="search-section-icon"></i> ${rowObj.title}`, mappedItems, 'mixed', null, 'portrait');
     }).join('');
 
-    container.innerHTML = heroHTML + continueWatchingHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
+    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
 
     // Initialize interactivity
     const cleanupHero = initHeroBanner();

@@ -136,3 +136,45 @@ export async function searchMovieBox(query, type = 'all') {
   if (!res.ok) throw new Error(`MovieBox search failed: ${res.status}`);
   return res.json();
 }
+
+export async function getLatestNetflix(page = 1) {
+  const isSafe = isSafeSearchOn();
+  const [moviesRes, tvRes] = await Promise.all([
+    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`),
+    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`)
+  ]);
+  const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
+  
+  const mixed = [];
+  const max = Math.max((movies.results || []).length, (tvs.results || []).length);
+  for (let i = 0; i < max; i++) {
+    if (movies.results?.[i]) {
+      mixed.push({ ...movies.results[i], media_type: 'movie' });
+    }
+    if (tvs.results?.[i]) {
+      mixed.push({ ...tvs.results[i], media_type: 'tv' });
+    }
+  }
+  return { results: mixed };
+}
+
+export async function getLatestPrime(page = 1) {
+  const isSafe = isSafeSearchOn();
+  const [moviesRes, tvRes] = await Promise.all([
+    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`),
+    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`)
+  ]);
+  const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
+  
+  const mixed = [];
+  const max = Math.max((movies.results || []).length, (tvs.results || []).length);
+  for (let i = 0; i < max; i++) {
+    if (movies.results?.[i]) {
+      mixed.push({ ...movies.results[i], media_type: 'movie' });
+    }
+    if (tvs.results?.[i]) {
+      mixed.push({ ...tvs.results[i], media_type: 'tv' });
+    }
+  }
+  return { results: mixed };
+}
