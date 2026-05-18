@@ -229,7 +229,7 @@
 /* Unaired Episode locked state */
 .episode-card.unaired {
   opacity: 0.7;
-  cursor: not-allowed !important;
+  cursor: default !important;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.03);
 }
