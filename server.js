@@ -597,6 +597,7 @@ app.get('/api/proxy/segment', async (req, res) => {
       if (response.headers[h]) res.setHeader(h, response.headers[h]);
     });
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Accel-Buffering', 'no'); // Prevent Nginx from buffering the video stream (critical for iOS Safari Range requests)
 
     // Pipe the stream directly to the browser — no buffering!
     response.data.pipe(res);

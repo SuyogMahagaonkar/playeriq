@@ -18,7 +18,7 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
   container.innerHTML = `
     <div class="vp-player" id="vp-player">
-      <video class="vp-video" id="vp-video" playsinline></video>
+      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous"></video>
 
       <!-- Loading spinner -->
       <div class="vp-loader" id="vp-loader">
