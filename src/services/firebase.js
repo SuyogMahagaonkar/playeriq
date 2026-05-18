@@ -205,7 +205,8 @@ export async function fetchWatchHistory(userId) {
               docId: `${show.docId}_s${epData.season}_e${epData.episode}`,
               showDocId: show.docId,
               seasonDocId: seasonDoc.id,
-              episodeDocId: epDoc.id
+              episodeDocId: epDoc.id,
+              showPosterPath: show.poster_path || epData.poster_path
             });
           });
         }));

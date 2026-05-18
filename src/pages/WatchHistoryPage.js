@@ -81,7 +81,7 @@ function groupTVHistoryItems(historyItems) {
           type: 'folder-tv',
           id: `${tvId}_season_${seasonNum}`,
           title: `${eps[0].title || eps[0].name} (Season ${seasonNum})`,
-          poster_path: eps[0].poster_path,
+          poster_path: eps[0].showPosterPath || eps[0].poster_path,
           episodes: eps
         });
       } else {
@@ -89,7 +89,7 @@ function groupTVHistoryItems(historyItems) {
           type: 'folder-tv',
           id: tvId,
           title: eps[0].title || eps[0].name,
-          poster_path: eps[0].poster_path,
+          poster_path: eps[0].showPosterPath || eps[0].poster_path,
           episodes: eps
         });
       }
@@ -384,10 +384,10 @@ async function removeAllHistory(uid) {
 function renderHistoryCard(item, isWatchAgain = false) {
   const progress = item.duration > 0 ? Math.round((item.currentTime / item.duration) * 100) : 0;
   const subtitle = item.type === 'tv' ? `S${item.season} · E${item.episode}` : 'Movie';
-  const poster = item.poster_path || '';
+  const poster = item.showPosterPath || item.poster_path || '';
 
   return `
-    <div class="user-media-card" data-history-card data-id="${item.docId || item.id}" data-media-type="${item.type}" data-season="${item.season || 1}" data-episode="${item.episode || 1}">
+    <div class="user-media-card" data-history-card data-id="${item.docId || item.id}" data-tmdb-id="${item.id}" data-media-type="${item.type}" data-season="${item.season || 1}" data-episode="${item.episode || 1}">
       <div class="user-media-checkbox" title="Select for bulk delete">
         <input type="checkbox" class="bulk-delete-checkbox" data-id="${item.docId || item.id}" />
         <div class="checkbox-visual"></div>
