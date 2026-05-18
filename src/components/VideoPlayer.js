@@ -212,20 +212,22 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     // Expose seekOffset getter for updateTime/updateBuffer
     window._playerGetSeekOffset = () => seekOffset;
 
+    const triedUrls = new Set([streamData.url]);
     video.addEventListener('error', (e) => {
       console.error('[Player] Video error:', video.error?.code, video.error?.message);
-      const nextStream = allStreams.find(s => s.url && s.url !== streamData.url);
+      const nextStream = allStreams.find(s => s.url && !triedUrls.has(s.url));
       if (nextStream) {
-        console.warn('[Player] Primary stream failed, trying fallback stream');
+        console.warn('[Player] Stream failed, trying next fallback stream:', nextStream.resolution);
+        triedUrls.add(nextStream.url);
         currentBaseUrl = getBaseUrl(nextStream.url);
         seekOffset = 0;
         video.src = nextStream.url;
       } else {
-        console.error('[Player] No other streams to try. Triggering fatal error.');
+        console.error('[Player] All streams failed. Triggering fatal error.');
         clearTimeout(watchdogTimeout);
         if (onFatalError) onFatalError();
       }
-    }, { once: true });
+    });
 
   } else if (streamData.type === 'hls' && Hls.isSupported()) {
     hls = new Hls({

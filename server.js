@@ -572,6 +572,9 @@ app.get('/api/proxy/segment', async (req, res) => {
   try {
     // Forward the Range header from the browser (critical for .mp4 seeking/scrubbing)
     const rangeHeader = req.headers['range'];
+    
+    // Detailed log to analyze range requests and iPhone behavior
+    console.log(`[Segment Proxy] Request for: ${url.substring(0, 60)}... | Range: ${rangeHeader || 'None'}`);
 
     const requestHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -596,6 +599,13 @@ app.get('/api/proxy/segment', async (req, res) => {
     forwardHeaders.forEach(h => {
       if (response.headers[h]) res.setHeader(h, response.headers[h]);
     });
+
+    // Force content-type if missing or incorrect
+    const currentContentType = res.getHeader('content-type');
+    if (!currentContentType || currentContentType === 'application/octet-stream') {
+      res.setHeader('content-type', 'video/mp4');
+    }
+
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Accel-Buffering', 'no'); // Prevent Nginx from buffering the video stream (critical for iOS Safari Range requests)
 
