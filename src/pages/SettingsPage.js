@@ -2,14 +2,14 @@
 // PlayerIQ — Settings Page
 // ========================================
 
-import { getUser, login, logout } from '../services/auth.js';
+import { getUser, login, logout, waitAuthReady } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import { getSettings, saveSettings, clearAllWatchHistory } from '../services/firebase.js';
 import { createFooter } from '../components/Footer.js';
 import { refreshSidebarNav } from '../components/Sidebar.js';
 
 export async function renderSettingsPage({ container }) {
-  const user = getUser();
+  const user = await waitAuthReady();
 
   if (!user) {
     container.innerHTML = `

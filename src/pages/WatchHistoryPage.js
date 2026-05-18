@@ -2,7 +2,7 @@
 // PlayerIQ — Watch History Page
 // ========================================
 
-import { getUser, login, onUserChange } from '../services/auth.js';
+import { getUser, login, onUserChange, waitAuthReady } from '../services/auth.js';
 import { getWatchHistory, removeFromHistory } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import { createFooter } from '../components/Footer.js';
@@ -10,7 +10,7 @@ import { createFooter } from '../components/Footer.js';
 export async function renderWatchHistoryPage({ container }) {
   container.innerHTML = renderShell('loading');
 
-  const user = getUser();
+  const user = await waitAuthReady();
 
   if (!user) {
     container.innerHTML = renderGuestPrompt('Watch History', 'history');

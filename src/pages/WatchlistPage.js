@@ -2,7 +2,7 @@
 // PlayerIQ — My Watchlist Page
 // ========================================
 
-import { getUser, login } from '../services/auth.js';
+import { getUser, login, waitAuthReady } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import { createFooter } from '../components/Footer.js';
 import { fetchWatchlist, removeFromWatchlist } from '../services/firebase.js';
@@ -10,7 +10,7 @@ import { fetchWatchlist, removeFromWatchlist } from '../services/firebase.js';
 export async function renderWatchlistPage({ container }) {
   container.innerHTML = `<div class="user-page" style="display:flex;align-items:center;justify-content:center;min-height:60vh"><div class="load-more-spinner" style="width:40px;height:40px"></div></div>`;
 
-  const user = getUser();
+  const user = await waitAuthReady();
   if (!user) {
     container.innerHTML = `
       <div class="user-page">

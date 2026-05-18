@@ -22,6 +22,18 @@ export function setNavbarAvatarUpdater(fn) { _updateNavbarAvatar = fn; }
 let currentUser = null;
 const listeners = new Set();
 
+// ---- Auth Ready Promise ----
+let isAuthReady = false;
+let authReadyResolve = null;
+const authReadyPromise = new Promise(resolve => {
+  authReadyResolve = resolve;
+});
+
+export function waitAuthReady() {
+  if (isAuthReady) return Promise.resolve(currentUser);
+  return authReadyPromise;
+}
+
 /**
  * Returns the currently signed-in Firebase user, or null.
  */
@@ -75,6 +87,12 @@ export function initAuth() {
 
     notifyListeners();
     if (_updateNavbarAvatar) _updateNavbarAvatar(user);
+
+    // Mark auth ready on the first change event from Firebase
+    if (!isAuthReady) {
+      isAuthReady = true;
+      if (authReadyResolve) authReadyResolve(user);
+    }
   });
 }
 
