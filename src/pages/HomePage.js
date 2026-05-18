@@ -41,9 +41,15 @@ export async function renderHomePage({ container }) {
 
     // Continue Watching
     const history = await getWatchHistory();
+    const continueWatchingItems = history.filter(item => {
+      if (item.watched) return false;
+      if (item.duration > 0 && (item.duration - item.currentTime <= 300)) return false;
+      return true;
+    });
+
     let continueWatchingHTML = '';
-    if (history && history.length > 0) {
-      const historyCards = history.map(item => {
+    if (continueWatchingItems && continueWatchingItems.length > 0) {
+      const historyCards = continueWatchingItems.map(item => {
         const route = item.type === 'tv' 
           ? `/watch/tv/${item.id}?s=${item.season}&e=${item.episode}` 
           : `/watch/movie/${item.id}`;

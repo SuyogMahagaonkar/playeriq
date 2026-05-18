@@ -94,10 +94,17 @@ export async function logout() {
 
 // ---- Watch History (Cloud or Local fallback) ----
 export async function saveProgress(media) {
+  // If only less than 5 minutes (300 seconds) remaining, treat as fully watched
+  const isWatched = media.duration > 0 && (media.duration - media.currentTime <= 300);
+  const mediaWithWatched = {
+    ...media,
+    watched: isWatched || media.watched || false
+  };
+
   if (currentUser) {
-    await saveProgressToCloud(currentUser.uid, media);
+    await saveProgressToCloud(currentUser.uid, mediaWithWatched);
   } else {
-    saveProgressLocal(media);
+    saveProgressLocal(mediaWithWatched);
   }
 }
 

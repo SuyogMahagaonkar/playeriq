@@ -29,6 +29,7 @@ export function saveProgressLocal(media) {
       episode: media.episode || 1,
       currentTime: media.currentTime || 0,
       duration: media.duration || 0,
+      watched: media.watched || false,
       timestamp: Date.now()
     });
 

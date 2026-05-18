@@ -103,10 +103,16 @@ async function getSavedPlaybackTime(id, isTV, season, episode) {
       }
     });
 
-    if (match && match.currentTime > 0 && match.duration > 0) {
-      const percent = (match.currentTime / match.duration) * 100;
-      if (percent < 95 && match.currentTime > 5) {
-        return Math.floor(match.currentTime);
+    if (match) {
+      // If already watched or less than 5 minutes remaining, play from start
+      if (match.watched) return 0;
+      if (match.duration > 0 && (match.duration - match.currentTime <= 300)) return 0;
+
+      if (match.currentTime > 0 && match.duration > 0) {
+        const percent = (match.currentTime / match.duration) * 100;
+        if (percent < 95 && match.currentTime > 5) {
+          return Math.floor(match.currentTime);
+        }
       }
     }
   } catch (err) {
