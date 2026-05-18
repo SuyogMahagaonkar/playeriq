@@ -195,6 +195,13 @@
   .search-input-wrapper { width: 120px; }
   .search-input-wrapper:focus-within { width: 170px; }
   .search-input  { font-size: 0.8rem; }
+  
+  /* Notification Popover Mobile Scaling */
+  .notif-dropdown {
+    right: -16px !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 340px !important;
+  }
 
   /* ---- Content Rows ---- */
   .content-row-scroll { gap: var(--space-xs); }
@@ -209,11 +216,34 @@
   .detail-poster-wrapper     { width: 120px; }
   .detail-main               { margin-top: -80px; padding: 0 var(--space-sm); }
   .detail-title              { font-size: var(--text-xl); }
-  .detail-actions .btn       { padding: var(--space-xs) var(--space-md); font-size: var(--text-xs); }
+  .detail-actions            { flex-direction: column; gap: var(--space-sm); }
+  .detail-actions .btn       { width: 100%; justify-content: center; padding: var(--space-xs) var(--space-md); font-size: var(--text-xs); }
   .detail-section            { padding: var(--space-sm); }
 
-  /* ---- Player ---- */
-  .episode-still { width: 90px; min-width: 90px; }
+  /* ---- Video Player Custom Touch Optimizations ---- */
+  .vp-controls {
+    padding: 20px 10px 10px !important;
+    gap: 8px !important;
+  }
+  .vp-time {
+    font-size: 11px !important;
+    margin-left: 2px !important;
+  }
+  .vp-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .vp-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .vp-big-play svg {
+    width: 55px !important;
+    height: 55px !important;
+  }
+  .vp-volume-group .vp-volume-slider {
+    display: none !important;
+  }
 
   /* ---- Profile dropdown: full-width on phone ---- */
   .profile-dropdown {
@@ -244,6 +274,28 @@
 
   /* ---- Sidebar overlay ---- */
   .sidebar-overlay.active { display: block; }
+}
+
+/* ================================================
+   MEDIUM / SMALL PHONE INTERMEDIATE (≤ 580px)
+   ================================================ */
+@media (max-width: 580px) {
+  /* Stack episode cards vertically exactly like Netflix Mobile */
+  .episode-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--space-sm) !important;
+    padding: var(--space-md) !important;
+  }
+  .episode-still-container {
+    width: 100% !important;
+    min-width: 100% !important;
+    aspect-ratio: 16/9 !important;
+  }
+  .episode-still-container img {
+    width: 100% !important;
+    height: 100% !important;
+  }
 }
 
 /* ================================================
