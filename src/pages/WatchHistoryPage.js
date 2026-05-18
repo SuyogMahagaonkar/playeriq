@@ -531,17 +531,49 @@ function openFolderModal(title, episodes) {
       if (!confirm('Remove this episode from your watch history?')) return;
 
       const row = btn.closest('.folder-episode-item');
-      row.style.opacity = '0.4';
+      
+      // Animate row collapse smoothly
       row.style.pointerEvents = 'none';
+      row.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+      row.style.opacity = '0';
+      row.style.transform = 'scale(0.9) translateX(20px)';
+      row.style.maxHeight = '0';
+      row.style.padding = '0';
+      row.style.marginTop = '0';
+      row.style.marginBottom = '0';
+      row.style.border = 'none';
 
       await removeFromHistory(docId);
-      close();
+      
+      setTimeout(() => {
+        row.remove();
+      }, 350);
 
-      // Refresh the page
+      // Remove from the in-memory array to track the remaining count
+      const index = episodes.findIndex(ep => (ep.docId || ep.id) === docId);
+      if (index > -1) {
+        episodes.splice(index, 1);
+      }
+
+      // Update the modal text dynamically
+      const descEl = overlay.querySelector('.folder-modal-desc');
+      if (descEl) {
+        descEl.textContent = `You have completed ${episodes.length} episode${episodes.length !== 1 ? 's' : ''} of this show. Select an episode to watch it again:`;
+      }
+
+      // Refresh the background page immediately
       const mainContainer = document.getElementById('main-content');
       if (mainContainer) {
         const freshItems = await getWatchHistory();
         renderPage(mainContainer, freshItems, getUser());
+      }
+
+      // If only 0 or 1 episode remains, the collection folder should close
+      // (since 1 episode will now render as a standard single card on the updated background page)
+      if (episodes.length <= 1) {
+        setTimeout(() => {
+          close();
+        }, 600);
       }
     });
   });

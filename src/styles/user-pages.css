@@ -783,6 +783,8 @@
   border: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
   position: relative;
+  max-height: 160px;
+  overflow: hidden;
   transition: all var(--transition-normal);
 }
 
