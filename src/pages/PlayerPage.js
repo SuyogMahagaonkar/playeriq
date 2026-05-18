@@ -66,16 +66,34 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
         simulatedCurrentTime = duration;
       }
 
+      // Extract episode metadata if TV
+      let epStill = posterPath;
+      let epTitle = '';
+      let epOverview = '';
+      if (isTV) {
+        const details = episodeDetails.get(`S${season}E${episode}`);
+        if (details) {
+          if (details.still_path) {
+            epStill = img.still(details.still_path);
+          }
+          epTitle = details.name;
+          epOverview = details.overview;
+        }
+      }
+
       await saveProgress({
         id,
         title,
         type: isTV ? 'tv' : 'movie',
-        poster_path: posterPath,
+        poster_path: epStill,
         backdrop_path: backdropPath,
         season,
         episode,
         currentTime: simulatedCurrentTime,
-        duration
+        duration,
+        episode_title: epTitle,
+        episode_still: epStill,
+        episode_overview: epOverview
       });
 
       // Stop tracking if fully watched (under 5 min left)
@@ -90,6 +108,7 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
 
 let tmdbRuntimeSeconds = null; // TMDB runtime in seconds — used as duration fallback for slider
 let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runtime in seconds
+let episodeDetails = new Map(); // key: `S${season}E${ep}` — episode metadata (still_path, name, overview)
 let totalEpisodes = 0;
 
 function getEmbedUrl(tmdbId, isTV, season = 1, episode = 1, imdbId = null) {
@@ -396,17 +415,35 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           wrapper,
           streamData,
           (currentTime, duration) => {
+            // Extract episode metadata if TV
+            let epStill = posterPath;
+            let epTitle = '';
+            let epOverview = '';
+            if (isTV) {
+              const details = episodeDetails.get(`S${season}E${episode}`);
+              if (details) {
+                if (details.still_path) {
+                  epStill = img.still(details.still_path);
+                }
+                epTitle = details.name;
+                epOverview = details.overview;
+              }
+            }
+
             // Save progress every 5 seconds (called by VideoPlayer)
             saveProgress({
               id,
               title,
               type: isTV ? 'tv' : 'movie',
-              poster_path: posterPath,
+              poster_path: epStill,
               backdrop_path: backdropPath,
               season,
               episode,
               currentTime,
-              duration
+              duration,
+              episode_title: epTitle,
+              episode_still: epStill,
+              episode_overview: epOverview
             });
 
             // Floating Next Episode button in last 60 seconds
@@ -1160,11 +1197,16 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
       </div>
     `).join('');
 
-    // Store per-episode runtimes for use by the video player
+    // Store per-episode runtimes and metadata details
     (season.episodes || []).forEach(ep => {
       if (ep.runtime) {
         episodeRuntimes.set(`S${seasonNumber}E${ep.episode_number}`, ep.runtime * 60);
       }
+      episodeDetails.set(`S${seasonNumber}E${ep.episode_number}`, {
+        still_path: ep.still_path || null,
+        name: ep.name || `Episode ${ep.episode_number}`,
+        overview: ep.overview || ''
+      });
     });
 
     // Set tmdbRuntimeSeconds to the active episode's runtime right away

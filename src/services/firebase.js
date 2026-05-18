@@ -79,7 +79,11 @@ export function getCurrentUser() {
  */
 export async function saveProgressToCloud(userId, media) {
   try {
-    const ref = doc(db, 'users', userId, 'watch_history', String(media.id));
+    const docId = media.type === 'tv'
+      ? `${media.id}_s${media.season}_e${media.episode}`
+      : String(media.id);
+
+    const ref = doc(db, 'users', userId, 'watch_history', docId);
     await setDoc(ref, {
       ...media,
       timestamp: serverTimestamp()
@@ -114,7 +118,12 @@ export async function fetchWatchHistory(userId) {
     const snapshot = await getDocs(colRef);
     const items = [];
     snapshot.forEach(docSnap => {
-      items.push({ ...docSnap.data(), id: docSnap.id });
+      const data = docSnap.data();
+      items.push({ 
+        ...data, 
+        id: data.id || docSnap.id, // Keep the original TMDB ID or fall back to docSnap.id
+        docId: docSnap.id 
+      });
     });
     // Sort by timestamp descending (most recent first)
     items.sort((a, b) => {

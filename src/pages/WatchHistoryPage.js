@@ -209,7 +209,7 @@ function renderPage(container, items, user) {
       const episodes = JSON.parse(folder.dataset.episodesJson);
       for (const ep of episodes) {
         // Also clear out individual records
-        await removeFromHistory(ep.id);
+        await removeFromHistory(ep.docId || ep.id);
       }
 
       folder.remove();
@@ -269,7 +269,7 @@ function renderPage(container, items, user) {
       if (epsJson) {
         const episodes = JSON.parse(epsJson);
         for (const ep of episodes) {
-          await removeFromHistory(ep.id);
+          await removeFromHistory(ep.docId || ep.id);
         }
       } else {
         await removeFromHistory(id);
@@ -315,9 +315,9 @@ function renderHistoryCard(item, isWatchAgain = false) {
   const poster = item.poster_path || '';
 
   return `
-    <div class="user-media-card" data-history-card data-id="${item.id}" data-media-type="${item.type}" data-season="${item.season || 1}" data-episode="${item.episode || 1}">
+    <div class="user-media-card" data-history-card data-id="${item.docId || item.id}" data-media-type="${item.type}" data-season="${item.season || 1}" data-episode="${item.episode || 1}">
       <div class="user-media-checkbox" title="Select for bulk delete">
-        <input type="checkbox" class="bulk-delete-checkbox" data-id="${item.id}" />
+        <input type="checkbox" class="bulk-delete-checkbox" data-id="${item.docId || item.id}" />
         <div class="checkbox-visual"></div>
       </div>
       ${poster
