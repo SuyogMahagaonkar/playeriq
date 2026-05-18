@@ -633,3 +633,47 @@
     font-size: var(--text-xs);
   }
 }
+
+/* ---------- Touch & Mobile Custom Overrides for Player Page ---------- */
+@media (hover: none) and (pointer: coarse) {
+  /* Force fullscreen button to always remain visible on touch screen players */
+  .player-fs-btn {
+    opacity: 1 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Elegant Wrapping Top Bar to prevent collisions */
+  .player-top-bar {
+    flex-wrap: wrap !important;
+    padding: 8px var(--space-sm) !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  .player-now-playing {
+    order: 3 !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    margin-top: 4px !important;
+  }
+  .player-source-selector {
+    order: 2 !important;
+  }
+  .player-back {
+    order: 1 !important;
+    padding: 5px 8px !important;
+  }
+  .player-now-title {
+    font-size: 0.8rem !important;
+  }
+  .player-source-select {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+  }
+  .player-next-episode {
+    width: calc(100% - 20px) !important;
+    justify-content: center !important;
+    padding: 10px 16px !important;
+    margin: 8px 10px !important;
+  }
+}
