@@ -22,6 +22,38 @@ function cleanStringForMatching(str) {
     .trim();
 }
 
+function getEnrichmentQuery(title) {
+  if (!title) return 'popular';
+  const clean = title
+    .replace(/<[^>]*>/g, '') // remove HTML tags
+    .replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '') // remove emojis
+    .replace(/[^a-zA-Z0-9\s]/g, '') // remove special symbols
+    .trim();
+    
+  const lower = clean.toLowerCase();
+  
+  // Custom smart keyword mapping for standard categories to pull best results
+  if (lower.includes('bollywood') || lower.includes('hindi') || lower.includes('indian')) return 'hindi';
+  if (lower.includes('k-drama') || lower.includes('kdrama') || lower.includes('korean')) return 'korean';
+  if (lower.includes('horror')) return 'horror';
+  if (lower.includes('action')) return 'action';
+  if (lower.includes('comedy')) return 'comedy';
+  if (lower.includes('anime') || lower.includes('hentai')) return 'anime';
+  if (lower.includes('fight') || lower.includes('wwe')) return 'action';
+  if (lower.includes('shorts') || lower.includes('short')) return 'short';
+  if (lower.includes('history') || lower.includes('personal') || lower.includes('you')) return 'movie';
+  if (lower.includes('tv') || lower.includes('show') || lower.includes('series')) return 'tv';
+  if (lower.includes('movie') || lower.includes('film')) return 'movie';
+  
+  // Default to first few words, filtering out generic ones
+  const words = clean.split(/\s+/).filter(w => {
+    const wl = w.toLowerCase();
+    return wl.length > 2 && wl !== 'and' && wl !== 'the' && wl !== 'for' && wl !== 'your' && wl !== 'with' && wl !== 'that' && wl !== 'now';
+  });
+  
+  return words.length > 0 ? words[0] : 'popular';
+}
+
 export async function renderCategoryPage({ container, query }) {
   const categoryTitle = query.title || 'Category';
   allItems = [];
@@ -76,9 +108,6 @@ export async function renderCategoryPage({ container, query }) {
     const homeData = await getMovieBoxHome();
     const items = homeData.items || [];
     
-    console.log('[CategoryPage] Query Title:', categoryTitle);
-    console.log('[CategoryPage] Cleaned Target Title:', cleanStringForMatching(categoryTitle));
-    
     // Find the row matches by title robustly
     const rowObj = items.find(i => {
       if (!i.title) return false;
@@ -88,7 +117,6 @@ export async function renderCategoryPage({ container, query }) {
     });
     
     if (rowObj) {
-      console.log('[CategoryPage] Found matching row:', rowObj.title);
       let rawItems = [];
       if (rowObj.type === 'SUBJECTS_MOVIE' || rowObj.type === 'APPOINTMENT_LIST') {
         rawItems = rowObj.subjects || [];
@@ -106,12 +134,50 @@ export async function renderCategoryPage({ container, query }) {
         release_date: mbItem.releaseDate || mbItem.release_date,
         media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
       }));
-    } else {
-      console.warn('[CategoryPage] No matching row found for:', categoryTitle);
     }
 
     filteredItems = [...allItems];
     renderGrid();
+
+    // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category ----
+    const enrichmentKeyword = getEnrichmentQuery(categoryTitle);
+    if (enrichmentKeyword) {
+      console.log(`[CategoryPage] Enriching catalog with search keyword: "${enrichmentKeyword}"`);
+      searchMovieBox(enrichmentKeyword).then(data => {
+        if (data.results && data.results.length > 0) {
+          const searchItems = data.results.map(m => ({
+            id: `mb_${m.subject_id || m.id || m.subjectId}`,
+            title: m.title,
+            name: m.title,
+            poster_path: m.cover?.url || m.cover_url || m.poster_path,
+            backdrop_path: m.backdrop_path || m.cover?.url || m.cover_url || m.poster_path,
+            vote_average: m.imdbRate || m.rating || null,
+            release_date: m.releaseDate || m.release_date || m.year,
+            media_type: m.media_type || (m.subjectType === 2 ? 'tv' : 'movie')
+          }));
+
+          // Deduplicate items against already existing ones
+          const existingIds = new Set(allItems.map(i => i.id));
+          const newItems = searchItems.filter(item => !existingIds.has(item.id));
+
+          if (newItems.length > 0) {
+            console.log(`[CategoryPage] Found ${newItems.length} new related releases for enrichment.`);
+            allItems = [...allItems, ...newItems];
+
+            // Re-apply filter if user is currently searching
+            const currentQuery = inputEl ? inputEl.value.toLowerCase().trim() : '';
+            if (currentQuery) {
+              filteredItems = allItems.filter(item => (item.title || '').toLowerCase().includes(currentQuery));
+            } else {
+              filteredItems = [...allItems];
+            }
+            renderGrid();
+          }
+        }
+      }).catch(err => {
+        console.warn('[CategoryPage] Silent background enrichment failed:', err);
+      });
+    }
 
     // Event listeners
     inputEl?.addEventListener('input', (e) => {
