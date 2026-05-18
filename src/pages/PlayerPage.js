@@ -560,7 +560,7 @@ export async function renderPlayerPage({ params, container }) {
     // For TV: load episode list FIRST so episodeRuntimes is populated
     // before loadPlayer runs, giving the player the correct episode duration.
     if (isTV) {
-      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
+      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
     } else {
@@ -577,7 +577,7 @@ export async function renderPlayerPage({ params, container }) {
 
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
       updateNowPlaying(currentSeason, currentEpisode);
-      loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
+      loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
     }
 
     function nextEpisode() {
@@ -883,13 +883,13 @@ export async function renderPlayerPage({ params, container }) {
 
     // TV season/episode handling
     if (isTV && data.seasons?.length) {
-      await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
+      await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
 
       document.getElementById('player-season-select')?.addEventListener('change', async (e) => {
         currentSeason = parseInt(e.target.value);
         currentEpisode = 1;
         // Update total episodes from the actual loaded season
-        totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
+        totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
         loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
         updateNowPlaying(currentSeason, currentEpisode);
       });
@@ -934,7 +934,7 @@ function updateNowPlaying(season, episode) {
   if (epEl) epEl.textContent = `S${season} E${episode}`;
 }
 
-async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title = '', posterPath = null, backdropPath = null, cleanTitle = null, year = null, onEnded = null) {
+async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title = '', posterPath = null, backdropPath = null, cleanTitle = null, year = null, onEnded = null, onEpisodeClick = null) {
   const listEl = document.getElementById('player-episodes-list');
   if (!listEl) return;
   listEl.innerHTML = `
@@ -974,23 +974,27 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
         const epNum = parseInt(item.dataset.episode);
         const sNum = parseInt(item.dataset.season);
 
-        // Update runtime BEFORE loadPlayer so the player gets the right duration
-        const epRuntime = episodeRuntimes.get(`S${sNum}E${epNum}`);
-        if (epRuntime) tmdbRuntimeSeconds = epRuntime;
+        if (onEpisodeClick) {
+          onEpisodeClick(sNum, epNum);
+        } else {
+          // Update runtime BEFORE loadPlayer so the player gets the right duration
+          const epRuntime = episodeRuntimes.get(`S${sNum}E${epNum}`);
+          if (epRuntime) tmdbRuntimeSeconds = epRuntime;
 
-        // Load the episode
-        loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath, onEnded);
+          // Load the episode
+          loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath, onEnded);
 
-        // Update active state
-        listEl.querySelectorAll('.player-episode-item').forEach(el => {
-          el.classList.remove('active');
-          const playingTag = el.querySelector('.player-episode-playing');
-          if (playingTag) playingTag.remove();
-        });
-        item.classList.add('active');
-        item.insertAdjacentHTML('beforeend', '<div class="player-episode-playing">▶ Now Playing</div>');
+          // Update active state
+          listEl.querySelectorAll('.player-episode-item').forEach(el => {
+            el.classList.remove('active');
+            const playingTag = el.querySelector('.player-episode-playing');
+            if (playingTag) playingTag.remove();
+          });
+          item.classList.add('active');
+          item.insertAdjacentHTML('beforeend', '<div class="player-episode-playing">▶ Now Playing</div>');
 
-        updateNowPlaying(sNum, epNum);
+          updateNowPlaying(sNum, epNum);
+        }
       });
     });
 
