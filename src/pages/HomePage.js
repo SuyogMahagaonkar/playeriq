@@ -244,12 +244,18 @@ export async function renderHomePage({ container }) {
       `;
     }
 
-    // Extract lists from the home payload
-    const validRows = items.filter(i => 
-      (i.type === 'SUBJECTS_MOVIE' && i.subjects && i.subjects.length > 0 && i.title) ||
-      (i.type === 'CUSTOM' && i.customData?.items && i.customData.items.length > 0 && i.title) ||
-      (i.type === 'APPOINTMENT_LIST' && i.subjects && i.subjects.length > 0 && i.title)
-    );
+    // Extract lists from the home payload, removing Upcoming Calendar and limiting to exactly 5 rows
+    const validRows = items.filter(i => {
+      const isCorrectType = 
+        (i.type === 'SUBJECTS_MOVIE' && i.subjects && i.subjects.length > 0 && i.title) ||
+        (i.type === 'CUSTOM' && i.customData?.items && i.customData.items.length > 0 && i.title) ||
+        (i.type === 'APPOINTMENT_LIST' && i.subjects && i.subjects.length > 0 && i.title);
+      if (!isCorrectType) return false;
+      
+      const lowerTitle = (i.title || '').toLowerCase();
+      if (lowerTitle.includes('upcoming calendar')) return false;
+      return true;
+    }).slice(0, 5);
     
     let rowsHTML = validRows.map((rowObj, index) => {
       let rawItems = [];
