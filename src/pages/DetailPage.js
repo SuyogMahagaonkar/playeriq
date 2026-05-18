@@ -2,7 +2,7 @@
 // PlayerIQ — Detail Page
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders } from '../services/api.js';
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser } from '../services/auth.js';
@@ -82,6 +82,13 @@ export async function renderDetailPage({ params, container }) {
             <div class="detail-genres">
               ${(data.genres || []).map(g => `<span class="detail-genre-tag">${g.name}</span>`).join('')}
             </div>
+            
+            <!-- Watch Providers (Streaming Source) Badge -->
+            <div id="watch-providers-container" style="display: none; margin: 15px 0 20px 0;">
+              <span style="color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 8px;">Streaming Source</span>
+              <div id="watch-providers-list" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+            </div>
+
             <h3 class="detail-overview-title">Overview</h3>
             <p class="detail-overview">${data.overview || 'No overview available.'}</p>
             <div class="detail-actions">
@@ -242,6 +249,36 @@ export async function renderDetailPage({ params, container }) {
         });
       });
     }
+
+    // Load and render Watch Providers (Streaming Source)
+    const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+    getWatchProviders(id, type, cleanTitle).then(providers => {
+      const provContainer = document.getElementById('watch-providers-container');
+      const provList = document.getElementById('watch-providers-list');
+      if (provContainer && provList && providers) {
+        const list = [...(providers.flatrate || []), ...(providers.buy || []), ...(providers.rent || [])];
+        const unique = [];
+        const seen = new Set();
+        for (const p of list) {
+          if (!seen.has(p.provider_id)) {
+            seen.add(p.provider_id);
+            unique.push(p);
+          }
+        }
+        
+        if (unique.length > 0) {
+          provList.innerHTML = unique.map(p => `
+            <div class="provider-badge" style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #fff;">
+              <img src="https://image.tmdb.org/t/p/original${p.logo_path}" alt="${p.provider_name}" style="width: 18px; height: 18px; border-radius: 4px;" />
+              <span>${p.provider_name}</span>
+            </div>
+          `).join('');
+          provContainer.style.display = 'block';
+        }
+      }
+    }).catch(err => {
+      console.warn('Failed to load watch providers:', err);
+    });
 
     initContentRows(container);
     if (window.lucide) window.lucide.createIcons();

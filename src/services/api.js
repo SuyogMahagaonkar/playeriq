@@ -34,6 +34,12 @@ export async function getMovieBoxHome(forceRefresh = false) {
 }
 
 export const getMovieDetails = async (id) => {
+  if (!String(id).startsWith('mb_')) {
+    const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
+    if (!res.ok) throw new Error('TMDB details failed');
+    return res.json();
+  }
+  
   const subjectId = String(id).replace('mb_', '');
   const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`);
   if (!res.ok) throw new Error('MovieBox details failed');
@@ -56,6 +62,20 @@ export const getMovieDetails = async (id) => {
 };
 
 export const getTVDetails = async (id) => {
+  if (!String(id).startsWith('mb_')) {
+    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
+    if (!res.ok) throw new Error('TMDB tv details failed');
+    const data = await res.json();
+    return {
+      ...data,
+      seasons: (data.seasons || []).map(s => ({
+        season_number: s.season_number,
+        name: s.name,
+        episode_count: s.episode_count
+      }))
+    };
+  }
+
   const subjectId = String(id).replace('mb_', '');
   const [infoRes, seasonsRes] = await Promise.all([
     fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`),
@@ -177,4 +197,36 @@ export async function getLatestPrime(page = 1) {
     }
   }
   return { results: mixed };
+}
+
+export async function getWatchProviders(id, type, title = null) {
+  let tmdbId = id;
+  if (String(id).startsWith('mb_')) {
+    if (!title) return null;
+    try {
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(title)}`);
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.results?.[0]) {
+          tmdbId = searchData.results[0].id;
+        } else {
+          return null;
+        }
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/watch/providers?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+    if (res.ok) {
+      const data = await res.json();
+      const providers = data.results?.IN || data.results?.US || Object.values(data.results || {})[0];
+      return providers || null;
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
 }
