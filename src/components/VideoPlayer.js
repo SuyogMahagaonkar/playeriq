@@ -579,6 +579,41 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
         togglePlay();
         e.preventDefault();
         break;
+      case 'j': {
+        const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
+        const cur = video.currentTime + off;
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 10));
+        else video.currentTime = Math.max(0, video.currentTime - 10);
+        showControls();
+        e.preventDefault();
+        break;
+      }
+      case 'l': {
+        const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
+        const cur = video.currentTime + off;
+        const dur = getEffectiveDuration();
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 10));
+        else video.currentTime = Math.min(dur, video.currentTime + 10);
+        showControls();
+        e.preventDefault();
+        break;
+      }
+      case '.': // Frame-by-frame forward (desktop)
+        if (!e.repeat) {
+          video.pause();
+          video.currentTime = Math.min(getEffectiveDuration(), video.currentTime + (1 / 24));
+          showControls();
+          e.preventDefault();
+        }
+        break;
+      case ',': // Frame-by-frame backward (desktop)
+        if (!e.repeat) {
+          video.pause();
+          video.currentTime = Math.max(0, video.currentTime - (1 / 24));
+          showControls();
+          e.preventDefault();
+        }
+        break;
       case 'f':
         toggleFs();
         e.preventDefault();
