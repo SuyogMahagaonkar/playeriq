@@ -118,7 +118,7 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
   
   if (title) {
     try {
-      const query = `?title=${encodeURIComponent(title)}&season=${seasonNumber}${year ? `&year=${year}` : ''}`;
+      const query = `?title=${encodeURIComponent(title)}&season=${seasonNumber}${year ? `&year=${year}` : ''}&tvId=${tvId}`;
       const res = await fetch(`${NODE_PROXY}/api/tmdb/episodes${query}`);
       if (res.ok) {
         const data = await res.json();

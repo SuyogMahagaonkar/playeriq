@@ -344,15 +344,16 @@ app.get('/api/moviebox/home', async (req, res) => {
 });
 
 // ---- TMDB Enrichment APIs ----
+// ---- TMDB Enrichment APIs ----
 app.get('/api/tmdb/episodes', async (req, res) => {
   try {
-    const { title, year, season } = req.query;
+    const { title, year, season, tvId } = req.query;
     if (!title || !season) return res.status(400).json({ error: 'Missing title or season' });
     
     const apiKey = '8e4ad9e56e31ab079517b5be6965b477';
     
     // Check cache
-    const cacheKey = `tmdb-eps-search-${title}-${year}-${season}`;
+    const cacheKey = `tmdb-eps-search-${title}-${year}-${season}-${tvId || ''}`;
     const cached = getCached(cacheKey);
     if (cached) return res.json(cached);
 
@@ -377,19 +378,102 @@ app.get('/api/tmdb/episodes', async (req, res) => {
     
     const tmdbId = tvResults[0].id;
     
-    // 2. Get season details
-    const seasonUrl = `https://api.themoviedb.org/3/tv/${tmdbId}/season/${season}?api_key=${apiKey}`;
+    let episodes = [];
+    let tmdbSeasonToFetch = parseInt(season);
+    let isAbsoluteMapping = false;
+    let offset = 0;
+
+    // Check if season exists in TMDB's TV details first
+    const tvUrl = `https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${apiKey}`;
+    const tvRes = await axios.get(tvUrl, { timeout: 10000 });
+    const tvDetails = tvRes.data;
+    const hasSeason = (tvDetails.seasons || []).some(s => s.season_number === parseInt(season));
+
+    if (!hasSeason && parseInt(season) > 1) {
+      // TMDB doesn't have this season, but it's a high season number.
+      // Let's check if Season 1 exists and has a lot of episodes
+      const s1 = (tvDetails.seasons || []).find(s => s.season_number === 1);
+      if (s1 && s1.episode_count > 100) {
+        tmdbSeasonToFetch = 1;
+        isAbsoluteMapping = true;
+        
+        // Calculate offset
+        if (tvId) {
+          const subjectId = String(tvId).replace('mb_', '');
+          try {
+            const port = process.env.PORT || 3000;
+            const mbSeasonsRes = await axios.get(`http://localhost:${port}/api/moviebox/seasons/${subjectId}`, { timeout: 5000 });
+            const mbSeasons = mbSeasonsRes.data.seasons || [];
+            mbSeasons.sort((a, b) => a.se - b.se);
+            for (const s of mbSeasons) {
+              if (s.se < parseInt(season)) {
+                offset += s.maxEp || 52;
+              }
+            }
+          } catch (e) {
+            offset = (parseInt(season) - 1) * 52;
+          }
+        } else {
+          offset = (parseInt(season) - 1) * 52;
+        }
+      }
+    }
+
+    // Now fetch TMDB season
+    const seasonUrl = `https://api.themoviedb.org/3/tv/${tmdbId}/season/${tmdbSeasonToFetch}?api_key=${apiKey}`;
     const seasonRes = await axios.get(seasonUrl, { timeout: 10000 });
-    
-    // 3. Extract episodes
-    const episodes = (seasonRes.data.episodes || []).map(ep => ({
-      episode_number: ep.episode_number,
-      name: ep.name,
-      runtime: ep.runtime,
-      overview: ep.overview,
-      still_path: ep.still_path,
-      air_date: ep.air_date
-    }));
+    const tmdbEpisodes = seasonRes.data.episodes || [];
+
+    if (isAbsoluteMapping) {
+      // Map MovieBox episode numbers to absolute episode numbers from TMDB Season 1
+      let maxEp = 52; // default
+      if (tvId) {
+        const subjectId = String(tvId).replace('mb_', '');
+        try {
+          const port = process.env.PORT || 3000;
+          const mbSeasonsRes = await axios.get(`http://localhost:${port}/api/moviebox/seasons/${subjectId}`, { timeout: 5000 });
+          const mbSeasons = mbSeasonsRes.data.seasons || [];
+          const currentMbSeason = mbSeasons.find(s => s.se === parseInt(season));
+          if (currentMbSeason) {
+            maxEp = currentMbSeason.maxEp || 52;
+          }
+        } catch (e) {}
+      }
+
+      episodes = [];
+      for (let i = 1; i <= maxEp; i++) {
+        const absEpNum = offset + i;
+        const matchingEp = tmdbEpisodes.find(ep => ep.episode_number === absEpNum);
+        if (matchingEp) {
+          episodes.push({
+            episode_number: i, // keep MovieBox episode number so UI maps correctly
+            name: matchingEp.name || `Episode ${i}`,
+            runtime: matchingEp.runtime,
+            overview: matchingEp.overview || '',
+            still_path: matchingEp.still_path || null,
+            air_date: matchingEp.air_date
+          });
+        } else {
+          episodes.push({
+            episode_number: i,
+            name: `Episode ${i}`,
+            runtime: null,
+            overview: '',
+            still_path: null,
+            air_date: null
+          });
+        }
+      }
+    } else {
+      episodes = tmdbEpisodes.map(ep => ({
+        episode_number: ep.episode_number,
+        name: ep.name,
+        runtime: ep.runtime,
+        overview: ep.overview,
+        still_path: ep.still_path,
+        air_date: ep.air_date
+      }));
+    }
     
     const result = { episodes };
     setCache(cacheKey, result);
