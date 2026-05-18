@@ -100,32 +100,32 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     btn.className = 'vp-next-overlay-btn';
     btn.style.cssText = `
       position: absolute;
-      bottom: 85px;
-      right: 24px;
-      background: rgba(15,15,20,0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.15);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 6px;
+      bottom: 100px;
+      right: 40px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      color: #000000;
+      padding: 14px 32px;
+      border-radius: 2px;
       font-family: inherit;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       cursor: pointer;
       z-index: 100;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transition: all 0.25s ease;
       opacity: 0;
-      transform: translateX(20px);
+      transform: translateY(15px);
     `;
 
     btn.innerHTML = `
       <span>Next Episode</span>
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><rect x="17" y="4" width="2" height="16"></rect></svg>
     `;
 
     wrapper.appendChild(btn);
@@ -138,14 +138,18 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
     // Hover effects
     btn.addEventListener('mouseenter', () => {
-      btn.style.background = 'var(--accent, #e50914)';
-      btn.style.borderColor = 'transparent';
-      btn.style.boxShadow = '0 8px 32px rgba(229, 9, 20, 0.4)';
+      btn.style.background = '#000000';
+      btn.style.color = '#ffffff';
+      btn.style.borderColor = 'rgba(255,255,255,0.8)';
+      btn.style.transform = 'scale(1.05)';
+      btn.style.boxShadow = '0 12px 40px rgba(0,0,0,0.7)';
     });
     btn.addEventListener('mouseleave', () => {
-      btn.style.background = 'rgba(15,15,20,0.85)';
-      btn.style.borderColor = 'rgba(255,255,255,0.15)';
-      btn.style.boxShadow = '0 8px 32px rgba(0,0,0,0.5)';
+      btn.style.background = '#ffffff';
+      btn.style.color = '#000000';
+      btn.style.borderColor = 'rgba(0, 0, 0, 0.15)';
+      btn.style.transform = 'scale(1)';
+      btn.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
     });
 
     // Click trigger
@@ -301,10 +305,10 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
               duration
             });
 
-            // Floating Next Episode button in last 30 seconds
+            // Floating Next Episode button in last 60 seconds
             const remaining = duration - currentTime;
             const nextEpNum = episode + 1;
-            if (isTV && nextEpNum <= totalEpisodes && remaining <= 30 && remaining > 0) {
+            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
               showNextEpisodeFloatingButton(nextEpNum);
             } else {
               hideNextEpisodeFloatingButton();
