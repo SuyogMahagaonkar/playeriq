@@ -693,8 +693,10 @@ export async function renderPlayerPage({ params, container }) {
       tmdbRuntimeSeconds = null;
     }
 
-    // Save initial progress
-    saveProgress({ id, title, type: isTV ? 'tv' : 'movie', poster_path, season: currentSeason, episode: currentEpisode });
+    // Save initial progress (Movies only — TV shows will save after metadata loads)
+    if (!isTV) {
+      saveProgress({ id, title, type: 'movie', poster_path, season: currentSeason, episode: currentEpisode });
+    }
 
     // Build seasons sidebar for TV
     let seasonsSidebarHTML = '';
@@ -801,22 +803,74 @@ export async function renderPlayerPage({ params, container }) {
     if (isTV) {
       const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
+
+      // Save initial TV progress with high-res episode screenshot and description
+      let epStill = data.poster_path;
+      let epTitle = '';
+      let epOverview = '';
+      const details = episodeDetails.get(`S${currentSeason}E${currentEpisode}`);
+      if (details) {
+        if (details.still_path) {
+          epStill = img.still(details.still_path);
+        }
+        epTitle = details.name;
+        epOverview = details.overview;
+      }
+      saveProgress({
+        id,
+        title,
+        type: 'tv',
+        poster_path: epStill,
+        backdrop_path: data.backdrop_path,
+        season: currentSeason,
+        episode: currentEpisode,
+        episode_title: epTitle,
+        episode_still: epStill,
+        episode_overview: epOverview
+      });
+
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     } else {
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
     }
 
     // ---- Helper functions for episode navigation ----
-    function goToEpisode(season, episode) {
+    async function goToEpisode(season, episode) {
       currentSeason = season;
       currentEpisode = episode;
 
-      // Update progress
-      saveProgress({ id, title, type: 'tv', poster_path: data.poster_path, backdrop_path: data.backdrop_path, season: currentSeason, episode: currentEpisode });
+      // Load episodes first to ensure metadata is refreshed/cached
+      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
+      if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
+
+      let epStill = data.poster_path;
+      let epTitle = '';
+      let epOverview = '';
+      const details = episodeDetails.get(`S${currentSeason}E${currentEpisode}`);
+      if (details) {
+        if (details.still_path) {
+          epStill = img.still(details.still_path);
+        }
+        epTitle = details.name;
+        epOverview = details.overview;
+      }
+
+      // Save TV progress with high-res episode screenshot and description
+      saveProgress({
+        id,
+        title,
+        type: 'tv',
+        poster_path: epStill,
+        backdrop_path: data.backdrop_path,
+        season: currentSeason,
+        episode: currentEpisode,
+        episode_title: epTitle,
+        episode_still: epStill,
+        episode_overview: epOverview
+      });
 
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
       updateNowPlaying(currentSeason, currentEpisode);
-      loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
     }
 
     function nextEpisode() {

@@ -427,9 +427,15 @@ function openFolderModal(title, episodes) {
           <span class="folder-modal-badge"><i data-lucide="layers"></i> Collection</span>
           <h2 class="folder-modal-title">${title}</h2>
         </div>
-        <button class="folder-modal-close" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+          <button class="settings-danger-btn" id="folder-clear-all-btn" style="padding: var(--space-2xs) var(--space-xs); font-size: 0.75rem; display: flex; align-items: center; gap: 4px; border-radius: var(--radius-sm);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 12px; height: 12px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Remove All
+          </button>
+          <button class="folder-modal-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
       <div class="folder-modal-body">
         <p class="folder-modal-desc">You have completed ${episodes.length} episodes of this show. Select an episode to watch it again:</p>
@@ -508,6 +514,27 @@ function openFolderModal(title, episodes) {
         renderPage(mainContainer, freshItems, getUser());
       }
     });
+  });
+
+  overlay.querySelector('#folder-clear-all-btn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to remove all ${episodes.length} episodes in this collection from your watch history?`)) return;
+
+    overlay.querySelector('.folder-modal').style.opacity = '0.5';
+    overlay.querySelector('.folder-modal').style.pointerEvents = 'none';
+
+    for (const ep of episodes) {
+      await removeFromHistory(ep.docId || ep.id);
+    }
+
+    close();
+
+    // Refresh the page
+    const mainContainer = document.getElementById('main-content');
+    if (mainContainer) {
+      const freshItems = await getWatchHistory();
+      renderPage(mainContainer, freshItems, getUser());
+    }
   });
 
   if (window.lucide) window.lucide.createIcons();
