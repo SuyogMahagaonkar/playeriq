@@ -11,7 +11,7 @@ import Hls from 'hls.js';
  * @param {Function} [onProgress] - Callback (currentTime, duration)
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null) {
+export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
@@ -385,7 +385,10 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   video.addEventListener('progress', updateBuffer);
   video.addEventListener('waiting', () => { loader.style.display = 'flex'; });
   video.addEventListener('canplay', () => { loader.style.display = 'none'; });
-  video.addEventListener('ended', () => { bigPlay.style.display = 'flex'; });
+  video.addEventListener('ended', () => {
+    bigPlay.style.display = 'flex';
+    if (onEnded) onEnded();
+  });
   // For HLS streams: update knownDuration when browser learns real duration.
   // For MP4/transcoded streams: NEVER update from durationchange — the browser
   // reports partial buffer sizes (30s, 60s...) as duration for fMP4 streams.

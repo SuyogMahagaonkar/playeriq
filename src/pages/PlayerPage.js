@@ -87,7 +87,7 @@ function _onFullscreenChange() {
 document.addEventListener('fullscreenchange', _onFullscreenChange);
 
 // ---- Player Loader (Custom + Fallback) ----
-async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null) {
+async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
 
@@ -231,7 +231,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
               activePlayer = null;
             }
             loadIframeFallback();
-          }
+          },
+          onEnded
         );
         return; // Success!
       } else {
@@ -559,11 +560,11 @@ export async function renderPlayerPage({ params, container }) {
     // For TV: load episode list FIRST so episodeRuntimes is populated
     // before loadPlayer runs, giving the player the correct episode duration.
     if (isTV) {
-      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year);
+      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
     } else {
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
     }
 
     // ---- Helper functions for episode navigation ----
@@ -574,9 +575,9 @@ export async function renderPlayerPage({ params, container }) {
       // Update progress
       saveProgress({ id, title, type: 'tv', poster_path: data.poster_path, backdrop_path: data.backdrop_path, season: currentSeason, episode: currentEpisode });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
       updateNowPlaying(currentSeason, currentEpisode);
-      loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year);
+      loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
     }
 
     function nextEpisode() {
@@ -589,6 +590,257 @@ export async function renderPlayerPage({ params, container }) {
       if (currentEpisode > 1) {
         goToEpisode(currentSeason, currentEpisode - 1);
       }
+    }
+
+    // ---- Auto-Play Countdown & Recommendations Overlay ----
+    function handlePlaybackEnded() {
+      // Remove any existing countdown or recommendations first to prevent duplicate overlays
+      wrapper.querySelectorAll('.vp-countdown-overlay, .vp-recommendations-overlay').forEach(el => el.remove());
+
+      const nextEpNum = currentEpisode + 1;
+      // If TV show and has next episode, show countdown
+      if (isTV && nextEpNum <= totalEpisodes) {
+        showAutoPlayCountdown(nextEpNum);
+      } else {
+        // If movie or last episode, show recommendations overlay
+        showRecommendationsOverlay();
+      }
+    }
+
+    function showAutoPlayCountdown(nextEpNum) {
+      let count = 5;
+      const overlay = document.createElement('div');
+      overlay.className = 'vp-countdown-overlay';
+      overlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 150;
+        color: #fff;
+        font-family: var(--font-display);
+        animation: fadeIn 0.4s ease;
+      `;
+
+      overlay.innerHTML = `
+        <div style="font-size: var(--text-lg); font-weight: var(--weight-medium); color: var(--text-secondary); margin-bottom: var(--space-xs);">Up Next</div>
+        <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); margin-bottom: var(--space-lg); text-align: center; max-width: 80%; text-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+          S${currentSeason} E${nextEpNum}
+        </div>
+        
+        <!-- Circular Progress Ring & Number -->
+        <div style="position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-xl);">
+          <svg width="120" height="120" style="transform: rotate(-90deg);">
+            <circle cx="60" cy="60" r="50" fill="transparent" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+            <circle class="countdown-circle" cx="60" cy="60" r="50" fill="transparent" stroke="var(--accent)" stroke-width="8" stroke-dasharray="314.16" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"></circle>
+          </svg>
+          <span class="countdown-seconds" style="position: absolute; font-size: var(--text-3xl); font-weight: var(--weight-bold); text-shadow: 0 2px 10px rgba(229,9,20,0.5);">5</span>
+        </div>
+        
+        <div style="display: flex; gap: var(--space-md);">
+          <button class="countdown-cancel-btn" style="
+            padding: 10px 24px;
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-primary);
+            font-weight: var(--weight-semibold);
+            font-size: var(--text-sm);
+            cursor: pointer;
+            transition: all 0.3s;
+          ">Cancel</button>
+          <button class="countdown-play-btn" style="
+            padding: 10px 24px;
+            border-radius: var(--radius-sm);
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-weight: var(--weight-semibold);
+            font-size: var(--text-sm);
+            cursor: pointer;
+            box-shadow: var(--shadow-glow-sm);
+            transition: all 0.3s;
+          ">Play Now</button>
+        </div>
+      `;
+
+      wrapper.appendChild(overlay);
+
+      const circle = overlay.querySelector('.countdown-circle');
+      const text = overlay.querySelector('.countdown-seconds');
+
+      const interval = setInterval(() => {
+        count--;
+        if (text) text.textContent = count;
+        if (circle) {
+          const dashoffset = 314.16 * ((5 - count) / 5);
+          circle.style.strokeDashoffset = dashoffset;
+        }
+
+        if (count <= 0) {
+          clearInterval(interval);
+          overlay.remove();
+          nextEpisode();
+        }
+      }, 1000);
+
+      // Cancel button
+      overlay.querySelector('.countdown-cancel-btn').addEventListener('click', () => {
+        clearInterval(interval);
+        overlay.remove();
+        showRecommendationsOverlay();
+      });
+
+      // Play Now button
+      overlay.querySelector('.countdown-play-btn').addEventListener('click', () => {
+        clearInterval(interval);
+        overlay.remove();
+        nextEpisode();
+      });
+    }
+
+    function showRecommendationsOverlay() {
+      // Remove any existing overlay
+      wrapper.querySelectorAll('.vp-recommendations-overlay').forEach(el => el.remove());
+
+      if (!similar.length) return;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'vp-recommendations-overlay';
+      overlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(10,10,15,0.92);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 140;
+        color: #fff;
+        font-family: var(--font-display);
+        animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: var(--space-lg);
+      `;
+
+      const recCards = similar.slice(0, 3).map(item => {
+        const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : 'data:image/svg+xml,...';
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : '—';
+        const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+        const cardRoute = `/${type}/${item.id}`;
+        
+        return `
+          <div class="rec-card" data-route="${cardRoute}" style="
+            width: 140px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2xs);
+          ">
+            <div style="
+              position: relative;
+              width: 100%;
+              height: 200px;
+              border-radius: var(--radius-sm);
+              overflow: hidden;
+              border: 1px solid rgba(255,255,255,0.08);
+              box-shadow: var(--shadow-card);
+            ">
+              <img src="${posterUrl}" alt="${item.title || item.name}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s;" class="rec-poster" />
+              <div style="
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: rgba(10,10,15,0.85);
+                backdrop-filter: blur(4px);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: var(--weight-bold);
+                color: var(--rating-high);
+                border: 1px solid rgba(255,255,255,0.06);
+              ">⭐ ${rating}</div>
+            </div>
+            <div style="
+              font-size: var(--text-sm);
+              font-weight: var(--weight-bold);
+              color: var(--text-primary);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              margin-top: 4px;
+            ">${item.title || item.name}</div>
+            <div style="font-size: 10px; color: var(--text-muted);">${year}</div>
+          </div>
+        `;
+      }).join('');
+
+      overlay.innerHTML = `
+        <!-- Replay Button -->
+        <button class="rec-replay-btn" style="
+          position: absolute;
+          top: var(--space-lg);
+          right: var(--space-lg);
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: white;
+          padding: 8px 16px;
+          border-radius: var(--radius-sm);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: var(--text-xs);
+          font-weight: var(--weight-bold);
+          cursor: pointer;
+          transition: all 0.3s;
+        ">
+          <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Replay Video
+        </button>
+
+        <div style="font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-xs);">Finished Playing</div>
+        <div style="font-size: var(--text-xl); font-weight: var(--weight-extrabold); margin-bottom: var(--space-xl);">More Like This</div>
+        
+        <div class="rec-cards-container" style="
+          display: flex;
+          gap: var(--space-lg);
+          justify-content: center;
+          width: 100%;
+          margin-bottom: var(--space-lg);
+        ">
+          ${recCards}
+        </div>
+      `;
+
+      wrapper.appendChild(overlay);
+      if (window.lucide) window.lucide.createIcons();
+
+      // Card hover effects & click routing
+      overlay.querySelectorAll('.rec-card').forEach(card => {
+        const poster = card.querySelector('.rec-poster');
+        card.addEventListener('mouseenter', () => {
+          if (poster) poster.style.transform = 'scale(1.05)';
+        });
+        card.addEventListener('mouseleave', () => {
+          if (poster) poster.style.transform = 'none';
+        });
+        card.addEventListener('click', () => {
+          overlay.remove();
+          window.location.hash = card.dataset.route;
+        });
+      });
+
+      // Replay button
+      overlay.querySelector('.rec-replay-btn').addEventListener('click', () => {
+        overlay.remove();
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+      });
     }
 
     // ---- Keyboard Shortcuts ----
@@ -613,7 +865,7 @@ export async function renderPlayerPage({ params, container }) {
     document.getElementById('source-select')?.addEventListener('change', (e) => {
       currentSourceIndex = parseInt(e.target.value);
       localStorage.setItem('piq_source', currentSourceIndex);
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
     });
 
     // Mode selector
@@ -626,19 +878,19 @@ export async function renderPlayerPage({ params, container }) {
         sourceSelect.style.display = currentPlayerMode === 'custom' ? 'none' : 'inline-block';
       }
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
     });
 
     // TV season/episode handling
     if (isTV && data.seasons?.length) {
-      await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year);
+      await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
 
       document.getElementById('player-season-select')?.addEventListener('change', async (e) => {
         currentSeason = parseInt(e.target.value);
         currentEpisode = 1;
         // Update total episodes from the actual loaded season
-        totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year);
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path);
+        totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded);
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
         updateNowPlaying(currentSeason, currentEpisode);
       });
     }
@@ -682,7 +934,7 @@ function updateNowPlaying(season, episode) {
   if (epEl) epEl.textContent = `S${season} E${episode}`;
 }
 
-async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title = '', posterPath = null, backdropPath = null, cleanTitle = null, year = null) {
+async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title = '', posterPath = null, backdropPath = null, cleanTitle = null, year = null, onEnded = null) {
   const listEl = document.getElementById('player-episodes-list');
   if (!listEl) return;
   listEl.innerHTML = `
@@ -727,7 +979,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
         if (epRuntime) tmdbRuntimeSeconds = epRuntime;
 
         // Load the episode
-        loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath);
+        loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath, onEnded);
 
         // Update active state
         listEl.querySelectorAll('.player-episode-item').forEach(el => {
