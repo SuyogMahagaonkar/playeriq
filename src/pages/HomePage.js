@@ -109,7 +109,7 @@ export async function renderHomePage({ container }) {
     const topMovies = top10MoviesData.results || [];
     if (topMovies.length > 0) {
       const topMoviesCards = topMovies.map((item, index) => {
-        const route = `/detail/movie/${item.id}`;
+        const route = `/movie/${item.id}`;
         const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
         return `
           <div class="top10-card" data-route="${route}" style="
@@ -181,7 +181,7 @@ export async function renderHomePage({ container }) {
     const topSeries = top10SeriesData.results || [];
     if (topSeries.length > 0) {
       const topSeriesCards = topSeries.map((item, index) => {
-        const route = `/detail/tv/${item.id}`;
+        const route = `/tv/${item.id}`;
         const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
         return `
           <div class="top10-card" data-route="${route}" style="
