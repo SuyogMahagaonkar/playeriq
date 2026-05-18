@@ -30,9 +30,22 @@ export function createNavbar() {
         </div>
         <div class="search-suggestions" id="search-suggestions" style="display:none"></div>
       </div>
-      <button class="navbar-btn" id="navbar-notif" title="Notifications">
-        <i data-lucide="bell"></i>
-      </button>
+      
+      <!-- Notifications Wrapper -->
+      <div style="position: relative; display: flex; align-items: center;">
+        <button class="navbar-btn" id="navbar-notif" title="Notifications">
+          <i data-lucide="bell"></i>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown" style="display: none;">
+          <div class="notif-dropdown-header">
+            <h3>Notifications</h3>
+            <button class="notif-clear-btn" id="notif-clear-btn">Clear All</button>
+          </div>
+          <div class="notif-dropdown-list" id="notif-dropdown-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
 
       <!-- Profile Wrapper -->
       <div class="profile-wrapper" id="profile-wrapper">
@@ -44,8 +57,11 @@ export function createNavbar() {
     </div>
   `;
 
-  // Setup scroll listener
-  setTimeout(() => setupNavbarScroll(navbar), 0);
+  // Setup scroll listener and notification badge
+  setTimeout(() => {
+    setupNavbarScroll(navbar);
+    refreshNotifBadge();
+  }, 0);
 
   return navbar;
 }
@@ -298,12 +314,40 @@ export function setupNavbarEvents() {
     }
   });
 
+  // Notifications bell toggle dropdown
+  document.addEventListener('click', (e) => {
+    const notifBtn = e.target.closest('#navbar-notif');
+    const dropdown = e.target.closest('#notif-dropdown');
+
+    if (notifBtn) {
+      e.stopPropagation();
+      closeDropdown(); // close profile dropdown if open
+      toggleNotifDropdown();
+      return;
+    }
+
+    if (!dropdown) {
+      toggleNotifDropdown(false);
+    }
+  });
+
+  // Clear all notifications
+  document.addEventListener('click', (e) => {
+    const clearBtn = e.target.closest('#notif-clear-btn');
+    if (clearBtn) {
+      e.stopPropagation();
+      clearAllNotifications();
+    }
+  });
+
   // Avatar → toggle dropdown
   document.addEventListener('click', (e) => {
     const avatar = e.target.closest('#navbar-avatar');
     const dropdown = e.target.closest('#profile-dropdown');
 
     if (avatar) {
+      e.stopPropagation();
+      toggleNotifDropdown(false); // close notifications dropdown if open
       toggleDropdown();
       return;
     }
@@ -315,7 +359,10 @@ export function setupNavbarEvents() {
 
   // Close on Escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeDropdown();
+    if (e.key === 'Escape') {
+      closeDropdown();
+      toggleNotifDropdown(false);
+    }
   });
 }
 
@@ -356,4 +403,162 @@ function renderSuggestions(results, container) {
       document.getElementById('search-clear').style.display = 'none';
     });
   });
+}
+
+// ---- Notifications Management Helpers ----
+
+export function refreshNotifBadge() {
+  const btn = document.getElementById('navbar-notif');
+  if (!btn) return;
+
+  // Clear existing badge
+  const existing = btn.querySelector('.notif-badge');
+  if (existing) existing.remove();
+
+  const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const unreadCount = Object.values(alerts).filter(it => it.airDate && it.airDate <= todayStr && !it.read).length;
+
+  if (unreadCount > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'notif-badge';
+    btn.appendChild(badge);
+  }
+}
+
+export function toggleNotifDropdown(show) {
+  const dropdown = document.getElementById('notif-dropdown');
+  if (!dropdown) return;
+
+  const current = dropdown.style.display !== 'none';
+  const next = typeof show === 'boolean' ? show : !current;
+
+  if (next) {
+    renderNotificationsDropdown();
+    dropdown.style.display = 'flex';
+    
+    // Mark released ones as read in localstorage
+    const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    Object.values(alerts).forEach(it => {
+      if (it.airDate && it.airDate <= todayStr) {
+        it.read = true;
+      }
+    });
+    localStorage.setItem('playeriq_notify_episodes', JSON.stringify(alerts));
+    refreshNotifBadge();
+  } else {
+    dropdown.style.display = 'none';
+  }
+}
+
+function renderNotificationsDropdown() {
+  const listEl = document.getElementById('notif-dropdown-list');
+  if (!listEl) return;
+
+  const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+  const items = Object.values(alerts);
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  if (items.length === 0) {
+    listEl.innerHTML = `
+      <div class="notif-empty-state">
+        <i data-lucide="bell-off" style="width: 32px; height: 32px;"></i>
+        <div class="notif-empty-state-title">No notifications yet</div>
+        <div class="notif-empty-state-subtitle">We'll alert you here when subscribed episodes release!</div>
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  // Sort: Released first (by airdate descending), then Upcoming (by airdate ascending)
+  const released = [];
+  const upcoming = [];
+
+  items.forEach(it => {
+    const isReleased = it.airDate && it.airDate <= todayStr;
+    if (isReleased) released.push(it);
+    else upcoming.push(it);
+  });
+
+  released.sort((a, b) => b.airDate.localeCompare(a.airDate));
+  upcoming.sort((a, b) => a.airDate.localeCompare(b.airDate));
+
+  let html = '';
+
+  if (released.length > 0) {
+    html += released.map(it => {
+      const formattedDate = new Date(it.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const watchRoute = `#/watch/tv/${it.tvId}?s=${it.seasonNumber}&e=${it.episodeNumber}`;
+      return `
+        <div class="notif-item" data-route="${watchRoute}">
+          <div class="notif-item-icon-wrapper">
+            <i data-lucide="play" style="width: 14px; height: 14px; fill: currentColor;"></i>
+          </div>
+          <div class="notif-item-content">
+            <div class="notif-item-title">🎉 Season ${it.seasonNumber} Episode ${it.episodeNumber} of <strong>${it.title || 'Show'}</strong> is now streaming!</div>
+            <div class="notif-item-meta">
+              <span>Released ${formattedDate}</span>
+              <span style="color: #00a8e1; font-weight:700;">• Stream Now</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (upcoming.length > 0) {
+    html += upcoming.map(it => {
+      const formattedDate = it.airDate && it.airDate !== 'Soon' ? new Date(it.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
+      const detailRoute = `#/tv/${it.tvId}`;
+      return `
+        <div class="notif-item upcoming" data-route="${detailRoute}">
+          <div class="notif-item-icon-wrapper upcoming">
+            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="notif-item-content">
+            <div class="notif-item-title" style="opacity: 0.7;">S${it.seasonNumber} E${it.episodeNumber} of <strong>${it.title || 'Show'}</strong> is scheduled to air.</div>
+            <div class="notif-item-meta">
+              <span>Airing ${formattedDate}</span>
+              <span>• Alert Set</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  listEl.innerHTML = html;
+  if (window.lucide) window.lucide.createIcons();
+
+  // Click listeners to navigate
+  listEl.querySelectorAll('.notif-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const route = item.dataset.route;
+      if (route) {
+        window.location.hash = route;
+        toggleNotifDropdown(false);
+      }
+    });
+  });
+}
+
+export async function clearAllNotifications() {
+  localStorage.setItem('playeriq_notify_episodes', '{}');
+  const user = getUser();
+  if (user) {
+    try {
+      const { collection, getDocs, deleteDoc, db } = await import('../services/firebase.js');
+      const colRef = collection(db, 'users', user.uid, 'notifications');
+      const snapshot = await getDocs(colRef);
+      const deletions = [];
+      snapshot.forEach(docSnap => deletions.push(deleteDoc(docSnap.ref)));
+      await Promise.all(deletions);
+    } catch (e) {
+      console.warn('Failed to clear notifications in cloud:', e);
+    }
+  }
+  refreshNotifBadge();
+  renderNotificationsDropdown();
 }

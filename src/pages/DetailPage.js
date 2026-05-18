@@ -377,6 +377,11 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
           }
           showToast('Notification alert removed.', 'bell-off');
         } else {
+          // Request browser push notification permission if default
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
+
           const notif = {
             epKey,
             tvId,

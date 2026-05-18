@@ -23,7 +23,7 @@ import './styles/user-pages.css';
 // Core
 import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
-import { createNavbar, setupNavbarEvents, updateNavbarAvatar } from './components/Navbar.js';
+import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';
 import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater } from './services/auth.js';
 import { renderLoginPage } from './pages/LoginPage.js';
 
@@ -84,6 +84,36 @@ function initApp() {
 
   // Boot collapsible sidebar toggle
   initSidebarToggle();
+
+  // ---- Check and Trigger Local Push Notifications ----
+  setTimeout(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      let updated = false;
+
+      Object.values(alerts).forEach(notif => {
+        const isReleased = notif.airDate && notif.airDate <= todayStr;
+        if (isReleased && !notif.delivered) {
+          try {
+            new Notification(`New Episode Out! 🍿`, {
+              body: `Season ${notif.seasonNumber} Episode ${notif.episodeNumber} of "${notif.title || 'Show'}" is now streaming!`,
+              icon: '/favicon.ico'
+            });
+            notif.delivered = true;
+            updated = true;
+          } catch (e) {
+            console.warn('Failed to fire browser push alert:', e);
+          }
+        }
+      });
+
+      if (updated) {
+        localStorage.setItem('playeriq_notify_episodes', JSON.stringify(alerts));
+        refreshNotifBadge();
+      }
+    }
+  }, 3000);
 
   // ---- Register Routes ----
   addRoute('/', async (ctx) => {
