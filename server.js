@@ -387,7 +387,8 @@ app.get('/api/tmdb/episodes', async (req, res) => {
       name: ep.name,
       runtime: ep.runtime,
       overview: ep.overview,
-      still_path: ep.still_path
+      still_path: ep.still_path,
+      air_date: ep.air_date
     }));
     
     const result = { episodes };
