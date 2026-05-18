@@ -557,14 +557,15 @@
   }
 
   /* Remove hover-only visibility; ensure controls are always visible on touch */
-  .movie-card-play, .card-delete-btn, .vp-controls, .hero-nav {
+  .card-delete-btn, .vp-controls, .hero-nav {
     opacity: 1 !important;
     visibility: visible !important;
     transform: none !important;
   }
   
+  /* Completely hide the play button overlay on movie card thumbnails for mobile */
   .movie-card-play {
-    transform: translate(-50%, -50%) scale(0.85) !important;
+    display: none !important;
   }
 
   /* Profile Dropdown Items Touch Optimization */
