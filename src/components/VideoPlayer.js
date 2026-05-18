@@ -103,17 +103,29 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   const video = document.getElementById('vp-video');
 
   // ---- 15s Playback Watchdog ----
-  // If the video is still in loading state (hasn't started playing / currentTime === 0)
-  // after 15 seconds, trigger onFatalError to gracefully switch to the iframe fallback.
-  let watchdogTimeout = setTimeout(() => {
-    if (video.currentTime === 0 && video.paused) {
-      console.warn('[Player Watchdog] Video failed to start playing in 15s. Triggering fatal error.');
-      if (onFatalError) onFatalError();
+  // Safari on iOS will stay stuck loading in a loop without firing a hard video.error event.
+  // We monitor the first 'play' action: if 15 seconds pass and the video fails to render 
+  // any frames (currentTime remains 0), we trigger onFatalError to load the iframe fallback.
+  let watchdogTimeout = null;
+
+  video.addEventListener('play', () => {
+    if (!watchdogTimeout) {
+      console.log('[Player Watchdog] Play initiated, starting 15s watchdog...');
+      watchdogTimeout = setTimeout(() => {
+        if (video.currentTime === 0) {
+          console.warn('[Player Watchdog] Video failed to start rendering frames after 15s. Triggering fatal error.');
+          if (onFatalError) onFatalError();
+        }
+      }, 15000);
     }
-  }, 15000);
+  });
 
   video.addEventListener('playing', () => {
-    clearTimeout(watchdogTimeout);
+    if (watchdogTimeout) {
+      console.log('[Player Watchdog] Playback started, clearing watchdog.');
+      clearTimeout(watchdogTimeout);
+      watchdogTimeout = null;
+    }
   });
 
   const controls = document.getElementById('vp-controls');
