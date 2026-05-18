@@ -62,7 +62,7 @@ export function refreshSidebarNav() {
   const navItems = [...NAV_ITEMS];
   if (!isSafe) {
     // Insert 18+ right after TV Shows
-    navItems.splice(3, 0, { label: '18+ Catalog', icon: 'eye-off', path: '/18plus' });
+    navItems.splice(3, 0, { label: '18+ Catalog', icon: 'flame', path: '/18plus' });
   }
 
   nav.innerHTML = `
