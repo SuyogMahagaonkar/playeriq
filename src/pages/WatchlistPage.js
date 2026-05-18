@@ -30,7 +30,18 @@ export async function renderWatchlistPage({ container }) {
     return;
   }
 
-  const items = await fetchWatchlist(user.uid).catch(() => []);
+  let items = await fetchWatchlist(user.uid).catch(() => []);
+  
+  // Apply SafeSearch filtering if enabled
+  const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+  if (isSafe) {
+    const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+)\b/i;
+    items = items.filter(item => {
+      const titleStr = (item.title || item.name || '').toLowerCase();
+      return !titleStr.includes('xxx') && !badTitleRegex.test(titleStr);
+    });
+  }
+
   const count = items.length;
 
   container.innerHTML = `

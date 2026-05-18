@@ -19,7 +19,18 @@ export async function renderWatchHistoryPage({ container }) {
   }
 
   try {
-    const items = await getWatchHistory();
+    let items = await getWatchHistory();
+    
+    // Apply SafeSearch filtering if enabled
+    const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+    if (isSafe) {
+      const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+)\b/i;
+      items = items.filter(item => {
+        const titleStr = (item.title || '').toLowerCase();
+        return !titleStr.includes('xxx') && !badTitleRegex.test(titleStr);
+      });
+    }
+
     renderPage(container, items, user);
   } catch (err) {
     console.error('[WatchHistory] Error:', err);
