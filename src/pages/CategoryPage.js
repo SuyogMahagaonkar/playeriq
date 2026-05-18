@@ -11,6 +11,17 @@ let filteredItems = [];
 let currentPage = 1;
 const ITEMS_PER_PAGE = 12;
 
+function cleanStringForMatching(str) {
+  if (!str) return '';
+  return str
+    .replace(/<[^>]*>/g, '') // remove HTML tags
+    .replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '') // remove emojis
+    .replace(/[^a-zA-Z0-9\s]/g, '') // remove special symbols
+    .replace(/\s+/g, ' ') // normalize spaces
+    .toLowerCase()
+    .trim();
+}
+
 export async function renderCategoryPage({ container, query }) {
   const categoryTitle = query.title || 'Category';
   allItems = [];
@@ -65,10 +76,19 @@ export async function renderCategoryPage({ container, query }) {
     const homeData = await getMovieBoxHome();
     const items = homeData.items || [];
     
-    // Find the row matches by title
-    const rowObj = items.find(i => i.title && i.title.toLowerCase().trim() === categoryTitle.toLowerCase().trim());
+    console.log('[CategoryPage] Query Title:', categoryTitle);
+    console.log('[CategoryPage] Cleaned Target Title:', cleanStringForMatching(categoryTitle));
+    
+    // Find the row matches by title robustly
+    const rowObj = items.find(i => {
+      if (!i.title) return false;
+      const cleanRowTitle = cleanStringForMatching(i.title);
+      const cleanTargetTitle = cleanStringForMatching(categoryTitle);
+      return cleanRowTitle === cleanTargetTitle;
+    });
     
     if (rowObj) {
+      console.log('[CategoryPage] Found matching row:', rowObj.title);
       let rawItems = [];
       if (rowObj.type === 'SUBJECTS_MOVIE' || rowObj.type === 'APPOINTMENT_LIST') {
         rawItems = rowObj.subjects || [];
@@ -86,6 +106,8 @@ export async function renderCategoryPage({ container, query }) {
         release_date: mbItem.releaseDate || mbItem.release_date,
         media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
       }));
+    } else {
+      console.warn('[CategoryPage] No matching row found for:', categoryTitle);
     }
 
     filteredItems = [...allItems];
