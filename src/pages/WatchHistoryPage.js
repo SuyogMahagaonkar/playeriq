@@ -256,13 +256,28 @@ function renderPage(container, items, user) {
   // Wire checkbox events
   const updateDeleteSelectedButton = () => {
     const checked = container.querySelectorAll('.bulk-delete-checkbox:checked');
-    const count = checked.length;
+    let totalItems = 0;
+    
+    checked.forEach(cb => {
+      const epsJson = cb.dataset.episodesJson;
+      if (epsJson) {
+        try {
+          const eps = JSON.parse(epsJson);
+          totalItems += Array.isArray(eps) ? eps.length : 1;
+        } catch (e) {
+          totalItems += 1;
+        }
+      } else {
+        totalItems += 1;
+      }
+    });
+
     const btn = container.querySelector('#delete-selected-btn');
     const countEl = container.querySelector('#delete-selected-count');
 
-    if (count > 0) {
+    if (totalItems > 0) {
       if (btn) btn.style.display = 'inline-flex';
-      if (countEl) countEl.textContent = count;
+      if (countEl) countEl.textContent = totalItems;
     } else {
       if (btn) btn.style.display = 'none';
     }
@@ -287,7 +302,22 @@ function renderPage(container, items, user) {
     const checked = container.querySelectorAll('.bulk-delete-checkbox:checked');
     if (checked.length === 0) return;
 
-    if (!confirm(`Delete all ${checked.length} selected collections/items from watch history?`)) return;
+    let totalItems = 0;
+    checked.forEach(cb => {
+      const epsJson = cb.dataset.episodesJson;
+      if (epsJson) {
+        try {
+          const eps = JSON.parse(epsJson);
+          totalItems += Array.isArray(eps) ? eps.length : 1;
+        } catch (e) {
+          totalItems += 1;
+        }
+      } else {
+        totalItems += 1;
+      }
+    });
+
+    if (!confirm(`Delete all ${totalItems} selected items from watch history?`)) return;
 
     const btn = container.querySelector('#delete-selected-btn');
     btn.innerHTML = `<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor"/></svg>`;
