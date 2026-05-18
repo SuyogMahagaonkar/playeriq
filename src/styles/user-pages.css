@@ -589,3 +589,303 @@
   border-bottom: 1px solid rgba(255,255,255,0.05);
   padding-bottom: var(--space-xs);
 }
+
+/* ---- TV Show Episode Folders ---- */
+.folder-card {
+  position: relative;
+  z-index: 1;
+}
+
+/* Base stack layers positioned behind the main poster */
+.folder-stack-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--shadow-glow-sm);
+  z-index: -1;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.folder-stack-layer-1 {
+  transform: scale(0.96) translateY(-6px) rotate(-1.5deg);
+}
+
+.folder-stack-layer-2 {
+  transform: scale(0.92) translateY(-12px) rotate(1.5deg);
+  opacity: 0.35;
+}
+
+/* Hover animations to expand the stack! */
+.folder-card:hover .folder-stack-layer-1 {
+  transform: scale(0.97) translateY(-9px) rotate(-2.5deg);
+  opacity: 0.8;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.folder-card:hover .folder-stack-layer-2 {
+  transform: scale(0.94) translateY(-17px) rotate(2.5deg);
+  opacity: 0.5;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.folder-poster-wrapper {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.folder-badge {
+  background: rgba(0, 168, 225, 0.15) !important;
+  color: #00a8e1 !important;
+}
+
+.folder-episode-count {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* ---- Folder Modal Overlay ---- */
+.folder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 12, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: var(--space-md);
+  opacity: 0;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.folder-modal-overlay.closing {
+  animation: fadeOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.folder-modal {
+  width: 100%;
+  max-width: 680px;
+  background: rgba(22, 22, 33, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  transform: scale(0.95);
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.folder-modal-overlay.closing .folder-modal {
+  animation: scaleOut 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.folder-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-xl) var(--space-xl) var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.folder-modal-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.folder-modal-badge {
+  font-size: 0.65rem;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  background: rgba(0, 168, 225, 0.15);
+  color: #00a8e1;
+  font-weight: var(--weight-extrabold);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+}
+
+.folder-modal-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.folder-modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-extrabold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.folder-modal-close {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.folder-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  transform: scale(1.08);
+}
+
+.folder-modal-body {
+  padding: var(--space-xl);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.folder-modal-desc {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+}
+
+/* Episodes Grid inside modal */
+.folder-episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.folder-episode-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.folder-episode-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.folder-episode-poster {
+  position: relative;
+  width: 80px;
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.folder-episode-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.folder-no-poster {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.folder-episode-play {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.folder-episode-item:hover .folder-episode-play {
+  opacity: 1;
+}
+
+.folder-episode-play svg {
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 6px rgba(229, 9, 20, 0.5));
+}
+
+.folder-episode-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.folder-episode-code {
+  font-size: 0.75rem;
+  font-weight: var(--weight-bold);
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.folder-episode-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
+
+/* Mobile responsive popup adjustments */
+@media (max-width: 580px) {
+  .folder-episodes-grid {
+    grid-template-columns: 1fr;
+  }
+}

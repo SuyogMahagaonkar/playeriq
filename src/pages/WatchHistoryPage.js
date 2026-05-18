@@ -51,6 +51,48 @@ function renderPage(container, items, user) {
     return !item.watched && !(item.duration > 0 && (item.duration - item.currentTime <= 300));
   });
 
+  // Group completed TV shows together if there are multiple episodes
+  const completedGroups = [];
+  const tvGroups = {};
+
+  completedItems.forEach(item => {
+    if (item.type === 'tv') {
+      if (!tvGroups[item.id]) {
+        tvGroups[item.id] = [];
+      }
+      tvGroups[item.id].push(item);
+    } else {
+      completedGroups.push({
+        type: 'movie',
+        item: item
+      });
+    }
+  });
+
+  Object.keys(tvGroups).forEach(tvId => {
+    const eps = tvGroups[tvId];
+    if (eps.length === 1) {
+      completedGroups.push({
+        type: 'single-tv',
+        item: eps[0]
+      });
+    } else {
+      eps.sort((a, b) => {
+        if (Number(a.season) !== Number(b.season)) {
+          return Number(a.season) - Number(b.season);
+        }
+        return Number(a.episode) - Number(b.episode);
+      });
+      completedGroups.push({
+        type: 'folder-tv',
+        id: tvId,
+        title: eps[0].title || eps[0].name,
+        poster_path: eps[0].poster_path,
+        episodes: eps
+      });
+    }
+  });
+
   container.innerHTML = `
     <div class="user-page">
       <div class="user-page-header">
@@ -94,7 +136,13 @@ function renderPage(container, items, user) {
               Watch Again
             </h2>
             <div class="user-media-grid">
-              ${completedItems.map(item => renderHistoryCard(item, true)).join('')}
+              ${completedGroups.map(group => {
+                if (group.type === 'folder-tv') {
+                  return renderFolderCard(group);
+                } else {
+                  return renderHistoryCard(group.item, true);
+                }
+              }).join('')}
             </div>
           ` : ''}
         `}
@@ -106,7 +154,7 @@ function renderPage(container, items, user) {
   // Wire "Browse" button
   container.querySelector('#browse-btn')?.addEventListener('click', () => navigate('/'));
 
-  // Wire each card
+  // Wire standard cards
   container.querySelectorAll('[data-history-card]').forEach(card => {
     const id = card.dataset.id;
     const type = card.dataset.mediaType;
@@ -130,7 +178,38 @@ function renderPage(container, items, user) {
       await removeFromHistory(id);
       card.remove();
       // Update count
-      const remaining = container.querySelectorAll('[data-history-card]').length;
+      const remaining = container.querySelectorAll('[data-history-card], [data-history-folder]').length;
+      const countEl = container.querySelector('.user-item-count');
+      if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
+      if (remaining === 0) renderPage(container, [], getUser());
+    });
+  });
+
+  // Wire folder cards
+  container.querySelectorAll('[data-history-folder]').forEach(folder => {
+    folder.addEventListener('click', (e) => {
+      if (e.target.closest('.user-media-remove')) return;
+      const title = folder.dataset.title;
+      const episodes = JSON.parse(folder.dataset.episodesJson);
+      openFolderModal(title, episodes);
+    });
+
+    // Remove entire collection button
+    folder.querySelector('.user-media-remove')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Remove all watched episodes of "${folder.dataset.title}" from history?`)) return;
+      folder.style.opacity = '0.4';
+      folder.style.pointerEvents = 'none';
+
+      const episodes = JSON.parse(folder.dataset.episodesJson);
+      for (const ep of episodes) {
+        // Also clear out individual records
+        await removeFromHistory(ep.id);
+      }
+
+      folder.remove();
+      // Update count
+      const remaining = container.querySelectorAll('[data-history-card], [data-history-folder]').length;
       const countEl = container.querySelector('.user-item-count');
       if (countEl) countEl.textContent = `${remaining} item${remaining !== 1 ? 's' : ''}`;
       if (remaining === 0) renderPage(container, [], getUser());
@@ -188,6 +267,105 @@ function renderHistoryCard(item, isWatchAgain = false) {
       </div>
     </div>
   `;
+}
+
+function renderFolderCard(group) {
+  const poster = group.poster_path || '';
+  const count = group.episodes.length;
+
+  return `
+    <div class="user-media-card folder-card" data-history-folder data-id="${group.id}" data-episodes-json='${JSON.stringify(group.episodes).replace(/'/g, "&apos;")}' data-title="${group.title}">
+      <div class="folder-stack-layer folder-stack-layer-1"></div>
+      <div class="folder-stack-layer folder-stack-layer-2"></div>
+      
+      <div class="folder-poster-wrapper">
+        ${poster
+          ? `<img class="user-media-card-poster" src="${poster}" alt="${group.title}" loading="lazy" />`
+          : `<div class="user-media-card-poster" style="background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;color:var(--text-dim)">No Poster</div>`
+        }
+        <div class="user-media-card-overlay">
+          <div class="user-media-card-play">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <button class="user-media-remove" title="Remove entire show from history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="user-media-card-info">
+        <div class="user-media-card-title" title="${group.title}">${group.title}</div>
+        <div class="user-media-card-meta">
+          <span class="user-media-card-type folder-badge">Collection</span>
+          <span class="folder-episode-count">${count} Episodes</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openFolderModal(title, episodes) {
+  const overlay = document.createElement('div');
+  overlay.className = 'folder-modal-overlay';
+  overlay.innerHTML = `
+    <div class="folder-modal">
+      <div class="folder-modal-header">
+        <div class="folder-modal-title-wrapper">
+          <span class="folder-modal-badge"><i data-lucide="layers"></i> Collection</span>
+          <h2 class="folder-modal-title">${title}</h2>
+        </div>
+        <button class="folder-modal-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="folder-modal-body">
+        <p class="folder-modal-desc">You have completed ${episodes.length} episodes of this show. Select an episode to watch it again:</p>
+        <div class="folder-episodes-grid">
+          ${episodes.map(ep => {
+            const epTitle = ep.title || `Episode ${ep.episode}`;
+            const subtitle = `Season ${ep.season} · Episode ${ep.episode}`;
+            return `
+              <div class="folder-episode-item" data-route="/watch/tv/${ep.id}?s=${ep.season}&e=${ep.episode}">
+                <div class="folder-episode-poster">
+                  ${ep.poster_path 
+                    ? `<img src="${ep.poster_path}" alt="${epTitle}" loading="lazy" />` 
+                    : `<div class="folder-no-poster">No Poster</div>`
+                  }
+                  <div class="folder-episode-play">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+                  </div>
+                </div>
+                <div class="folder-episode-info">
+                  <div class="folder-episode-code">${subtitle}</div>
+                  <div class="folder-episode-name" title="${epTitle}">${epTitle}</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.classList.add('closing');
+    setTimeout(() => overlay.remove(), 250);
+  };
+  overlay.querySelector('.folder-modal-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+
+  overlay.querySelectorAll('.folder-episode-item').forEach(item => {
+    item.addEventListener('click', () => {
+      close();
+      const route = item.dataset.route;
+      import('../services/router.js').then(({ navigate }) => navigate(route));
+    });
+  });
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function renderGuestPrompt(page, icon) {
