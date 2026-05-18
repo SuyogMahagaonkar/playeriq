@@ -14,13 +14,91 @@ export function createContentRow(title, items, type = 'movie', moreRoute = null,
     // Append a beautiful "View More" card ONLY when explicitly requested (like Netflix and Prime)
     if (showViewMore && items.length > 0) {
       const cleanTitle = title.replace(/<[^>]*>/g, '').trim();
+      const isNetflixCard = cleanTitle.toLowerCase().includes('netflix');
+      const themeColor = isNetflixCard ? '#e50914' : '#00a8e1';
+      const shadowColor = isNetflixCard ? 'rgba(229, 9, 20, 0.3)' : 'rgba(0, 168, 225, 0.3)';
+
       cards += `
-        <a href="#/category?title=${encodeURIComponent(cleanTitle)}" class="movie-card movie-card-portrait more-card-link" style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, rgba(255, 0, 85, 0.08) 0%, rgba(20,20,25,0.6) 100%); border:1px dashed rgba(255,0,85,0.3); border-radius:12px; height:100%; min-height:240px; cursor:pointer; text-decoration:none; transition:all 0.3s; padding: 20px; box-sizing: border-box; min-width: 160px; max-width: 160px; flex-shrink: 0; align-self: stretch;">
-          <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,0,85,0.1); border:1px solid #ff0055; display:flex; align-items:center; justify-content:center; margin-bottom:12px; box-shadow:0 4px 10px rgba(255,0,85,0.2);">
-            <i data-lucide="arrow-right" style="color:#ff0055; width:20px; height:20px;"></i>
+        <a href="#/category?title=${encodeURIComponent(cleanTitle)}" class="movie-card movie-card-portrait more-card-link netflix-style-more-card" style="
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          background: rgba(20, 20, 25, 0.5);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 12px;
+          height: 100%;
+          min-height: 240px;
+          cursor: pointer;
+          text-decoration: none;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          padding: 24px;
+          box-sizing: border-box;
+          min-width: 160px;
+          max-width: 160px;
+          flex-shrink: 0;
+          align-self: stretch;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        "
+        onmouseover="this.style.transform='translateY(-6px)'; this.style.borderColor='${themeColor}'; this.style.boxShadow='0 10px 25px ${shadowColor}'; this.querySelector('.circle-btn').style.transform='scale(1.1)'; this.querySelector('.circle-btn').style.background='${themeColor}'; this.querySelector('.circle-icon').style.color='#fff';"
+        onmouseout="this.style.transform='none'; this.style.borderColor='rgba(255,255,255,0.06)'; this.style.boxShadow='0 4px 30px rgba(0,0,0,0.3)'; this.querySelector('.circle-btn').style.transform='none'; this.querySelector('.circle-btn').style.background='rgba(255, 255, 255, 0.05)'; this.querySelector('.circle-icon').style.color='${themeColor}';"
+        >
+          <!-- Accent Glow from Bottom -->
+          <div style="
+            position: absolute;
+            bottom: -30px;
+            width: 100px;
+            height: 100px;
+            background: ${themeColor};
+            filter: blur(40px);
+            opacity: 0.15;
+            pointer-events: none;
+            transition: all 0.4s;
+          "></div>
+
+          <!-- Glowing Interactive Arrow Button -->
+          <div class="circle-btn" style="
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          ">
+            <i class="circle-icon" data-lucide="arrow-right" style="color: ${themeColor}; width: 22px; height: 22px; transition: all 0.4s;"></i>
           </div>
-          <span style="color:#fff; font-size:15px; font-weight:700; text-align:center;">View More</span>
-          <span style="color:var(--text-muted); font-size:12px; font-weight:500; text-align:center; margin-top:4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">${cleanTitle}</span>
+
+          <!-- Stylized Text Block -->
+          <span style="
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            display: block;
+            margin-bottom: 4px;
+          ">Explore All</span>
+          
+          <span style="
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
+          ">${cleanTitle.replace('Latest from ', '')}</span>
         </a>
       `;
     }
