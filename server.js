@@ -305,20 +305,29 @@ app.get('/api/moviebox/home', async (req, res) => {
     const bridgeUrl = `${PYTHON_BRIDGE_URL}/api/moviebox/home`;
     const { data } = await axios.get(bridgeUrl, { timeout: 15000 });
     
-    // Apply SafeSearch filter recursively to home data
-    if (isSafe && data.items) {
-      data.items = data.items.map(row => {
-        if (row.subjects) {
-          row.subjects = row.subjects.filter(s => isSafeContent(s));
-        }
-        if (row.customData?.items) {
-          row.customData.items = row.customData.items.filter(ci => isSafeContent(ci.subject));
-        }
-        if (row.banner?.banners) {
-          row.banner.banners = row.banner.banners.filter(b => isSafeContent(b.subject));
-        }
-        return row;
+    if (data.items) {
+      // 1. Filter out unwanted categories (WWE, Skill & Courses, Cricket)
+      const unwantedRowRegex = /wwe|skill|course|cricket/i;
+      data.items = data.items.filter(row => {
+        const title = (row.title || '').toLowerCase();
+        return !unwantedRowRegex.test(title);
       });
+
+      // 2. Apply SafeSearch filter recursively to remaining home data
+      if (isSafe) {
+        data.items = data.items.map(row => {
+          if (row.subjects) {
+            row.subjects = row.subjects.filter(s => isSafeContent(s));
+          }
+          if (row.customData?.items) {
+            row.customData.items = row.customData.items.filter(ci => isSafeContent(ci.subject));
+          }
+          if (row.banner?.banners) {
+            row.banner.banners = row.banner.banners.filter(b => isSafeContent(b.subject));
+          }
+          return row;
+        });
+      }
     }
 
     res.json(data);
