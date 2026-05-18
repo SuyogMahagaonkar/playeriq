@@ -74,7 +74,8 @@ export async function renderHomePage({ container }) {
         mappedNetflix,
         'mixed',
         null,
-        'portrait'
+        'portrait',
+        true
       );
     }
 
@@ -96,7 +97,8 @@ export async function renderHomePage({ container }) {
         mappedPrime,
         'mixed',
         null,
-        'portrait'
+        'portrait',
+        true
       );
     }
 

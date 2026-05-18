@@ -4,15 +4,15 @@
 
 import { createMovieCard, createSkeletonCard, attachCardClicks } from './MovieCard.js';
 
-export function createContentRow(title, items, type = 'movie', moreRoute = null, cardLayout = 'portrait') {
+export function createContentRow(title, items, type = 'movie', moreRoute = null, cardLayout = 'portrait', showViewMore = false) {
   let cards = '';
   if (type === 'custom') {
     cards = items; // Already HTML string
   } else {
     cards = items.map(item => createMovieCard(item, type, null, null, null, false, cardLayout)).join('');
     
-    // Append a beautiful "View More" card at the end of every row category (excluding local custom rows like history)
-    if (type !== 'history' && items.length > 0) {
+    // Append a beautiful "View More" card ONLY when explicitly requested (like Netflix and Prime)
+    if (showViewMore && items.length > 0) {
       const cleanTitle = title.replace(/<[^>]*>/g, '').trim();
       cards += `
         <a href="#/category?title=${encodeURIComponent(cleanTitle)}" class="movie-card movie-card-portrait more-card-link" style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, rgba(255, 0, 85, 0.08) 0%, rgba(20,20,25,0.6) 100%); border:1px dashed rgba(255,0,85,0.3); border-radius:12px; height:100%; min-height:240px; cursor:pointer; text-decoration:none; transition:all 0.3s; padding: 20px; box-sizing: border-box; min-width: 160px; max-width: 160px; flex-shrink: 0; align-self: stretch;">
