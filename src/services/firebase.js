@@ -299,3 +299,53 @@ export async function clearAllWatchHistory(userId) {
   }
 }
 
+// ---- Firestore: Notifications ----
+
+/**
+ * Add an unaired episode notification alert.
+ * @param {string} userId
+ * @param {Object} notif - { epKey, tvId, seasonNumber, episodeNumber, title, airDate }
+ */
+export async function addNotificationToCloud(userId, notif) {
+  try {
+    const ref = doc(db, 'users', userId, 'notifications', notif.epKey);
+    await setDoc(ref, {
+      ...notif,
+      createdAt: serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.error('[Firebase] Failed to add notification:', err);
+  }
+}
+
+/**
+ * Remove an unaired episode notification alert.
+ * @param {string} userId
+ * @param {string} epKey
+ */
+export async function removeNotificationFromCloud(userId, epKey) {
+  try {
+    const ref = doc(db, 'users', userId, 'notifications', epKey);
+    await deleteDoc(ref);
+  } catch (err) {
+    console.error('[Firebase] Failed to remove notification:', err);
+  }
+}
+
+/**
+ * Check if an unaired episode notification alert exists.
+ * @param {string} userId
+ * @param {string} epKey
+ * @returns {Promise<boolean>}
+ */
+export async function isNotificationInCloud(userId, epKey) {
+  try {
+    const ref = doc(db, 'users', userId, 'notifications', epKey);
+    const snap = await getDoc(ref);
+    return snap.exists();
+  } catch (err) {
+    console.error('[Firebase] Failed to check notification:', err);
+    return false;
+  }
+}
+

@@ -6,7 +6,7 @@ import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser } from '../services/auth.js';
-import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud } from '../services/firebase.js';
 
 export async function renderDetailPage({ params, container }) {
   const isTV = window.location.hash.includes('#/tv/');
@@ -302,23 +302,150 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
 
   try {
     const season = await getSeasonDetails(tvId, seasonNumber, title, year);
-    listEl.innerHTML = (season.episodes || []).map(ep => `
-      <div class="episode-card" data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}">
-        <img class="episode-still" src="${ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>')}" alt="Episode ${ep.episode_number}" loading="lazy" />
-        <div class="episode-info">
-          <div class="episode-number">Episode ${ep.episode_number}</div>
-          <div class="episode-name">${ep.name || ''}</div>
-          <div class="episode-overview">${ep.overview || 'No description available.'}</div>
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const episodesHTML = (season.episodes || []).map(ep => {
+      const isUnaired = !ep.air_date || ep.air_date > todayStr;
+      const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
+      const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+
+      const cardClass = isUnaired ? 'episode-card unaired' : 'episode-card';
+      const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+
+      return `
+        <div class="${cardClass}" ${routeStr}>
+          <div class="episode-still-container">
+            <img src="${ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>')}" alt="Episode ${ep.episode_number}" loading="lazy" />
+            ${isUnaired ? `
+              <div class="episode-lock-overlay">
+                <i data-lucide="lock"></i>
+              </div>
+            ` : ''}
+          </div>
+          <div class="episode-info">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <div class="episode-number">
+                Episode ${ep.episode_number}
+                ${isUnaired ? `<span style="color:#00a8e1; font-weight:700; margin-left:8px; font-size:11px;">Coming ${formattedDate}</span>` : ''}
+              </div>
+            </div>
+            <div class="episode-name">${ep.name || ''}</div>
+            <div class="episode-overview">${ep.overview || 'No description available.'}</div>
+            
+            ${isUnaired ? `
+              <button class="notify-btn" data-ep-key="${epKey}" data-title="${ep.name || ''}" data-airdate="${ep.air_date || 'Soon'}">
+                <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
+                <span>Notify Me</span>
+              </button>
+            ` : ''}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+
+    listEl.innerHTML = episodesHTML;
+    if (window.lucide) window.lucide.createIcons();
+
+    // Setup toggle indicators
+    listEl.querySelectorAll('.notify-btn').forEach(btn => {
+      const epKey = btn.dataset.epKey;
+      const titleStr = btn.dataset.title;
+      const airdateStr = btn.dataset.airdate;
+      const user = getUser();
+
+      // Check if already notified
+      const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+      if (alerts[epKey]) {
+        btn.classList.add('active');
+        btn.innerHTML = `<i data-lucide="bell-ring" style="width: 14px; height: 14px; fill: #00a8e1;"></i> <span>Notified</span>`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const currentAlerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+        const isActive = btn.classList.contains('active');
+
+        if (isActive) {
+          delete currentAlerts[epKey];
+          localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
+          btn.classList.remove('active');
+          btn.innerHTML = `<i data-lucide="bell" style="width: 14px; height: 14px;"></i> <span>Notify Me</span>`;
+          
+          if (user) {
+            await removeNotificationFromCloud(user.uid, epKey);
+          }
+          showToast('Notification alert removed.', 'bell-off');
+        } else {
+          const notif = {
+            epKey,
+            tvId,
+            seasonNumber,
+            episodeNumber: String(epKey.split('_E')[1]),
+            title: titleStr,
+            airDate: airdateStr
+          };
+          currentAlerts[epKey] = notif;
+          localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
+          btn.classList.add('active');
+          btn.innerHTML = `<i data-lucide="bell-ring" style="width: 14px; height: 14px; fill: #00a8e1;"></i> <span>Notified</span>`;
+          
+          if (user) {
+            await addNotificationToCloud(user.uid, notif);
+          }
+          showToast(`Alert set! We will notify you when Episode ${notif.episodeNumber} airs.`, 'bell');
+        }
+        if (window.lucide) window.lucide.createIcons();
+      });
+    });
 
     listEl.querySelectorAll('.episode-card').forEach(card => {
-      card.addEventListener('click', () => { window.location.hash = card.dataset.route; });
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.notify-btn')) {
+          e.stopPropagation();
+          return;
+        }
+
+        if (card.classList.contains('unaired')) {
+          showToast('This episode has not aired yet.', 'calendar');
+          return;
+        }
+
+        const route = card.dataset.route;
+        if (route) window.location.hash = route;
+      });
     });
+
   } catch (err) {
     listEl.innerHTML = '<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>';
   }
+}
+
+function showToast(message, iconName = 'bell') {
+  let container = document.getElementById('piq-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'piq-toast-container';
+    container.className = 'piq-toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'piq-toast';
+  toast.innerHTML = `
+    <i data-lucide="${iconName}" style="width: 16px; height: 16px;"></i>
+    <span>${message}</span>
+  `;
+  container.appendChild(toast);
+  
+  if (window.lucide) window.lucide.createIcons();
+
+  setTimeout(() => toast.classList.add('show'), 50);
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3500);
 }
 
 function updateWatchlistBtn(btn, textEl, inList) {
