@@ -970,17 +970,11 @@
 #delete-selected-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-glow-sm);
-  animation: pulseDeleteBtn 2s infinite;
+  gap: var(--space-2xs);
+  padding: 6px 12px;
 }
 
-@keyframes pulseDeleteBtn {
-  0%, 100% { box-shadow: 0 0 10px rgba(229, 9, 20, 0.3); }
-  50% { box-shadow: 0 0 16px rgba(229, 9, 20, 0.6); }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

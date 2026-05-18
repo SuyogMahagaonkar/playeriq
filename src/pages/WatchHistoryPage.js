@@ -118,9 +118,9 @@ function renderPage(container, items, user) {
         ${count === 0 ? renderEmpty('history') : `
           <div class="user-page-toolbar">
             <span class="user-item-count">${count} item${count !== 1 ? 's' : ''}</span>
-            <button class="settings-danger-btn" id="delete-selected-btn" style="display: none; margin-left: auto;">
+            <button class="settings-danger-btn" id="delete-selected-btn" style="display: none; margin-left: auto;" title="Delete Selected">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-              Delete Selected (<span id="delete-selected-count">0</span>)
+              (<span id="delete-selected-count">0</span>)
             </button>
           </div>
           
@@ -259,7 +259,7 @@ function renderPage(container, items, user) {
     if (!confirm(`Delete all ${checked.length} selected collections/items from watch history?`)) return;
 
     const btn = container.querySelector('#delete-selected-btn');
-    btn.textContent = 'Deleting…';
+    btn.innerHTML = `<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor"/></svg>`;
     btn.disabled = true;
 
     for (const cb of checked) {
