@@ -238,9 +238,14 @@ function renderPage(container, items, user) {
       folder.style.pointerEvents = 'none';
 
       const episodes = JSON.parse(folder.dataset.episodesJson);
-      for (const ep of episodes) {
-        // Also clear out individual records
-        await removeFromHistory(ep.docId || ep.id);
+      const firstEp = episodes[0];
+      if (firstEp && firstEp.showDocId) {
+        await removeFromHistory(firstEp.showDocId);
+      } else {
+        // Fallback for local progress
+        for (const ep of episodes) {
+          await removeFromHistory(ep.id);
+        }
       }
 
       folder.remove();
@@ -329,8 +334,14 @@ function renderPage(container, items, user) {
 
       if (epsJson) {
         const episodes = JSON.parse(epsJson);
-        for (const ep of episodes) {
-          await removeFromHistory(ep.docId || ep.id);
+        const firstEp = episodes[0];
+        if (firstEp && firstEp.showDocId) {
+          await removeFromHistory(firstEp.showDocId);
+        } else {
+          // Fallback for local progress
+          for (const ep of episodes) {
+            await removeFromHistory(ep.id);
+          }
         }
       } else {
         await removeFromHistory(id);
@@ -585,8 +596,14 @@ function openFolderModal(title, episodes) {
     overlay.querySelector('.folder-modal').style.opacity = '0.5';
     overlay.querySelector('.folder-modal').style.pointerEvents = 'none';
 
-    for (const ep of episodes) {
-      await removeFromHistory(ep.docId || ep.id);
+    const firstEp = episodes[0];
+    if (firstEp && firstEp.showDocId) {
+      await removeFromHistory(firstEp.showDocId);
+    } else {
+      // Fallback for local progress
+      for (const ep of episodes) {
+        await removeFromHistory(ep.id);
+      }
     }
 
     close();
