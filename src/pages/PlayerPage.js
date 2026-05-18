@@ -2,7 +2,7 @@
 // PlayerIQ — Player Page (Cinema Mode)
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, img, NODE_PROXY } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { navigate } from '../services/router.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
@@ -105,24 +105,70 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   wrapper.innerHTML = `
     <div class="player-loading-overlay" id="player-loading">
       <div class="player-loading-spinner"></div>
-      <div class="player-loading-text">Loading Player...</div>
+      <div class="player-loading-text" id="player-loading-text">Fetching stream...</div>
     </div>
   `;
 
+  // ---- Stream fetch timeout: 60s with live countdown ----
+  // On production the VPS MovieBox scrape can take 10–40s.
+  // We show a live status message so the user knows it's working,
+  // then gracefully fall back to iframe if it takes too long.
+  const STREAM_TIMEOUT_MS = 60000;
+
   // Determine if we should try custom player
   if (currentPlayerMode === 'custom') {
+    let countdownInterval = null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
+
+    // Live countdown in the loading text
+    let elapsed = 0;
+    const loadingTextEl = () => document.getElementById('player-loading-text');
+    countdownInterval = setInterval(() => {
+      elapsed += 1;
+      const el = loadingTextEl();
+      if (el) el.textContent = `Fetching stream... (${elapsed}s)`;
+    }, 1000);
+
+    const clearTimers = () => {
+      clearTimeout(timeoutId);
+      clearInterval(countdownInterval);
+    };
+
     try {
       const endpoint = isTV
         ? `/api/stream/tv/${id}/${season}/${episode}`
         : `/api/stream/movie/${id}`;
 
-      const res = await fetch(`http://localhost:8788${endpoint}`);
+      // Use NODE_PROXY (production API URL) — NOT localhost.
+      // On local dev, Vite proxies /api/* to localhost:8788 automatically.
+      const res = await fetch(`${NODE_PROXY}${endpoint}`, { signal: controller.signal });
+      clearTimers();
+
       if (res.ok) {
         const streamData = await res.json();
 
         // Inject TMDB runtime as duration fallback if MovieBox didn't provide one
         if (!streamData.duration && tmdbRuntimeSeconds) {
           streamData.duration = tmdbRuntimeSeconds;
+        }
+
+        // ---- Bug fix: rewrite relative /api/* proxy URLs to absolute ----
+        // The Node proxy returns stream/transcode/segment URLs as relative paths
+        // (e.g. /api/proxy/transcode?...). On GitHub Pages these resolve against
+        // the GitHub Pages origin — NOT the VPS — so video.src breaks silently.
+        // We must prefix them with NODE_PROXY before handing to VideoPlayer.
+        const toAbsolute = (url) => {
+          if (!url) return url;
+          if (url.startsWith('/api/')) return `${NODE_PROXY}${url}`;
+          return url;
+        };
+        streamData.url = toAbsolute(streamData.url);
+        if (Array.isArray(streamData.all_streams)) {
+          streamData.all_streams = streamData.all_streams.map(s => ({
+            ...s,
+            url: toAbsolute(s.url),
+          }));
         }
 
         // Clear wrapper and init custom player
@@ -146,7 +192,12 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         console.warn('Backend stream extraction failed, falling back to iframe');
       }
     } catch (err) {
-      console.warn('Backend server not reachable, falling back to iframe', err);
+      clearTimers();
+      if (err.name === 'AbortError') {
+        console.warn(`[Player] Stream fetch timed out after ${STREAM_TIMEOUT_MS / 1000}s, falling back to iframe`);
+      } else {
+        console.warn('Backend server not reachable, falling back to iframe', err);
+      }
     }
   }
 
