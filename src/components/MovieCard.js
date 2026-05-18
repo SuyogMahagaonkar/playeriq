@@ -64,6 +64,16 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
     </div>
   ` : '';
 
+  let srcsetAttribute = '';
+  let sizesAttribute = '';
+  if (item.poster_path && cardLayout !== 'landscape') {
+    srcsetAttribute = `srcset="${img.poster(item.poster_path, 'w185')} 185w, ${img.poster(item.poster_path, 'w342')} 342w, ${img.poster(item.poster_path, 'w500')} 500w, ${img.poster(item.poster_path, 'w780')} 780w"`;
+    sizesAttribute = `sizes="(max-width: 768px) calc(50vw - 20px), 180px"`;
+  } else if (item.backdrop_path && cardLayout === 'landscape') {
+    srcsetAttribute = `srcset="${img.backdrop(item.backdrop_path, 'w300')} 300w, ${img.backdrop(item.backdrop_path, 'w780')} 780w, ${img.backdrop(item.backdrop_path, 'original')} 1280w"`;
+    sizesAttribute = `sizes="(max-width: 768px) 100vw, 280px"`;
+  }
+
   const cardWidth = cardLayout === 'landscape' ? '280px' : '180px';
   const layoutClass = cardLayout === 'landscape' ? 'landscape' : '';
 
@@ -71,7 +81,7 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
     <div class="movie-card ${layoutClass}" data-route="${route}" style="width:${cardWidth}" role="button" tabindex="0" aria-label="${title}">
       <div class="movie-card-poster-wrapper">
         ${poster
-      ? `<img class="movie-card-poster" src="${poster}" alt="${title}" loading="lazy" />`
+      ? `<img class="movie-card-poster" src="${poster}" ${srcsetAttribute} ${sizesAttribute} alt="${title}" loading="lazy" />`
       : `<div class="movie-card-poster" style="background:var(--bg-tertiary);width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:var(--text-xs);">No Image</div>`
     }
         <div class="movie-card-gradient"></div>

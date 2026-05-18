@@ -16,9 +16,12 @@ export function createHeroBanner(items) {
     const type = m.media_type === 'tv' ? 'tv' : 'movie';
     const overview = m.overview || '';
 
+    const bannerSrcset = `srcset="${img.backdrop(m.backdrop_path, 'w300')} 300w, ${img.backdrop(m.backdrop_path, 'w780')} 780w, ${img.backdrop(m.backdrop_path, 'w1280')} 1280w, ${img.backdrop(m.backdrop_path, 'original')} 1920w"`;
+    const bannerSizes = `sizes="(max-width: 768px) 100vw, 100vw"`;
+
     return `
       <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}">
-        <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'original')}" alt="${title}" />
+        <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'original')}" ${bannerSrcset} ${bannerSizes} alt="${title}" loading="eager" />
         <div class="hero-gradient-left"></div>
         <div class="hero-gradient-bottom"></div>
         <div class="hero-content">

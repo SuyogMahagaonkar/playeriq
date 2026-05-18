@@ -43,32 +43,32 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
         <!-- Bottom bar -->
         <div class="vp-bottom-bar">
           <div class="vp-left-controls">
-            <button class="vp-btn" id="vp-play-btn" title="Play (Space)">
+            <button class="vp-btn" id="vp-play-btn" title="Play (Space)" aria-label="Toggle Play/Pause">
               <svg class="vp-icon-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               <svg class="vp-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
             </button>
 
-            <button class="vp-btn" id="vp-skip-back" title="Back 10s (←)">
+            <button class="vp-btn" id="vp-skip-back" title="Back 10s (←)" aria-label="Skip backward 10 seconds">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 105.64-8.36L3 12"/><text x="12" y="15" fill="currentColor" stroke="none" font-size="8" text-anchor="middle" font-weight="bold">10</text></svg>
             </button>
 
-            <button class="vp-btn" id="vp-skip-forward" title="Forward 10s (→)">
+            <button class="vp-btn" id="vp-skip-forward" title="Forward 10s (→)" aria-label="Skip forward 10 seconds">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-5.64-8.36L21 12"/><text x="12" y="15" fill="currentColor" stroke="none" font-size="8" text-anchor="middle" font-weight="bold">10</text></svg>
             </button>
 
             <div class="vp-volume-group">
-              <button class="vp-btn" id="vp-mute-btn" title="Mute (M)">
+              <button class="vp-btn" id="vp-mute-btn" title="Mute (M)" aria-label="Toggle Mute">
                 <svg class="vp-icon-vol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
                 <svg class="vp-icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
               </button>
-              <input type="range" class="vp-volume-slider" id="vp-volume" min="0" max="100" value="100">
+              <input type="range" class="vp-volume-slider" id="vp-volume" min="0" max="100" value="100" aria-label="Volume slider">
             </div>
 
             <span class="vp-time" id="vp-time">0:00 / 0:00</span>
           </div>
 
           <div class="vp-right-controls">
-            <select class="vp-select" id="vp-speed" title="Playback Speed">
+            <select class="vp-select" id="vp-speed" title="Playback Speed" aria-label="Playback Speed">
               <option value="0.5">0.5x</option>
               <option value="0.75">0.75x</option>
               <option value="1" selected>1x</option>
@@ -77,15 +77,15 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
               <option value="2">2x</option>
             </select>
 
-            <select class="vp-select" id="vp-quality" title="Quality">
+            <select class="vp-select" id="vp-quality" title="Quality" aria-label="Video Quality">
               <option value="-1">Auto</option>
             </select>
 
-            <button class="vp-btn" id="vp-pip-btn" title="Picture in Picture">
+            <button class="vp-btn" id="vp-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
             </button>
 
-            <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)">
+            <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
               <svg class="vp-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
               <svg class="vp-icon-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
             </button>
