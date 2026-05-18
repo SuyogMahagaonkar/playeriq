@@ -567,6 +567,27 @@
     transform: translate(-50%, -50%) scale(0.85) !important;
   }
 
+  /* Profile Dropdown Items Touch Optimization */
+  .profile-dropdown-item {
+    min-height: 44px !important;
+    padding: 10px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Hero Slider Navigation Arrows Target Expansion */
+  .hero-nav {
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .hero-nav svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
   /* Keyboard outlines */
   *:focus-visible {
     outline: 2px solid var(--accent, #e50914) !important;
