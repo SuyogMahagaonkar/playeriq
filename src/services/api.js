@@ -230,3 +230,17 @@ export async function getWatchProviders(id, type, title = null) {
   }
   return null;
 }
+
+export async function getTop10Movies() {
+  const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
+  if (!res.ok) throw new Error('Failed to fetch top 10 movies');
+  const data = await res.json();
+  return { results: (data.results || []).slice(0, 10) };
+}
+
+export async function getTop10Series() {
+  const res = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
+  if (!res.ok) throw new Error('Failed to fetch top 10 series');
+  const data = await res.json();
+  return { results: (data.results || []).slice(0, 10) };
+}

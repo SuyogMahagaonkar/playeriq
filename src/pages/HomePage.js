@@ -1,4 +1,4 @@
-import { getMovieBoxHome, getLatestNetflix, getLatestPrime } from '../services/api.js';
+import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -12,10 +12,12 @@ export async function renderHomePage({ container }) {
   `;
 
   try {
-    const [homeData, netflixData, primeData] = await Promise.all([
+    const [homeData, netflixData, primeData, top10MoviesData, top10SeriesData] = await Promise.all([
       getMovieBoxHome(),
       getLatestNetflix().catch(() => ({ results: [] })),
-      getLatestPrime().catch(() => ({ results: [] }))
+      getLatestPrime().catch(() => ({ results: [] })),
+      getTop10Movies().catch(() => ({ results: [] })),
+      getTop10Series().catch(() => ({ results: [] }))
     ]);
     
     const items = homeData.items || [];
@@ -102,6 +104,150 @@ export async function renderHomePage({ container }) {
       );
     }
 
+    // 3. Top 10 Movies Row
+    let top10MoviesHTML = '';
+    const topMovies = top10MoviesData.results || [];
+    if (topMovies.length > 0) {
+      const topMoviesCards = topMovies.map((item, index) => {
+        const route = `/detail/movie/${item.id}`;
+        const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
+        return `
+          <div class="top10-card" data-route="${route}" style="
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            width: 190px;
+            height: 240px;
+            flex-shrink: 0;
+            margin-left: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          "
+          onmouseover="this.style.transform='scale(1.05) translateY(-5px)';"
+          onmouseout="this.style.transform='none';"
+          >
+            <div class="top10-number" style="
+              font-size: 150px;
+              font-weight: 900;
+              line-height: 0.8;
+              color: #0b0b0f;
+              -webkit-text-stroke: 4px rgba(255, 255, 255, 0.45);
+              position: absolute;
+              left: -30px;
+              bottom: 0px;
+              z-index: 1;
+              user-select: none;
+              font-family: 'Arial Black', Impact, sans-serif;
+              transition: all 0.3s;
+            ">${index + 1}</div>
+            
+            <div style="
+              width: 140px;
+              height: 210px;
+              border-radius: 8px;
+              overflow: hidden;
+              z-index: 2;
+              border: 1px solid rgba(255, 255, 255, 0.08);
+              box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+              position: absolute;
+              right: 0;
+              bottom: 15px;
+            ">
+              <img src="${posterUrl}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      top10MoviesHTML = `
+        <section class="content-row">
+          <div class="content-row-header" style="padding-left: 45px;">
+            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#ff0055;"></i> Top 10 Movies Today</h2>
+          </div>
+          <div class="content-row-scroll-wrapper" style="position: relative;">
+            <button class="scroll-arrow scroll-arrow-left" style="z-index:10;"><i data-lucide="chevron-left"></i></button>
+            <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
+              ${topMoviesCards}
+            </div>
+            <button class="scroll-arrow scroll-arrow-right" style="z-index:10;"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </section>
+      `;
+    }
+
+    // 4. Top 10 Series Row
+    let top10SeriesHTML = '';
+    const topSeries = top10SeriesData.results || [];
+    if (topSeries.length > 0) {
+      const topSeriesCards = topSeries.map((item, index) => {
+        const route = `/detail/tv/${item.id}`;
+        const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
+        return `
+          <div class="top10-card" data-route="${route}" style="
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            width: 190px;
+            height: 240px;
+            flex-shrink: 0;
+            margin-left: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          "
+          onmouseover="this.style.transform='scale(1.05) translateY(-5px)';"
+          onmouseout="this.style.transform='none';"
+          >
+            <div class="top10-number" style="
+              font-size: 150px;
+              font-weight: 900;
+              line-height: 0.8;
+              color: #0b0b0f;
+              -webkit-text-stroke: 4px rgba(255, 255, 255, 0.45);
+              position: absolute;
+              left: -30px;
+              bottom: 0px;
+              z-index: 1;
+              user-select: none;
+              font-family: 'Arial Black', Impact, sans-serif;
+              transition: all 0.3s;
+            ">${index + 1}</div>
+            
+            <div style="
+              width: 140px;
+              height: 210px;
+              border-radius: 8px;
+              overflow: hidden;
+              z-index: 2;
+              border: 1px solid rgba(255, 255, 255, 0.08);
+              box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+              position: absolute;
+              right: 0;
+              bottom: 15px;
+            ">
+              <img src="${posterUrl}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      top10SeriesHTML = `
+        <section class="content-row">
+          <div class="content-row-header" style="padding-left: 45px;">
+            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#00a8e1;"></i> Top 10 Shows Today</h2>
+          </div>
+          <div class="content-row-scroll-wrapper" style="position: relative;">
+            <button class="scroll-arrow scroll-arrow-left" style="z-index:10;"><i data-lucide="chevron-left"></i></button>
+            <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
+              ${topSeriesCards}
+            </div>
+            <button class="scroll-arrow scroll-arrow-right" style="z-index:10;"><i data-lucide="chevron-right"></i></button>
+          </div>
+        </section>
+      `;
+    }
+
     // Extract lists from the home payload
     const validRows = items.filter(i => 
       (i.type === 'SUBJECTS_MOVIE' && i.subjects && i.subjects.length > 0 && i.title) ||
@@ -135,12 +281,31 @@ export async function renderHomePage({ container }) {
       return createContentRow(`<i data-lucide="${icon}" class="search-section-icon"></i> ${rowObj.title}`, mappedItems, 'mixed', null, 'portrait');
     }).join('');
 
-    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
+    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + top10MoviesHTML + top10SeriesHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
+
+    // Inject outline top 10 style
+    const top10Style = document.createElement('style');
+    top10Style.innerHTML = `
+      .top10-card:hover .top10-number {
+        -webkit-text-stroke: 4px #ff0055 !important;
+        color: rgba(255, 0, 85, 0.1) !important;
+        filter: drop-shadow(0 0 15px rgba(255, 0, 85, 0.6)) !important;
+      }
+    `;
+    container.appendChild(top10Style);
 
     // Initialize interactivity
     const cleanupHero = initHeroBanner();
     initContentRows(container);
     if (window.lucide) window.lucide.createIcons();
+
+    // Wire up Top 10 clicks
+    container.querySelectorAll('.top10-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const route = card.dataset.route;
+        if (route) window.location.hash = route;
+      });
+    });
 
     // Handle delete events for Continue Watching
     const deleteHandler = (e) => {
