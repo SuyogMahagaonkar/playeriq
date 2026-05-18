@@ -91,7 +91,8 @@
   cursor: pointer;
   z-index: 20;
   opacity: 1;
-  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  visibility: visible;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-normal), visibility var(--transition-normal);
   border: 1.5px solid rgba(255,255,255,0.2);
   box-shadow: 0 2px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
 }
@@ -114,6 +115,7 @@
 .content-row-arrow-right { right: 6px; }
 
 .content-row-arrow.hidden {
+  opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }

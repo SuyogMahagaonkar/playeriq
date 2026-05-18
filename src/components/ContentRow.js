@@ -169,19 +169,19 @@ export function initContentRows(container) {
       scroll.scrollBy({ left: getScrollAmount(), behavior: 'smooth' });
     });
 
-    // ---- Arrow visibility (simple: both visible, hide only at edges) ----
-    // Left starts hidden since we start at position 0
-    if (leftArrow) leftArrow.classList.add('hidden');
-    // Right arrow is NEVER pre-hidden - always visible unless truly no overflow
-
+    // ---- Arrow visibility (dynamically hide at borders or if no overflow) ----
     function updateArrows() {
       const atStart = scroll.scrollLeft <= 5;
-      const atEnd = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 5;
+      const atEnd = scroll.scrollLeft >= (scroll.scrollWidth - scroll.clientWidth - 5);
       if (leftArrow) leftArrow.classList.toggle('hidden', atStart);
       if (rightArrow) rightArrow.classList.toggle('hidden', atEnd);
     }
 
     scroll.addEventListener('scroll', updateArrows, { passive: true });
+    window.addEventListener('resize', updateArrows, { passive: true });
+
+    // Evaluate immediately on initial paint
+    updateArrows();
 
     // ---- Drag-to-scroll (desktop) ----
     // Track drag state; only navigate if not dragging
