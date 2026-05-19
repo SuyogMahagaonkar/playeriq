@@ -4,7 +4,7 @@
 
 import { getUser, login, logout, waitAuthReady } from '../services/auth.js';
 import { navigate } from '../services/router.js';
-import { getSettings, saveSettings, clearAllWatchHistory } from '../services/firebase.js';
+import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig } from '../services/firebase.js';
 import { createFooter } from '../components/Footer.js';
 import { refreshSidebarNav } from '../components/Sidebar.js';
 
@@ -32,7 +32,13 @@ export async function renderSettingsPage({ container }) {
 
   container.innerHTML = `<div class="user-page" style="display:flex;align-items:center;justify-content:center;min-height:60vh"><div class="load-more-spinner" style="width:40px;height:40px"></div></div>`;
 
-  const prefs = await getSettings(user.uid).catch(() => ({ language: 'all', autoplay: true, quality: 'auto', safeSearch: true }));
+  const [prefs, globalConfig] = await Promise.all([
+    getSettings(user.uid).catch(() => ({ language: 'all', autoplay: true, quality: 'auto', safeSearch: true })),
+    getGlobalConfig()
+  ]);
+
+  const isAdmin = user.email === 'suyogmahagaonkar183@gmail.com';
+  const showSafeSearchToggle = isAdmin || (globalConfig.showSafeSearchToggle !== false);
 
   container.innerHTML = `
     <div class="user-page">
@@ -94,6 +100,7 @@ export async function renderSettingsPage({ container }) {
               </select>
             </div>
 
+            ${showSafeSearchToggle ? `
             <div class="settings-row">
               <div class="settings-row-label">
                 <div class="settings-row-title">Safe Search</div>
@@ -107,6 +114,7 @@ export async function renderSettingsPage({ container }) {
                 <span class="settings-toggle-track"></span>
               </label>
             </div>
+            ` : ''}
 
             <div class="settings-row">
               <div class="settings-row-label">
@@ -149,6 +157,26 @@ export async function renderSettingsPage({ container }) {
               </button>
             </div>
           </div>
+
+          <!-- Admin Dashboard (Visible only to Admin) -->
+          ${isAdmin ? `
+            <div class="settings-section admin-section" style="border: 1px solid var(--accent); padding: var(--space-lg); border-radius: 12px; margin-top: var(--space-xl); background: rgba(147, 51, 234, 0.05);">
+              <div class="settings-section-title" style="color: var(--accent); display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: var(--space-md);">
+                🛡️ Admin Controls
+              </div>
+              
+              <div class="settings-row" style="border: none; padding-top: 0;">
+                <div class="settings-row-label">
+                  <div class="settings-row-title">Display Safe Search Toggle</div>
+                  <div class="settings-row-desc">Allow all other users to toggle Safe Search on their Settings screen. If disabled, their toggle is hidden and Safe Search remains locked to active/default.</div>
+                </div>
+                <label class="settings-toggle">
+                  <input type="checkbox" id="admin-display-safesearch" ${globalConfig.showSafeSearchToggle !== false ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+          ` : ''}
 
         </div>
       </div>
@@ -341,7 +369,9 @@ export async function renderSettingsPage({ container }) {
       autoplay: document.getElementById('pref-autoplay')?.checked ?? true,
       quality:  document.getElementById('pref-quality')?.value  ?? 'auto',
       language: document.getElementById('pref-language')?.value ?? 'all',
-      safeSearch: document.getElementById('pref-safesearch')?.checked ?? true,
+      safeSearch: document.getElementById('pref-safesearch') 
+        ? document.getElementById('pref-safesearch').checked 
+        : (prefs.safeSearch ?? true),
       parentalPin: parentalPin
     };
     await saveSettings(user.uid, newPrefs);
@@ -411,6 +441,13 @@ export async function renderSettingsPage({ container }) {
     if (!confirm('Delete your entire watch history? This cannot be undone.')) return;
     await clearAllWatchHistory(user.uid);
     showToast('✓ Watch history cleared');
+  });
+
+  // Admin Controls
+  container.querySelector('#admin-display-safesearch')?.addEventListener('change', async () => {
+    const isChecked = container.querySelector('#admin-display-safesearch').checked;
+    await saveGlobalConfig({ showSafeSearchToggle: isChecked });
+    showToast('✓ System controls updated');
   });
 
   // Sign out

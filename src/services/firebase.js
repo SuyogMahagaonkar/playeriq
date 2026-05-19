@@ -465,3 +465,35 @@ export async function isNotificationInCloud(userId, epKey) {
   }
 }
 
+/**
+ * Get system-wide global configuration.
+ * @returns {Promise<Object>}
+ */
+export async function getGlobalConfig() {
+  try {
+    const ref = doc(db, 'system', 'config');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data();
+    }
+    return { showSafeSearchToggle: true };
+  } catch (err) {
+    console.error('[Firebase] Failed to get global config:', err);
+    return { showSafeSearchToggle: true };
+  }
+}
+
+/**
+ * Save system-wide global configuration.
+ * @param {Object} config
+ */
+export async function saveGlobalConfig(config) {
+  try {
+    const ref = doc(db, 'system', 'config');
+    await setDoc(ref, config, { merge: true });
+  } catch (err) {
+    console.error('[Firebase] Failed to save global config:', err);
+    throw err;
+  }
+}
+
