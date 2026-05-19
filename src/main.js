@@ -24,7 +24,7 @@ import './styles/user-pages.css';
 import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';
-import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater } from './services/auth.js';
+import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater, applyGlobalTheme } from './services/auth.js';
 import { renderLoginPage } from './pages/LoginPage.js';
 
 // Pages
@@ -43,6 +43,7 @@ import { renderCategoryPage } from './pages/CategoryPage.js';
 
 // ---- Boot App ----
 function initApp() {
+  applyGlobalTheme();
   const app = document.getElementById('app');
 
   // Create layout

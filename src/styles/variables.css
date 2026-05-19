@@ -118,3 +118,64 @@
   --z-modal: 400;
   --z-splash: 1000;
 }
+
+/* ========================================
+   Seamless Dynamic Themes & OLED Modes
+   ======================================== */
+
+/* ---- Theme: Red (Cinema) ---- */
+[data-theme-color="red"] {
+  --accent: #e50914;
+  --accent-hover: #ff2a2a;
+  --accent-glow: rgba(229, 9, 20, 0.35);
+  --accent-soft: rgba(229, 9, 20, 0.12);
+  --gradient-accent: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+}
+
+/* ---- Theme: Blue (Prime) ---- */
+[data-theme-color="blue"] {
+  --accent: #0084ff;
+  --accent-hover: #3fa4ff;
+  --accent-glow: rgba(0, 132, 255, 0.35);
+  --accent-soft: rgba(0, 132, 255, 0.12);
+  --gradient-accent: linear-gradient(135deg, #0084ff 0%, #0055a5 100%);
+}
+
+/* ---- Theme: Green (Emerald) ---- */
+[data-theme-color="green"] {
+  --accent: #00c853;
+  --accent-hover: #2aff7c;
+  --accent-glow: rgba(0, 200, 83, 0.35);
+  --accent-soft: rgba(0, 200, 83, 0.12);
+  --gradient-accent: linear-gradient(135deg, #00c853 0%, #007731 100%);
+}
+
+/* ---- Theme: Gold (Cyber) ---- */
+[data-theme-color="gold"] {
+  --accent: #e5a900;
+  --accent-hover: #ffcf40;
+  --accent-glow: rgba(229, 169, 0, 0.35);
+  --accent-soft: rgba(229, 169, 0, 0.12);
+  --gradient-accent: linear-gradient(135deg, #e5a900 0%, #997000 100%);
+}
+
+/* ---- Theme: Purple (Amethyst) ---- */
+[data-theme-color="purple"] {
+  --accent: #a855f7;
+  --accent-hover: #c084fc;
+  --accent-glow: rgba(168, 85, 247, 0.35);
+  --accent-soft: rgba(168, 85, 247, 0.12);
+  --gradient-accent: linear-gradient(135deg, #a855f7 0%, #701a75 100%);
+}
+
+/* ---- Mode: OLED Pure Black ---- */
+[data-theme-dark="oled"] {
+  --bg-primary: #000000;
+  --bg-secondary: #050505;
+  --bg-tertiary: #0a0a0a;
+  --bg-card: #0d0d0d;
+  --bg-card-hover: #121212;
+  --bg-surface: #101010;
+  --bg-overlay: rgba(0, 0, 0, 0.95);
+  --border-color: rgba(255, 255, 255, 0.04);
+}

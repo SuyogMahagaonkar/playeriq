@@ -342,7 +342,14 @@ const DEFAULT_SETTINGS = {
   language: 'all',
   autoplay: true,
   quality: 'auto',
-  safeSearch: true
+  safeSearch: true,
+  themeColor: 'purple',
+  themeDark: false,
+  seekInterval: 10,
+  skipRecaps: false,
+  subtitleSize: '100%',
+  subtitleColor: '#ffffff',
+  subtitleBgOpacity: 0.5
 };
 
 /**
@@ -493,6 +500,60 @@ export async function saveGlobalConfig(config) {
     await setDoc(ref, config, { merge: true });
   } catch (err) {
     console.error('[Firebase] Failed to save global config:', err);
+    throw err;
+  }
+}
+
+/**
+ * Export complete watch history and watchlist for a user.
+ * @param {string} userId
+ * @returns {Promise<Object>}
+ */
+export async function exportUserLibrary(userId) {
+  try {
+    const history = await fetchWatchHistory(userId);
+    const watchlistRef = collection(db, 'users', userId, 'watchlist');
+    const watchlistSnap = await getDocs(watchlistRef);
+    const watchlist = [];
+    watchlistSnap.forEach(docSnap => {
+      watchlist.push(docSnap.data());
+    });
+    
+    return {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      history,
+      watchlist
+    };
+  } catch (err) {
+    console.error('[Firebase] Failed to export library:', err);
+    throw err;
+  }
+}
+
+/**
+ * Import complete watch history and watchlist for a user.
+ * @param {string} userId
+ * @param {Object} data
+ */
+export async function importUserLibrary(userId, data) {
+  try {
+    if (!data || typeof data !== 'object') throw new Error('Invalid backup data format');
+    
+    if (Array.isArray(data.history)) {
+      for (const item of data.history) {
+        await saveProgressToCloud(userId, item);
+      }
+    }
+    
+    if (Array.isArray(data.watchlist)) {
+      for (const item of data.watchlist) {
+        const ref = doc(db, 'users', userId, 'watchlist', item.id);
+        await setDoc(ref, item, { merge: true });
+      }
+    }
+  } catch (err) {
+    console.error('[Firebase] Failed to import library:', err);
     throw err;
   }
 }

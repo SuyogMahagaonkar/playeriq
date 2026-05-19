@@ -16,6 +16,55 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   let controlsTimeout = null;
   let isDragging = false;
 
+  const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
+  const isSkipRecapsEnabled = localStorage.getItem('piq_skip_recaps') === 'true';
+  let hasAutoSkipped = false;
+
+  const subSize = localStorage.getItem('piq_sub_size') || '100%';
+  const subColor = localStorage.getItem('piq_sub_color') || '#ffffff';
+  const subBgOpacity = localStorage.getItem('piq_sub_bg_opacity') || '0.5';
+
+  const subStyle = document.createElement('style');
+  subStyle.id = 'piq-subtitles-custom-style';
+  subStyle.innerHTML = `
+    #vp-video::cue {
+      font-size: ${subSize} !important;
+      color: ${subColor} !important;
+      background-color: rgba(0, 0, 0, ${subBgOpacity}) !important;
+    }
+  `;
+  document.head.appendChild(subStyle);
+
+  function showPlayerHUD(text) {
+    const playerEl = document.getElementById('vp-player');
+    if (!playerEl) return;
+    const hud = document.createElement('div');
+    hud.style.cssText = `
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-display);
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      animation: fadeIn 0.3s ease;
+    `;
+    hud.innerHTML = text;
+    playerEl.appendChild(hud);
+    setTimeout(() => {
+      hud.style.transition = 'opacity 0.3s ease';
+      hud.style.opacity = '0';
+      setTimeout(() => hud.remove(), 300);
+    }, 2500);
+  }
+
   container.innerHTML = `
     <div class="vp-player" id="vp-player">
       <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous"></video>
@@ -362,6 +411,19 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     const offset = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
     const cur = video.currentTime + offset;
     const dur = getEffectiveDuration();
+
+    // Auto-skip intros & recaps
+    if (isSkipRecapsEnabled && !hasAutoSkipped && dur > 600 && cur > 1 && cur < 5) {
+      hasAutoSkipped = true;
+      const skipTarget = 85;
+      if (isTranscoded && window._playerPerformSeek) {
+        window._playerPerformSeek(skipTarget);
+      } else {
+        video.currentTime = skipTarget;
+      }
+      showPlayerHUD('⚡ Auto-Skipped Intro & Recap');
+    }
+
     timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
     if (!isDragging && dur > 0) {
       const pct = (cur / dur) * 100;
@@ -434,9 +496,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     const offset = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
     const cur = video.currentTime + offset;
     if (isTranscoded && window._playerPerformSeek) {
-      window._playerPerformSeek(Math.max(0, cur - 10));
+      window._playerPerformSeek(Math.max(0, cur - customSeekInterval));
     } else {
-      video.currentTime = Math.max(0, video.currentTime - 10);
+      video.currentTime = Math.max(0, video.currentTime - customSeekInterval);
     }
   });
   skipForward.addEventListener('click', () => {
@@ -444,9 +506,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     const cur = video.currentTime + offset;
     const dur = getEffectiveDuration();
     if (isTranscoded && window._playerPerformSeek) {
-      window._playerPerformSeek(Math.min(dur, cur + 10));
+      window._playerPerformSeek(Math.min(dur, cur + customSeekInterval));
     } else {
-      video.currentTime = Math.min(dur, video.currentTime + 10);
+      video.currentTime = Math.min(dur, video.currentTime + customSeekInterval);
     }
   });
 
@@ -606,8 +668,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       case 'j': {
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
-        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 10));
-        else video.currentTime = Math.max(0, video.currentTime - 10);
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - customSeekInterval));
+        else video.currentTime = Math.max(0, video.currentTime - customSeekInterval);
         showControls();
         e.preventDefault();
         break;
@@ -616,8 +678,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
         const dur = getEffectiveDuration();
-        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 10));
-        else video.currentTime = Math.min(dur, video.currentTime + 10);
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + customSeekInterval));
+        else video.currentTime = Math.min(dur, video.currentTime + customSeekInterval);
         showControls();
         e.preventDefault();
         break;
@@ -649,8 +711,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       case 'ArrowLeft': {
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
-        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 10));
-        else video.currentTime = Math.max(0, video.currentTime - 10);
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - customSeekInterval));
+        else video.currentTime = Math.max(0, video.currentTime - customSeekInterval);
         showControls();
         e.preventDefault();
         break;
@@ -659,8 +721,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
         const dur = getEffectiveDuration();
-        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 10));
-        else video.currentTime = Math.min(dur, video.currentTime + 10);
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + customSeekInterval));
+        else video.currentTime = Math.min(dur, video.currentTime + customSeekInterval);
         showControls();
         e.preventDefault();
         break;
@@ -700,6 +762,7 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       window.removeEventListener('keydown', onKeyDown);
       clearTimeout(controlsTimeout);
       clearTimeout(watchdogTimeout);
+      subStyle.remove();
       container.innerHTML = '';
     }
   };

@@ -10,7 +10,9 @@ import {
   fetchWatchHistory,
   saveProgressToCloud,
   removeProgressFromCloud,
-  getSettings
+  getSettings,
+  exportUserLibrary,
+  importUserLibrary
 } from './firebase.js';
 import { getProgress, saveProgressLocal, removeProgressLocal, clearProgressLocal } from './storage.js';
 
@@ -73,6 +75,13 @@ export function initAuth() {
       // Sync settings to localStorage for synchronous access in API calls
       const prefs = await getSettings(user.uid);
       localStorage.setItem('piq_safesearch', prefs.safeSearch ? 'true' : 'false');
+      localStorage.setItem('piq_theme_color', prefs.themeColor || 'purple');
+      localStorage.setItem('piq_theme_dark', prefs.themeDark ? 'oled' : 'default');
+      localStorage.setItem('piq_seek_interval', String(prefs.seekInterval || 10));
+      localStorage.setItem('piq_skip_recaps', prefs.skipRecaps ? 'true' : 'false');
+      localStorage.setItem('piq_sub_size', prefs.subtitleSize || '100%');
+      localStorage.setItem('piq_sub_color', prefs.subtitleColor || '#ffffff');
+      localStorage.setItem('piq_sub_bg_opacity', String(prefs.subtitleBgOpacity ?? 0.5));
 
       // Migrate any existing localStorage history to Firestore
       const localHistory = getProgress();
@@ -139,4 +148,24 @@ export async function removeFromHistory(mediaId) {
   } else {
     removeProgressLocal(mediaId);
   }
+}
+
+/**
+ * Apply the current global HSL accent colors and dark mode theme.
+ */
+export function applyGlobalTheme() {
+  const color = localStorage.getItem('piq_theme_color') || 'purple';
+  const dark = localStorage.getItem('piq_theme_dark') || 'default';
+  document.documentElement.setAttribute('data-theme-color', color);
+  document.documentElement.setAttribute('data-theme-dark', dark);
+}
+
+export async function exportLibrary() {
+  if (!currentUser) throw new Error('Must be logged in to export');
+  return await exportUserLibrary(currentUser.uid);
+}
+
+export async function importLibrary(data) {
+  if (!currentUser) throw new Error('Must be logged in to import');
+  await importUserLibrary(currentUser.uid, data);
 }
