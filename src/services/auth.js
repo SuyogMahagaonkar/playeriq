@@ -83,6 +83,9 @@ export function initAuth() {
       localStorage.setItem('piq_sub_color', prefs.subtitleColor || '#ffffff');
       localStorage.setItem('piq_sub_bg_opacity', String(prefs.subtitleBgOpacity ?? 0.5));
 
+      // Apply the user's customized theme instantly
+      applyGlobalTheme();
+
       // Migrate any existing localStorage history to Firestore
       const localHistory = getProgress();
       if (localHistory.length > 0) {
@@ -92,6 +95,19 @@ export function initAuth() {
         }
         clearProgressLocal();
       }
+    } else {
+      // User logged out - clear all user-specific settings so they don't bleed into guest/other sessions
+      localStorage.removeItem('piq_safesearch');
+      localStorage.removeItem('piq_theme_color');
+      localStorage.removeItem('piq_theme_dark');
+      localStorage.removeItem('piq_seek_interval');
+      localStorage.removeItem('piq_skip_recaps');
+      localStorage.removeItem('piq_sub_size');
+      localStorage.removeItem('piq_sub_color');
+      localStorage.removeItem('piq_sub_bg_opacity');
+
+      // Revert style to standard default theme
+      applyGlobalTheme();
     }
 
     notifyListeners();
