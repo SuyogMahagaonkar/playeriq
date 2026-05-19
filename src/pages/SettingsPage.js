@@ -53,130 +53,183 @@ export async function renderSettingsPage({ container }) {
       </div>
 
       <div class="user-page-body">
-        <div class="settings-layout">
-
-          <!-- Profile -->
-          <div class="settings-section">
-            <div class="settings-section-title">Profile</div>
-            <div class="settings-profile-row">
-              <div class="settings-profile-avatar">
-                ${user.photoURL
-                  ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
-                  : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
-              </div>
-              <div class="settings-profile-info">
-                <div class="settings-profile-name">${user.displayName ?? 'User'}</div>
-                <div class="settings-profile-email">${user.email ?? ''}</div>
-              </div>
-              <span class="settings-profile-badge">Google</span>
-            </div>
+        <div class="settings-grid-layout">
+          
+          <!-- Left: Tab navigation sidebar -->
+          <div class="settings-nav-sidebar">
+            <button class="settings-nav-btn active" data-tab="general">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Profile & General</span>
+            </button>
+            <button class="settings-nav-btn" data-tab="playback">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              <span>Playback Preferences</span>
+            </button>
+            ${showSafeSearchToggle ? `
+            <button class="settings-nav-btn" data-tab="parental">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Parental Controls</span>
+            </button>
+            ` : ''}
+            <button class="settings-nav-btn" data-tab="account">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="8" r="5"/></svg>
+              <span>Account Management</span>
+            </button>
+            ${isAdmin ? `
+            <button class="settings-nav-btn admin-nav-btn" data-tab="admin">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>🛡️ Admin Controls</span>
+            </button>
+            ` : ''}
           </div>
 
-          <!-- Playback Preferences -->
-          <div class="settings-section">
-            <div class="settings-section-title">Playback</div>
-
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Autoplay Next Episode</div>
-                <div class="settings-row-desc">Automatically play the next episode when the current one ends</div>
-              </div>
-              <label class="settings-toggle">
-                <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
-                <span class="settings-toggle-track"></span>
-              </label>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Default Quality</div>
-                <div class="settings-row-desc">Preferred video stream quality</div>
-              </div>
-              <select class="settings-select" id="pref-quality">
-                <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
-                <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
-                <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
-                <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
-              </select>
-            </div>
-
-            ${showSafeSearchToggle ? `
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Safe Search</div>
-                <div class="settings-row-desc">
-                  Hide explicitly adult and erotic content from search and browse
-                  <div id="parental-pin-actions" style="margin-top: 5px;"></div>
+          <!-- Right: Content panes -->
+          <div class="settings-content-panes" style="width: 100%;">
+            
+            <!-- Tab: General -->
+            <div class="settings-tab-panel active" id="panel-general">
+              <!-- Profile Card -->
+              <div class="settings-section">
+                <div class="settings-section-title">Profile</div>
+                <div class="settings-profile-row">
+                  <div class="settings-profile-avatar">
+                    ${user.photoURL
+                      ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
+                      : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+                  </div>
+                  <div class="settings-profile-info">
+                    <div class="settings-profile-name">${user.displayName ?? 'User'}</div>
+                    <div class="settings-profile-email">${user.email ?? ''}</div>
+                  </div>
+                  <span class="settings-profile-badge">Google</span>
                 </div>
               </div>
-              <label class="settings-toggle">
-                <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
-                <span class="settings-toggle-track"></span>
-              </label>
+
+              <!-- General System -->
+              <div class="settings-section">
+                <div class="settings-section-title">System & Region</div>
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Content Language</div>
+                    <div class="settings-row-desc">Filter content and metadata lists by language preference</div>
+                  </div>
+                  <select class="settings-select" id="pref-language">
+                    <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
+                    <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
+                    <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
+                    <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
+                    <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Playback -->
+            <div class="settings-tab-panel" id="panel-playback">
+              <div class="settings-section">
+                <div class="settings-section-title">Playback Preferences</div>
+                
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Autoplay Next Episode</div>
+                    <div class="settings-row-desc">Automatically play the next episode when the current one ends</div>
+                  </div>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Default Quality</div>
+                    <div class="settings-row-desc">Preferred video stream resolution quality</div>
+                  </div>
+                  <select class="settings-select" id="pref-quality">
+                    <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
+                    <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
+                    <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
+                    <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Parental -->
+            ${showSafeSearchToggle ? `
+            <div class="settings-tab-panel" id="panel-parental">
+              <div class="settings-section">
+                <div class="settings-section-title">Parental Controls</div>
+                
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Safe Search</div>
+                    <div class="settings-row-desc">
+                      Hide explicitly adult and erotic content from search and browse lists
+                      <div id="parental-pin-actions" style="margin-top: 5px;"></div>
+                    </div>
+                  </div>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
+                </div>
+              </div>
             </div>
             ` : ''}
 
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Content Language</div>
-                <div class="settings-row-desc">Filter content by language preference</div>
-              </div>
-              <select class="settings-select" id="pref-language">
-                <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
-                <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
-                <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
-                <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
-                <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Account -->
-          <div class="settings-section">
-            <div class="settings-section-title">Account</div>
-
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Watch History</div>
-                <div class="settings-row-desc">Permanently delete your entire watch history</div>
-              </div>
-              <button class="settings-danger-btn" id="settings-clear-history">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
-                Clear History
-              </button>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-row-label">
-                <div class="settings-row-title">Sign Out</div>
-                <div class="settings-row-desc">Sign out of your Google account on this device</div>
-              </div>
-              <button class="settings-signout-btn" id="settings-signout">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Sign Out
-              </button>
-            </div>
-          </div>
-
-          <!-- Admin Dashboard (Visible only to Admin) -->
-          ${isAdmin ? `
-            <div class="settings-section admin-section" style="border: 1px solid var(--accent); padding: var(--space-lg); border-radius: 12px; margin-top: var(--space-xl); background: rgba(147, 51, 234, 0.05);">
-              <div class="settings-section-title" style="color: var(--accent); display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: var(--space-md);">
-                🛡️ Admin Controls
-              </div>
-              
-              <div class="settings-row" style="border: none; padding-top: 0;">
-                <div class="settings-row-label">
-                  <div class="settings-row-title">Display Safe Search Toggle</div>
-                  <div class="settings-row-desc">Allow all other users to toggle Safe Search on their Settings screen. If disabled, their toggle is hidden and Safe Search remains locked to active/default.</div>
+            <!-- Tab: Account -->
+            <div class="settings-tab-panel" id="panel-account">
+              <div class="settings-section">
+                <div class="settings-section-title">Account Safety & Session</div>
+                
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Watch History</div>
+                    <div class="settings-row-desc">Permanently delete your entire watch history. This cannot be undone.</div>
+                  </div>
+                  <button class="settings-danger-btn" id="settings-clear-history">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+                    Clear History
+                  </button>
                 </div>
-                <label class="settings-toggle">
-                  <input type="checkbox" id="admin-display-safesearch" ${globalConfig.showSafeSearchToggle !== false ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Sign Out</div>
+                    <div class="settings-row-desc">Sign out of your Google account on this device</div>
+                  </div>
+                  <button class="settings-signout-btn" id="settings-signout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </div>
-          ` : ''}
+
+            <!-- Tab: Admin Controls -->
+            ${isAdmin ? `
+            <div class="settings-tab-panel" id="panel-admin">
+              <div class="settings-section admin-section" style="border: 1px solid var(--accent); background: rgba(147, 51, 234, 0.04);">
+                <div class="settings-section-title" style="color: var(--accent); font-weight: 700; border-bottom: 1px solid rgba(147, 51, 234, 0.15);">
+                  🛡️ Admin Panel
+                </div>
+                
+                <div class="settings-row" style="border: none;">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Display Safe Search Toggle</div>
+                    <div class="settings-row-desc">Allow all other users to toggle Safe Search on their Settings screen. If disabled, their toggle is hidden and Safe Search remains locked to active/default.</div>
+                  </div>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="admin-display-safesearch" ${globalConfig.showSafeSearchToggle !== false ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+
+          </div>
 
         </div>
       </div>
@@ -454,6 +507,18 @@ export async function renderSettingsPage({ container }) {
   container.querySelector('#settings-signout')?.addEventListener('click', async () => {
     await logout();
     navigate('/');
+  });
+
+  // Tab Switching event wiring
+  container.querySelectorAll('.settings-nav-sidebar .settings-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.settings-nav-sidebar .settings-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      container.querySelectorAll('.settings-content-panes .settings-tab-panel').forEach(panel => panel.classList.remove('active'));
+      const targetPanel = container.querySelector(`#panel-${btn.dataset.tab}`);
+      if (targetPanel) targetPanel.classList.add('active');
+    });
   });
 
   if (window.lucide) window.lucide.createIcons();
