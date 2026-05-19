@@ -75,7 +75,7 @@ export function initAuth() {
       // Sync settings to localStorage for synchronous access in API calls
       const prefs = await getSettings(user.uid);
       localStorage.setItem('piq_safesearch', prefs.safeSearch ? 'true' : 'false');
-      localStorage.setItem('piq_theme_color', prefs.themeColor || 'purple');
+      localStorage.setItem('piq_theme_color', prefs.themeColor || 'red');
       localStorage.setItem('piq_theme_dark', prefs.themeDark ? 'oled' : 'default');
       localStorage.setItem('piq_seek_interval', String(prefs.seekInterval || 10));
       localStorage.setItem('piq_skip_recaps', prefs.skipRecaps ? 'true' : 'false');
@@ -170,7 +170,7 @@ export async function removeFromHistory(mediaId) {
  * Apply the current global HSL accent colors and dark mode theme.
  */
 export function applyGlobalTheme() {
-  const color = localStorage.getItem('piq_theme_color') || 'purple';
+  const color = localStorage.getItem('piq_theme_color') || 'red';
   const dark = localStorage.getItem('piq_theme_dark') || 'default';
   document.documentElement.setAttribute('data-theme-color', color);
   document.documentElement.setAttribute('data-theme-dark', dark);
