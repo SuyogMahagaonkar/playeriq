@@ -86,7 +86,7 @@ export async function renderSettingsPage({ container }) {
             ${isAdmin ? `
             <button class="settings-nav-btn admin-nav-btn" data-tab="admin">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>🛡️ Admin Controls</span>
+              <span>Admin Controls</span>
             </button>
             ` : ''}
           </div>
@@ -306,8 +306,8 @@ export async function renderSettingsPage({ container }) {
                     <div class="settings-row-title">Export Library</div>
                     <div class="settings-row-desc">Save your entire Watch History and Watchlist as a JSON file backup</div>
                   </div>
-                  <button class="settings-action-btn" id="btn-export-library" style="background:var(--accent-soft);color:var(--accent);border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;transition:opacity 0.2s">
-                    📥 Export JSON
+                  <button class="settings-action-btn" id="btn-export-library" style="background:var(--accent-soft);color:var(--accent);border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;transition:opacity 0.2s;display:inline-flex;align-items:center;gap:8px">
+                    <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export JSON
                   </button>
                 </div>
 
@@ -316,8 +316,8 @@ export async function renderSettingsPage({ container }) {
                     <div class="settings-row-title">Import Library</div>
                     <div class="settings-row-desc">Upload a previously exported JSON backup to merge and restore your library</div>
                   </div>
-                  <label class="settings-action-btn" style="background:rgba(255,255,255,0.05);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;display:inline-block;text-align:center;transition:opacity 0.2s">
-                    📤 Import JSON
+                  <label class="settings-action-btn" style="background:rgba(255,255,255,0.05);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-align:center;transition:opacity 0.2s">
+                    <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import JSON
                     <input type="file" id="import-library-file" accept=".json" style="display:none" />
                   </label>
                 </div>
@@ -334,8 +334,8 @@ export async function renderSettingsPage({ container }) {
                   </div>
                   <div style="text-align:right">
                     <div id="cache-size-gauge" style="font-weight:700;color:var(--accent);font-size:16px;margin-bottom:8px">estimating...</div>
-                    <button class="settings-danger-btn" id="btn-purge-cache" style="border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">
-                      🧹 Purge Cache
+                    <button class="settings-danger-btn" id="btn-purge-cache" style="border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                      <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg> Purge Cache
                     </button>
                   </div>
                 </div>
@@ -376,7 +376,7 @@ export async function renderSettingsPage({ container }) {
             <div class="settings-tab-panel" id="panel-admin">
               <div class="settings-section admin-section" style="border: 1px solid var(--accent); background: rgba(147, 51, 234, 0.04);">
                 <div class="settings-section-title" style="color: var(--accent); font-weight: 700; border-bottom: 1px solid rgba(147, 51, 234, 0.15);">
-                  🛡️ Admin Panel
+                  Admin Panel
                 </div>
                 
                 <div class="settings-row" style="border: none;">
@@ -521,7 +521,9 @@ export async function renderSettingsPage({ container }) {
       overlay.innerHTML = `
         <div class="pin-modal-card">
           <div class="pin-modal-header">
-            <span class="pin-modal-icon">🔒</span>
+            <span class="pin-modal-icon" style="display:inline-block;color:var(--accent);margin-bottom:8px">
+              <svg style="width:36px;height:36px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
             <h3>${hasPin ? 'Enter Parental PIN' : 'Create Parental PIN'}</h3>
           </div>
           <p>${hasPin ? 'Please enter your 4-digit parental PIN to disable SafeSearch.' : 'Create a 4-digit PIN to lock SafeSearch and adult content.'}</p>

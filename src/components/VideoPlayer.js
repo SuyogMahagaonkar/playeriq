@@ -55,6 +55,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
       animation: fadeIn 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     `;
     hud.innerHTML = text;
     playerEl.appendChild(hud);
@@ -421,7 +424,7 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       } else {
         video.currentTime = skipTarget;
       }
-      showPlayerHUD('⚡ Auto-Skipped Intro & Recap');
+      showPlayerHUD(`<svg style="width:14px;height:14px;color:var(--accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Skipped Intro & Recap`);
     }
 
     timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
