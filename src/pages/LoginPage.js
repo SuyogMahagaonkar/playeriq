@@ -24,7 +24,7 @@ const BENEFITS = [
 
 let unsubscribeAuth = null;
 
-export function renderLoginPage(container, onSkip) {
+export function renderLoginPage(container) {
   container.innerHTML = '';
 
   const page = document.createElement('div');
@@ -92,7 +92,7 @@ export function renderLoginPage(container, onSkip) {
 
       <!-- Error -->
       <div class="login-error" id="login-error">
-        Sign-in failed. Please try again or continue as guest.
+        Sign-in failed. Please try again.
       </div>
 
       <!-- Divider -->
@@ -110,14 +110,8 @@ export function renderLoginPage(container, onSkip) {
         <span id="login-google-btn-text">Sign in with Google</span>
       </button>
 
-      <!-- Guest skip -->
-      <div class="login-skip">
-        Just browsing? &nbsp;
-        <button id="login-skip-btn">Continue as guest →</button>
-      </div>
-
       <!-- Privacy note -->
-      <div class="login-privacy">
+      <div class="login-privacy" style="margin-top: var(--space-xl);">
         By signing in you agree to our Terms of Service and Privacy Policy.
         We never sell your data.
       </div>
@@ -142,8 +136,7 @@ export function renderLoginPage(container, onSkip) {
 
     try {
       await login();
-      // Auth listener in auth.js will call updateNavbarAvatar and trigger re-render
-      destroyLoginPage(container, onSkip);
+      destroyLoginPage(container);
     } catch (err) {
       googleBtn.classList.remove('loading');
       googleBtn.innerHTML = `
@@ -159,14 +152,9 @@ export function renderLoginPage(container, onSkip) {
       console.error('[Login] Sign-in failed:', err);
     }
   });
-
-  // ---- Event: Guest / Skip ----
-  page.querySelector('#login-skip-btn').addEventListener('click', () => {
-    destroyLoginPage(container, onSkip);
-  });
 }
 
-function destroyLoginPage(container, onSkip) {
+function destroyLoginPage(container) {
   const page = document.getElementById('login-page');
   if (page) {
     page.style.animation = 'none';
@@ -174,7 +162,8 @@ function destroyLoginPage(container, onSkip) {
     page.style.transition = 'opacity 0.35s ease';
     setTimeout(() => {
       page.remove();
-      if (typeof onSkip === 'function') onSkip();
+      const overlay = document.getElementById('login-overlay');
+      if (overlay) overlay.remove();
     }, 350);
   }
 }

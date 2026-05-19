@@ -206,12 +206,7 @@ function initApp() {
           }
         });
 
-        renderLoginPage(loginContainer, () => {
-          // Guest: just close the overlay
-          const overlay = document.getElementById('login-overlay');
-          if (overlay) overlay.remove();
-          unsub();
-        });
+        renderLoginPage(loginContainer);
       }
     }, 600);
   }, 800);

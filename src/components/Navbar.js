@@ -233,10 +233,7 @@ function showLoginPage() {
     }
   });
 
-  renderLoginPage(loginContainer, () => {
-    document.getElementById('login-overlay')?.remove();
-    unsub();
-  });
+  renderLoginPage(loginContainer);
 }
 
 // ---- Update Navbar Avatar (called from auth.js) ----
