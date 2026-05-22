@@ -474,57 +474,68 @@
 
   /* --- Cards & Grid Layouts --- */
   .movie-grid {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 12px !important; /* 12px gap */
-    padding: 0 12px !important;
-    justify-content: flex-start !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 12px !important;
   }
   
-  .movie-card {
-    height: 180px !important; /* Default mobile card height: 180px */
-    width: calc(50% - 12px) !important; /* Two columns side-by-side */
-    margin: 0 !important;
-    border-radius: 8px !important; /* 8px rounded corners */
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    background: var(--bg-card) !important;
+  /* HIDE textual details on all mobile cards to replicate the clean Netflix/Hotstar native view */
+  .movie-card .movie-card-info {
+    display: none !important;
   }
   
-  .movie-card-poster-wrapper {
-    height: 110px !important;
-    aspect-ratio: 16/9 !important; /* Thumbnail aspect ratio 16:9 */
+  /* Portrait Cards: General browse/category lists */
+  .movie-card:not(.landscape) {
     width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 2/3 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    background: var(--bg-card) !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
   }
-
-  .movie-card-poster {
+  
+  .movie-card:not(.landscape) .movie-card-poster-wrapper {
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover !important; /* Thumbnail object-fit: cover */
+    aspect-ratio: 2/3 !important;
+    border-radius: 8px !important;
+  }
+  
+  .movie-card:not(.landscape) .movie-card-poster {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
-  .movie-card-info {
-    padding: 12px !important; /* Internal padding: 12px */
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    flex-grow: 1 !important;
-  }
-
-  .movie-card-title {
-    font-size: clamp(14px, 3.5vw, 16px) !important; /* Clamp font-size between 14px and 16px */
-    line-height: 1.4 !important;
-    white-space: normal !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important; /* Truncate to 2 lines with ellipsis */
-    -webkit-box-orient: vertical !important;
+  /* Landscape Cards: Continue Watching exclusively */
+  .movie-card.landscape {
+    width: 200px !important;
+    height: 112px !important;
+    aspect-ratio: 16/9 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    background: var(--bg-card) !important;
+    margin: 0 !important;
     overflow: hidden !important;
+    display: block !important;
+    flex-shrink: 0 !important;
   }
-
-  .movie-card-meta, .movie-card-lang, .movie-card-year {
-    font-size: 12px !important; /* Subtitle/caption: 12-13px */
-    color: var(--text-muted) !important;
+  
+  .movie-card.landscape .movie-card-poster-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 16/9 !important;
+    border-radius: 8px !important;
+  }
+  
+  .movie-card.landscape .movie-card-poster {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
   /* --- Buttons & Touch Controls --- */
@@ -630,17 +641,31 @@
     padding: 8px 12px !important; /* visible left/right padding so cards not flush */
   }
 
-  .content-row-scroll .movie-card {
-    scroll-snap-align: start !important; /* scroll-snap-align: start */
-    width: calc(83vw - 20px) !important; /* Hint next card (1.2 items per viewport) */
+  .content-row-scroll .movie-card:not(.landscape) {
+    scroll-snap-align: start !important;
+    width: 110px !important;
+    height: 165px !important;
+    aspect-ratio: 2/3 !important;
     flex-shrink: 0 !important;
-    height: 180px !important;
+  }
+
+  .content-row-scroll .movie-card.landscape {
+    scroll-snap-align: start !important;
+    width: 200px !important;
+    height: 112px !important;
+    aspect-ratio: 16/9 !important;
+    flex-shrink: 0 !important;
   }
 
   /* For tablets/wider carousels */
   @media (min-width: 500px) {
-    .content-row-scroll .movie-card {
-      width: calc(45vw - 12px) !important; /* Show 2.2 items to hint more content */
+    .content-row-scroll .movie-card:not(.landscape) {
+      width: 140px !important;
+      height: 210px !important;
+    }
+    .content-row-scroll .movie-card.landscape {
+      width: 280px !important;
+      height: 158px !important;
     }
   }
 
@@ -759,3 +784,99 @@
     width: auto !important;
   }
 }
+
+/* ==========================================================================
+   🌐 GLOBAL BOTTOM NAVIGATION HIDING FOR DESKTOP
+   ========================================================================== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ==========================================================================
+   📱 MOBILE BOTTOM NAVIGATION GLASSMORPHISM & NEON PURPLE GLOW (≤768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(10, 10, 15, 0.72) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index: var(--z-navbar, 300) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .bottom-nav-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--text-secondary) !important;
+    text-decoration: none !important;
+    width: 20% !important;
+    height: 100% !important;
+    transition: color 0.2s ease, transform 0.2s ease !important;
+    position: relative !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 4px 0 !important;
+    min-width: unset !important;
+    min-height: unset !important;
+  }
+
+  .bottom-nav-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 2px !important;
+    transition: transform var(--transition-bounce) !important;
+  }
+
+  .bottom-nav-icon i {
+    width: 20px !important;
+    height: 20px !important;
+    stroke-width: 2.2 !important;
+    transition: filter 0.25s ease, color 0.25s ease !important;
+  }
+
+  .bottom-nav-text {
+    font-family: var(--font-body) !important;
+    font-weight: var(--weight-medium) !important;
+    font-size: 10px !important;
+    letter-spacing: 0.1px !important;
+    transition: color 0.25s ease !important;
+  }
+
+  /* Active state with glowing neon purple color (#a855f7) */
+  .bottom-nav-item.active {
+    color: #a855f7 !important;
+  }
+
+  .bottom-nav-item.active .bottom-nav-icon {
+    transform: scale(1.1) translateY(-1px) !important;
+  }
+
+  .bottom-nav-item.active .bottom-nav-icon i {
+    color: #a855f7 !important;
+    filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.75)) !important;
+  }
+
+  .bottom-nav-item.active .bottom-nav-text {
+    color: #a855f7 !important;
+    font-weight: var(--weight-bold) !important;
+  }
+
+  /* Layout Spacing Overrides to prevent overlapping content */
+  .main-content {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+

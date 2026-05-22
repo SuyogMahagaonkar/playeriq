@@ -68,10 +68,51 @@ function initApp() {
   app.appendChild(sidebar);
   app.appendChild(mainContent);
 
+  // Create Mobile Bottom Navigation (Disney+ Hotstar style)
+  const bottomNav = document.createElement('nav');
+  bottomNav.className = 'mobile-bottom-nav';
+  bottomNav.innerHTML = `
+    <a href="#/" class="bottom-nav-item" data-path="/">
+      <span class="bottom-nav-icon"><i data-lucide="home"></i></span>
+      <span class="bottom-nav-text">Home</span>
+    </a>
+    <a href="#/movies" class="bottom-nav-item" data-path="/movies">
+      <span class="bottom-nav-icon"><i data-lucide="film"></i></span>
+      <span class="bottom-nav-text">Movies</span>
+    </a>
+    <a href="#/tv" class="bottom-nav-item" data-path="/tv">
+      <span class="bottom-nav-icon"><i data-lucide="tv"></i></span>
+      <span class="bottom-nav-text">TV Shows</span>
+    </a>
+    <a href="#/search" class="bottom-nav-item" data-path="/search">
+      <span class="bottom-nav-icon"><i data-lucide="search"></i></span>
+      <span class="bottom-nav-text">Search</span>
+    </a>
+    <a href="#/settings" class="bottom-nav-item" data-path="/settings">
+      <span class="bottom-nav-icon"><i data-lucide="user"></i></span>
+      <span class="bottom-nav-text">Profile</span>
+    </a>
+  `;
+  app.appendChild(bottomNav);
+
+  function updateMobileBottomNavActive() {
+    const currentPath = window.location.hash.slice(1) || '/';
+    document.querySelectorAll('.bottom-nav-item').forEach(item => {
+      const path = item.dataset.path;
+      const isActive = path === '/' 
+        ? (currentPath === '/' || currentPath === '')
+        : currentPath.startsWith(path);
+      item.classList.toggle('active', isActive);
+    });
+  }
+
+  window.addEventListener('hashchange', updateMobileBottomNavActive);
+  updateMobileBottomNavActive();
+
   // Setup navbar events
   setupNavbarEvents();
 
-  // Initialize Lucide icons for sidebar and navbar
+  // Initialize Lucide icons for sidebar, navbar, and bottom nav
   if (window.lucide) window.lucide.createIcons();
 
   // Wire navbar avatar updater into auth service (avoids circular imports)

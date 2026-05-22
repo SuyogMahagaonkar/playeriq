@@ -3,6 +3,7 @@
 // ========================================
 
 import { getCurrentPath } from '../services/router.js';
+import { getUser } from '../services/auth.js';
 
 const NAV_ITEMS = [
   { label: 'Home',        icon: 'home',      path: '/' },
@@ -65,6 +66,40 @@ export function refreshSidebarNav() {
     navItems.splice(3, 0, { label: '18+ Catalog', icon: 'flame', path: '/18plus' });
   }
 
+  const user = getUser();
+  
+  let libraryItems = [
+    { label: 'Search', icon: 'search', path: '/search' }
+  ];
+  
+  if (user) {
+    libraryItems.push({ label: 'My Watchlist', icon: 'bookmark', path: '/watchlist' });
+    libraryItems.push({ label: 'Watch History', icon: 'history', path: '/history' });
+  }
+  
+  let accountSection = '';
+  if (user) {
+    accountSection = `
+      <div class="sidebar-section-label">Account</div>
+      <a href="#/settings" class="sidebar-link" data-path="/settings" data-label="Settings">
+        <span class="sidebar-link-icon"><i data-lucide="settings"></i></span>
+        <span class="sidebar-link-text">Settings</span>
+      </a>
+      <a href="#" id="sidebar-signout" class="sidebar-link danger" style="color: var(--primary);" data-label="Sign Out">
+        <span class="sidebar-link-icon"><i data-lucide="log-out"></i></span>
+        <span class="sidebar-link-text">Sign Out</span>
+      </a>
+    `;
+  } else {
+    accountSection = `
+      <div class="sidebar-section-label">Account</div>
+      <a href="#" id="sidebar-signin" class="sidebar-link" data-label="Sign In">
+        <span class="sidebar-link-icon"><i data-lucide="log-in"></i></span>
+        <span class="sidebar-link-text">Sign In</span>
+      </a>
+    `;
+  }
+
   nav.innerHTML = `
     <div class="sidebar-section-label">Menu</div>
     ${navItems.map(item => `
@@ -73,17 +108,57 @@ export function refreshSidebarNav() {
         <span class="sidebar-link-text">${item.label}</span>
       </a>
     `).join('')}
+    
     <div class="sidebar-section-label">Library</div>
-    ${SECONDARY_ITEMS.map(item => `
+    ${libraryItems.map(item => `
       <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
         <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
         <span class="sidebar-link-text">${item.label}</span>
       </a>
     `).join('')}
+    
+    ${accountSection}
   `;
 
   if (window.lucide) window.lucide.createIcons();
   updateSidebarActive();
+
+  // Attach event listener for signout/signin
+  const signoutBtn = document.getElementById('sidebar-signout');
+  if (signoutBtn) {
+    signoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      toggleSidebar(false);
+      const { logout } = await import('../services/auth.js');
+      await logout();
+    });
+  }
+
+  const signinBtn = document.getElementById('sidebar-signin');
+  if (signinBtn) {
+    signinBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSidebar(false);
+      const existing = document.getElementById('login-overlay');
+      if (!existing) {
+        const loginContainer = document.createElement('div');
+        loginContainer.id = 'login-overlay';
+        document.body.appendChild(loginContainer);
+        import('../pages/LoginPage.js').then(m => {
+          m.renderLoginPage(loginContainer);
+        });
+      }
+    });
+  }
+
+  // Hide sidebar when links are clicked on mobile
+  nav.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 991) {
+        toggleSidebar(false);
+      }
+    });
+  });
 }
 
 export function initSidebarToggle() {

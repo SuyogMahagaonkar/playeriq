@@ -18,6 +18,9 @@ export function createNavbar() {
 
   navbar.innerHTML = `
     <div class="navbar-left">
+      <button class="navbar-hamburger" id="navbar-hamburger-btn" title="Open Menu">
+        <i data-lucide="menu"></i>
+      </button>
     </div>
     <div class="navbar-right">
       <div class="search-container" id="search-container">
@@ -268,6 +271,12 @@ export function updateNavbarAvatar(user) {
 
 // ---- Setup All Navbar Events ----
 export function setupNavbarEvents() {
+  const hamburgerBtn = document.getElementById('navbar-hamburger-btn');
+  hamburgerBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSidebar(true);
+  });
+
   const input = document.getElementById('search-input');
   const suggestions = document.getElementById('search-suggestions');
   const clearBtn = document.getElementById('search-clear');

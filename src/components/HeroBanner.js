@@ -99,6 +99,34 @@ export function initHeroBanner() {
     interval = setInterval(() => goTo(current + 1), 6000);
   };
 
+  // Touch gesture support (Disney+ Hotstar style)
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  banner.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  banner.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }, { passive: true });
+
+  function handleSwipe() {
+    const diff = touchEndX - touchStartX;
+    if (Math.abs(diff) > 50) { // minimum swipe distance of 50px
+      if (diff > 0) {
+        // Swipe Right -> Go to previous slide
+        goTo(current - 1);
+        resetInterval();
+      } else {
+        // Swipe Left -> Go to next slide
+        goTo(current + 1);
+        resetInterval();
+      }
+    }
+  }
+
   // Navigation
   banner.querySelector('#hero-prev')?.addEventListener('click', () => { goTo(current - 1); resetInterval(); });
   banner.querySelector('#hero-next')?.addEventListener('click', () => { goTo(current + 1); resetInterval(); });

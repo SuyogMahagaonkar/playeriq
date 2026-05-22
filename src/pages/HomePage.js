@@ -54,7 +54,7 @@ export async function renderHomePage({ container }) {
           ? `/watch/tv/${item.id}?s=${item.season}&e=${item.episode}` 
           : `/watch/movie/${item.id}`;
         const subtitle = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
-        return createMovieCard(item, item.type, route, subtitle, item, true, 'portrait');
+        return createMovieCard(item, item.type, route, subtitle, item, true, 'landscape');
       }).join('');
 
       continueWatchingHTML = createContentRow(
