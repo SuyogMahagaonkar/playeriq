@@ -19,6 +19,8 @@ import './styles/responsive.css';
 import './styles/login.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
+import './styles/mobile-player.css';
+
 
 // Core
 import { addRoute, initRouter } from './services/router.js';

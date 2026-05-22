@@ -33,6 +33,109 @@ let activePlayer = null;
 let iframeInterval = null;
 let isOfflinePlayback = false;
 
+// ---- Mini-player state (mobile only) ----
+let _miniPlayerRoute = null;  // route string e.g. '/watch/movie/12345'
+let _miniPlayerTitle = '';
+let _miniPlayerPoster = '';
+let _miniPlayerCleanup = null;
+
+function _isMobileDevice() {
+  return window.innerWidth <= 768 || ('ontouchstart' in window);
+}
+
+function showRotatePrompt() {
+  if (!_isMobileDevice()) return;
+  let prompt = document.getElementById('vp-rotate-prompt-global');
+  if (!prompt) {
+    prompt = document.createElement('div');
+    prompt.id = 'vp-rotate-prompt-global';
+    prompt.className = 'vp-rotate-prompt';
+    prompt.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Rotate for better experience
+    `;
+    document.body.appendChild(prompt);
+  }
+  setTimeout(() => prompt.classList.add('visible'), 50);
+  setTimeout(() => { prompt.classList.remove('visible'); setTimeout(() => prompt.remove(), 400); }, 3500);
+}
+
+function showMiniPlayer(videoEl, title, posterUrl, route) {
+  if (!_isMobileDevice()) return;
+  destroyMiniPlayer();
+
+  _miniPlayerRoute = route;
+  _miniPlayerTitle = title;
+  _miniPlayerPoster = posterUrl;
+
+  const mini = document.createElement('div');
+  mini.id = 'vp-mini-player';
+  mini.className = 'active';
+  mini.setAttribute('role', 'complementary');
+  mini.setAttribute('aria-label', 'Mini player — tap to restore');
+  mini.innerHTML = `
+    <img class="vp-mini-thumb" src="${posterUrl || ''}" alt="" onerror="this.style.display='none'">
+    <div class="vp-mini-body" id="vp-mini-restore">
+      <div class="vp-mini-title">${title}</div>
+      <div class="vp-mini-sub">Tap to restore player</div>
+    </div>
+    <div class="vp-mini-controls">
+      <button class="vp-mini-btn" id="vp-mini-playpause" aria-label="Play/Pause">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="vp-mini-btn vp-mini-close-btn" id="vp-mini-close" aria-label="Close mini player">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(mini);
+
+  // Restore: navigate back to watch route
+  document.getElementById('vp-mini-restore')?.addEventListener('click', () => {
+    destroyMiniPlayer();
+    if (_miniPlayerRoute) window.location.hash = '#' + _miniPlayerRoute;
+  });
+  mini.querySelector('.vp-mini-thumb')?.addEventListener('click', () => {
+    destroyMiniPlayer();
+    if (_miniPlayerRoute) window.location.hash = '#' + _miniPlayerRoute;
+  });
+
+  // Play/pause button
+  const ppBtn = document.getElementById('vp-mini-playpause');
+  function updateMiniPP() {
+    if (!videoEl || !ppBtn) return;
+    const paused = videoEl.paused;
+    ppBtn.innerHTML = paused
+      ? `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+  }
+  if (videoEl) {
+    videoEl.addEventListener('play',  updateMiniPP);
+    videoEl.addEventListener('pause', updateMiniPP);
+    updateMiniPP();
+  }
+  ppBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!videoEl) return;
+    videoEl.paused ? videoEl.play() : videoEl.pause();
+  });
+
+  // Close
+  document.getElementById('vp-mini-close')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (videoEl) videoEl.pause();
+    destroyMiniPlayer();
+  });
+}
+
+function destroyMiniPlayer() {
+  const existing = document.getElementById('vp-mini-player');
+  if (existing) existing.remove();
+}
+
 function clearIframeTracker() {
   if (iframeInterval) {
     clearInterval(iframeInterval);
@@ -574,6 +677,47 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           onEnded,
           startTime
         );
+
+        // ---- Mobile post-init: rotate-on-play + MediaSession ----
+        if (_isMobileDevice()) {
+          // Attempt landscape lock (works in installed PWA / Android Chrome)
+          if (screen.orientation?.lock) {
+            screen.orientation.lock('landscape').catch(() => {
+              // Graceful fallback: show "rotate your device" prompt
+              showRotatePrompt();
+            });
+          } else {
+            showRotatePrompt();
+          }
+
+          // MediaSession: show title + artwork on lock screen
+          if (wrapper._initMediaSession) {
+            wrapper._initMediaSession(
+              title,
+              isTV ? `Season ${season} · Episode ${episode}` : '',
+              posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '',
+              null, // onPrev — wired up later via onNextEpisodeClick
+              onNextEpisodeClick
+            );
+          }
+
+          // Mini-player: when user navigates away mid-play
+          const videoEl = wrapper.querySelector('video');
+          const watchRoute = isTV ? `/watch/tv/${id}/${season}/${episode}` : `/watch/movie/${id}`;
+          const hashChangeHandler = () => {
+            const hash = window.location.hash || '';
+            const isOnPlayerPage = hash.includes('/watch/');
+            if (!isOnPlayerPage && videoEl && !videoEl.paused) {
+              showMiniPlayer(videoEl, title, posterPath ? `https://image.tmdb.org/t/p/w342${posterPath}` : '', watchRoute);
+            } else {
+              destroyMiniPlayer();
+            }
+          };
+          window.addEventListener('hashchange', hashChangeHandler);
+          // Cleanup on next player load
+          _miniPlayerCleanup = () => window.removeEventListener('hashchange', hashChangeHandler);
+        }
+
         return; // Success!
       } else {
         console.warn('Backend stream extraction failed, falling back to iframe');

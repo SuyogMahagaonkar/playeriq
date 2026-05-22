@@ -172,6 +172,82 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
       <!-- Provider badge -->
       <div class="vp-provider" id="vp-provider">${streamData.provider || 'Custom'}</div>
+
+      <!-- ===== MOBILE-ONLY OVERLAYS ===== -->
+      <!-- Offline banner -->
+      <div id="vp-offline-banner" class="vp-offline-banner hidden" role="status" aria-live="polite">
+        <span class="vp-offline-banner-dot"></span>
+        📴 Offline — playing from downloads
+      </div>
+
+      <!-- Gesture touch zones (invisible, cover left/right halves) -->
+      <div id="vp-gesture-left"  class="vp-gesture-zone vp-gesture-left"  aria-hidden="true"></div>
+      <div id="vp-gesture-right" class="vp-gesture-zone vp-gesture-right" aria-hidden="true"></div>
+
+      <!-- Brightness swipe overlay (left half swipe) -->
+      <div id="vp-brightness-overlay" class="vp-swipe-overlay" role="status" aria-label="Brightness" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <div class="vp-swipe-bar"><div class="vp-swipe-bar-fill" id="vp-brightness-bar"></div></div>
+        <span id="vp-brightness-val">80%</span>
+      </div>
+
+      <!-- Volume swipe overlay (right half swipe) -->
+      <div id="vp-volume-overlay" class="vp-swipe-overlay" role="status" aria-label="Volume" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 010 14.14"/>
+          <path d="M15.54 8.46a5 5 0 010 7.07"/>
+        </svg>
+        <div class="vp-swipe-bar"><div class="vp-swipe-bar-fill" id="vp-volume-bar"></div></div>
+        <span id="vp-volume-val">100%</span>
+      </div>
+
+      <!-- Double-tap seek flash — left (rewind) -->
+      <div id="vp-seek-flash-left" class="vp-seek-flash vp-seek-flash-left" aria-hidden="true">
+        <div class="vp-seek-arrows">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="11 17 2 12 11 7 11 17"/><polygon points="22 17 13 12 22 7 22 17"/></svg>
+        </div>
+        <span class="vp-seek-label">‹‹ 10s</span>
+      </div>
+
+      <!-- Double-tap seek flash — right (forward) -->
+      <div id="vp-seek-flash-right" class="vp-seek-flash vp-seek-flash-right" aria-hidden="true">
+        <div class="vp-seek-arrows">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 7 22 12 13 17 13 7"/><polygon points="2 7 11 12 2 17 2 7"/></svg>
+        </div>
+        <span class="vp-seek-label">15s ››</span>
+      </div>
+
+      <!-- Long-press speed toast -->
+      <div id="vp-speed-toast" class="vp-speed-toast" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        2× Speed
+      </div>
+
+      <!-- Lock controls button -->
+      <button id="vp-lock-btn" class="vp-lock-btn" aria-label="Lock controls" title="Lock controls">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </button>
+
+      <!-- Locked overlay -->
+      <div id="vp-locked-overlay" class="vp-locked-overlay hidden" aria-label="Controls locked">
+        <div class="vp-locked-hint">Hold to unlock</div>
+        <button id="vp-unlock-btn" class="vp-unlock-btn" aria-label="Hold to unlock controls">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+          </svg>
+        </button>
+      </div>
     </div>
   `;
 
@@ -888,6 +964,295 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     }
   });
 
+  // ========================================================
+  // MOBILE-ONLY ENHANCEMENTS
+  // ========================================================
+  const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+
+  // ---- Cinematic Mode Toggle (cover ↔ contain) ----
+  const cinematicBtn = document.getElementById('vp-cinematic-btn');
+  if (cinematicBtn) {
+    let cinematicOn = false;
+    cinematicBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cinematicOn = !cinematicOn;
+      player.classList.toggle('cinematic-mode', cinematicOn);
+      cinematicBtn.classList.toggle('active', cinematicOn);
+      cinematicBtn.setAttribute('title', cinematicOn ? 'Letterbox Mode' : 'Cinematic Mode');
+      localStorage.setItem('piq_cinematic', cinematicOn ? '1' : '0');
+    });
+    // Restore preference
+    if (localStorage.getItem('piq_cinematic') === '1') {
+      cinematicOn = true;
+      player.classList.add('cinematic-mode');
+      cinematicBtn.classList.add('active');
+    }
+  }
+
+  // ---- Offline Banner ----
+  if (streamData.isOffline) {
+    const offlineBanner = document.getElementById('vp-offline-banner');
+    if (offlineBanner) {
+      offlineBanner.classList.remove('hidden');
+      setTimeout(() => offlineBanner.classList.add('visible'), 100);
+    }
+  }
+
+  // ---- MediaSession API (lock screen + notification controls) ----
+  function initMediaSession(title, artist, posterUrl, onPrev, onNext) {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      const artwork = posterUrl ? [{ src: posterUrl, sizes: '512x512', type: 'image/jpeg' }] : [];
+      navigator.mediaSession.metadata = new MediaMetadata({ title: title || 'PlayerIQ', artist: artist || '', artwork });
+      navigator.mediaSession.setActionHandler('play',         () => video.play());
+      navigator.mediaSession.setActionHandler('pause',        () => video.pause());
+      navigator.mediaSession.setActionHandler('seekbackward', (d) => {
+        const skip = d?.seekOffset || 10;
+        video.currentTime = Math.max(0, video.currentTime - skip);
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (d) => {
+        const skip = d?.seekOffset || 15;
+        video.currentTime = Math.min(video.duration || Infinity, video.currentTime + skip);
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', onPrev || null);
+      navigator.mediaSession.setActionHandler('nexttrack',     onNext || null);
+    } catch (err) {
+      console.warn('[MediaSession] Setup failed:', err);
+    }
+  }
+
+  // Expose so PlayerPage can call it with title/artwork
+  container._initMediaSession = initMediaSession;
+
+  // Update MediaSession position state on timeupdate
+  video.addEventListener('timeupdate', () => {
+    if (!('mediaSession' in navigator)) return;
+    const dur = getEffectiveDuration();
+    if (dur > 0) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: dur,
+          playbackRate: video.playbackRate,
+          position: Math.min(video.currentTime, dur)
+        });
+      } catch (_) { /* not supported on all browsers */ }
+    }
+  });
+
+  // ---- Mobile Gesture Controller ----
+  if (isMobile()) {
+    const gLeft  = document.getElementById('vp-gesture-left');
+    const gRight = document.getElementById('vp-gesture-right');
+    const brightOverlay  = document.getElementById('vp-brightness-overlay');
+    const volOverlay     = document.getElementById('vp-volume-overlay');
+    const brightVal      = document.getElementById('vp-brightness-val');
+    const brightBar      = document.getElementById('vp-brightness-bar');
+    const volVal         = document.getElementById('vp-volume-val');
+    const volBar         = document.getElementById('vp-volume-bar');
+    const seekFlashLeft  = document.getElementById('vp-seek-flash-left');
+    const seekFlashRight = document.getElementById('vp-seek-flash-right');
+    const speedToast     = document.getElementById('vp-speed-toast');
+
+    let currentBrightness = parseFloat(localStorage.getItem('piq_brightness') || '1.0');
+    document.documentElement.style.filter = currentBrightness < 1.0 ? `brightness(${currentBrightness})` : '';
+
+    function showSwipeOverlay(el, show) {
+      if (!el) return;
+      el.classList.toggle('visible', show);
+    }
+
+    let overlayHideTimer = null;
+    function autoHideOverlay(el) {
+      if (!el) return;
+      clearTimeout(overlayHideTimer);
+      overlayHideTimer = setTimeout(() => showSwipeOverlay(el, false), 900);
+    }
+
+    // Flash seek animation
+    function showSeekFlash(side) {
+      const el = side === 'left' ? seekFlashLeft : seekFlashRight;
+      if (!el) return;
+      el.classList.add('active');
+      setTimeout(() => el.classList.remove('active'), 600);
+    }
+
+    // --- Touch gesture state ---
+    let touchStartX = 0, touchStartY = 0;
+    let touchStartTime = 0;
+    let touchMoved = false;
+    let swipeActive = false;
+    let swipeSide = null; // 'left' | 'right'
+    let longPressTimer = null;
+    let lastTapTime = { left: 0, right: 0 };
+
+    function handleGestureStart(side, e) {
+      const t = e.changedTouches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+      touchMoved = false;
+      swipeActive = false;
+      swipeSide = side;
+
+      // Long-press → 2× speed
+      longPressTimer = setTimeout(() => {
+        if (!touchMoved) {
+          video.playbackRate = 2.0;
+          if (speedToast) {
+            speedToast.classList.add('visible');
+          }
+        }
+      }, 600);
+    }
+
+    function handleGestureMove(side, e) {
+      e.preventDefault(); // prevent page scroll during swipe
+      const t = e.changedTouches[0];
+      const dy = touchStartY - t.clientY;
+      const dx = Math.abs(t.clientX - touchStartX);
+
+      // Must be predominantly vertical
+      if (Math.abs(dy) < 8 && !swipeActive) return;
+      if (dx > Math.abs(dy) * 1.5) return; // horizontal swipe → ignore
+
+      touchMoved = true;
+      swipeActive = true;
+      clearTimeout(longPressTimer);
+
+      // Sensitivity: 150px swipe = full range
+      const delta = dy / 150;
+
+      if (side === 'right') {
+        // Volume
+        const newVol = Math.max(0, Math.min(1, video.volume + delta));
+        video.volume = newVol;
+        video.muted = newVol === 0;
+        const pct = Math.round(newVol * 100);
+        if (volVal) volVal.textContent = pct + '%';
+        if (volBar) volBar.style.height = pct + '%';
+        if (volumeSlider) volumeSlider.value = pct;
+        showSwipeOverlay(volOverlay, true);
+        autoHideOverlay(volOverlay);
+        touchStartY = t.clientY; // reset for delta-style movement
+      } else {
+        // Brightness (CSS filter)
+        currentBrightness = Math.max(0.2, Math.min(1.0, currentBrightness + delta * 0.5));
+        document.documentElement.style.filter = currentBrightness < 1.0 ? `brightness(${currentBrightness.toFixed(2)})` : '';
+        localStorage.setItem('piq_brightness', currentBrightness.toFixed(2));
+        const pct = Math.round(currentBrightness * 100);
+        if (brightVal) brightVal.textContent = pct + '%';
+        if (brightBar) brightBar.style.height = pct + '%';
+        showSwipeOverlay(brightOverlay, true);
+        autoHideOverlay(brightOverlay);
+        touchStartY = t.clientY;
+      }
+    }
+
+    function handleGestureEnd(side, e) {
+      clearTimeout(longPressTimer);
+
+      // Restore speed if long-press was active
+      if (speedToast && speedToast.classList.contains('visible')) {
+        video.playbackRate = parseFloat(document.getElementById('vp-speed')?.value || '1');
+        speedToast.classList.remove('visible');
+      }
+
+      if (touchMoved || swipeActive) return; // was a swipe, not a tap
+
+      const elapsed = Date.now() - touchStartTime;
+      if (elapsed > 500) return; // long press — not a tap
+
+      // Double-tap detection (300ms window)
+      const now = Date.now();
+      const lastTap = lastTapTime[side];
+      if (now - lastTap < 300) {
+        // Double tap!
+        lastTapTime[side] = 0;
+        if (side === 'left') {
+          // Rewind 10s
+          const off = (window._playerGetSeekOffset?.() || 0);
+          const cur = video.currentTime + off;
+          if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 10));
+          else video.currentTime = Math.max(0, video.currentTime - 10);
+          showSeekFlash('left');
+        } else {
+          // Forward 15s
+          const off = (window._playerGetSeekOffset?.() || 0);
+          const cur = video.currentTime + off;
+          const dur = getEffectiveDuration();
+          if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 15));
+          else video.currentTime = Math.min(dur, video.currentTime + 15);
+          showSeekFlash('right');
+        }
+        showControls();
+      } else {
+        // Single tap → toggle controls
+        lastTapTime[side] = now;
+        if (controls.classList.contains('vp-visible')) {
+          hideControls();
+        } else {
+          showControls();
+        }
+      }
+    }
+
+    if (gLeft) {
+      gLeft.addEventListener('touchstart', (e) => handleGestureStart('left', e),  { passive: true });
+      gLeft.addEventListener('touchmove',  (e) => handleGestureMove('left', e),   { passive: false });
+      gLeft.addEventListener('touchend',   (e) => handleGestureEnd('left', e),    { passive: true });
+    }
+    if (gRight) {
+      gRight.addEventListener('touchstart', (e) => handleGestureStart('right', e), { passive: true });
+      gRight.addEventListener('touchmove',  (e) => handleGestureMove('right', e),  { passive: false });
+      gRight.addEventListener('touchend',   (e) => handleGestureEnd('right', e),   { passive: true });
+    }
+
+    // Remove the old video click toggle on mobile (gesture zones handle it)
+    video.removeEventListener('click', togglePlay);
+  } // end isMobile
+
+  // ---- Lock Controller ----
+  const lockBtn     = document.getElementById('vp-lock-btn');
+  const lockedOverlay = document.getElementById('vp-locked-overlay');
+  const unlockBtn   = document.getElementById('vp-unlock-btn');
+
+  if (lockBtn && lockedOverlay && unlockBtn) {
+    let isLocked = false;
+    let unlockHoldTimer = null;
+
+    lockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isLocked = !isLocked;
+      player.classList.toggle('vp-locked', isLocked);
+      lockedOverlay.classList.toggle('hidden', !isLocked);
+      lockBtn.setAttribute('aria-label', isLocked ? 'Controls locked — tap to see unlock' : 'Lock controls');
+      // Update lock icon
+      lockBtn.querySelector('path').setAttribute('d',
+        isLocked
+          ? 'M7 11V7a5 5 0 0 1 9.9-1' // open shackle = unlocked icon when locked (to invite tapping)
+          : 'M7 11V7a5 5 0 0 1 10 0v4'  // closed shackle = locked
+      );
+    });
+
+    // Unlock: hold for 800ms
+    unlockBtn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      unlockBtn.classList.add('holding');
+      unlockHoldTimer = setTimeout(() => {
+        isLocked = false;
+        player.classList.remove('vp-locked');
+        lockedOverlay.classList.add('hidden');
+        unlockBtn.classList.remove('holding');
+        lockBtn.querySelector('path').setAttribute('d', 'M7 11V7a5 5 0 0 1 10 0v4');
+      }, 800);
+    }, { passive: true });
+
+    unlockBtn.addEventListener('touchend', () => {
+      clearTimeout(unlockHoldTimer);
+      unlockBtn.classList.remove('holding');
+    });
+  }
+
   // Cast
   if (vpCastBtn) {
     vpCastBtn.addEventListener('click', (e) => {
@@ -1074,8 +1439,10 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     });
   }
 
-  // Double-click for fullscreen
-  video.addEventListener('dblclick', toggleFs);
+  // Double-click for fullscreen (desktop only — mobile uses double-tap gesture)
+  if (!('ontouchstart' in window)) {
+    video.addEventListener('dblclick', toggleFs);
+  }
 
   // ---- Cleanup ----
   return {
@@ -1095,6 +1462,14 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       window.removeEventListener('keydown', onKeyDown);
       clearTimeout(controlsTimeout);
       clearTimeout(watchdogTimeout);
+      // Restore brightness if modified
+      if (localStorage.getItem('piq_brightness')) {
+        document.documentElement.style.filter = '';
+      }
+      // Clear MediaSession
+      if ('mediaSession' in navigator) {
+        try { navigator.mediaSession.metadata = null; } catch (_) {}
+      }
       subStyle.remove();
       if (!preserveVideo) {
         container.innerHTML = '';

@@ -1,0 +1,805 @@
+/* ============================================================
+   PlayerIQ — Netflix-Style Mobile Player Additions
+   Scope: @media (max-width: 768px) ONLY
+   Desktop is completely untouched.
+   ============================================================ */
+
+/* ============================================================
+   1. GESTURE ZONES — invisible touch surfaces, left/right halves
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-gesture-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    z-index: 8;
+    /* Invisible but touch-active */
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .vp-gesture-left  { left: 0; }
+  .vp-gesture-right { right: 0; }
+}
+
+/* ============================================================
+   2. SWIPE OVERLAYS — volume (right) & brightness (left)
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-swipe-overlay {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    letter-spacing: 0.5px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    min-width: 70px;
+  }
+
+  .vp-swipe-overlay.visible {
+    opacity: 1;
+  }
+
+  .vp-swipe-overlay svg {
+    width: 28px;
+    height: 28px;
+    color: #fff;
+  }
+
+  /* Brightness overlay — left center */
+  #vp-brightness-overlay {
+    left: 32px;
+  }
+
+  /* Volume overlay — right center */
+  #vp-volume-overlay {
+    right: 32px;
+  }
+
+  /* Progress bar inside swipe overlay */
+  .vp-swipe-bar {
+    width: 4px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    margin: 4px 0;
+  }
+
+  .vp-swipe-bar-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--accent, #e50914), #ff6b6b);
+    border-radius: 2px;
+    transition: height 0.05s linear;
+  }
+}
+
+/* ============================================================
+   3. DOUBLE-TAP SEEK FLASH — "+15s" / "−10s" ripple
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-seek-flash {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 45;
+    transition: opacity 0.2s ease;
+  }
+
+  .vp-seek-flash.active {
+    opacity: 1;
+  }
+
+  .vp-seek-flash-left  { left: 0; }
+  .vp-seek-flash-right { right: 0; }
+
+  /* Half-screen tinted wash */
+  .vp-seek-flash-left::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+    border-radius: 0 50% 50% 0 / 0 100% 100% 0;
+    animation: seekFlashPulse 0.4s ease forwards;
+  }
+  .vp-seek-flash-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+    border-radius: 50% 0 0 50% / 100% 0 0 100%;
+    animation: seekFlashPulse 0.4s ease forwards;
+  }
+
+  @keyframes seekFlashPulse {
+    0%   { opacity: 0; }
+    30%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Seek arrows (Netflix-style stacked chevrons) */
+  .vp-seek-arrows {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .vp-seek-arrows svg {
+    width: 22px;
+    height: 22px;
+    color: #fff;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  }
+
+  .vp-seek-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    position: relative;
+    z-index: 2;
+  }
+}
+
+/* ============================================================
+   4. LOCK SCREEN CONTROLS
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Lock toggle button — always visible in top-right of player */
+  .vp-lock-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 60;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+    line-height: 1;
+    font-size: 18px;
+  }
+
+  .vp-lock-btn:hover,
+  .vp-lock-btn:active {
+    background: rgba(229, 9, 20, 0.75);
+    border-color: rgba(229, 9, 20, 0.5);
+    transform: scale(1.1);
+  }
+
+  .vp-lock-btn svg {
+    width: 18px;
+    height: 18px;
+    color: #fff;
+  }
+
+  /* Locked overlay — frosted glass over entire player */
+  .vp-locked-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    transition: opacity 0.25s ease;
+  }
+
+  .vp-locked-overlay.hidden {
+    display: none;
+  }
+
+  .vp-locked-hint {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.65);
+    font-family: var(--font-display, 'Inter', sans-serif);
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 0 24px;
+  }
+
+  /* Unlock button — hold to unlock */
+  .vp-unlock-btn {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.2s;
+    overflow: hidden;
+  }
+
+  .vp-unlock-btn::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--accent, #e50914);
+    transform: rotate(0deg);
+    transition: transform 0s;
+    opacity: 0;
+  }
+
+  .vp-unlock-btn.holding::before {
+    opacity: 1;
+    border-top-color: var(--accent, #e50914);
+    animation: unlockSpin 0.8s linear forwards;
+  }
+
+  @keyframes unlockSpin {
+    0%   { transform: rotate(0deg);   opacity: 1; }
+    100% { transform: rotate(360deg); opacity: 1; }
+  }
+
+  /* When player is locked, hide gesture zones & regular controls */
+  .vp-player.vp-locked .vp-gesture-zone,
+  .vp-player.vp-locked #vp-controls {
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Keep lock button accessible when locked */
+  .vp-player.vp-locked .vp-lock-btn {
+    z-index: 65;
+    background: rgba(229, 9, 20, 0.7);
+    border-color: rgba(229, 9, 20, 0.4);
+  }
+}
+
+/* ============================================================
+   5. SPEED PREVIEW TOAST — long-press 2× speed
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-speed-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 14px;
+    padding: 14px 28px;
+    font-size: 22px;
+    font-weight: 800;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    color: #fff;
+    z-index: 55;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .vp-speed-toast.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .vp-speed-toast svg {
+    width: 20px;
+    height: 20px;
+    color: var(--accent, #e50914);
+  }
+}
+
+/* ============================================================
+   6. CINEMATIC MODE TOGGLE button (injected into controls bar)
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-cinematic-btn {
+    /* Inherits vp-btn styles */
+    opacity: 0.85;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .vp-cinematic-btn.active {
+    color: var(--accent, #e50914) !important;
+    opacity: 1;
+  }
+
+  .vp-cinematic-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Video in cinematic (cover) mode */
+  .vp-player.cinematic-mode .vp-video {
+    object-fit: cover !important;
+  }
+
+  /* Video in letterbox (contain) mode — default */
+  .vp-player:not(.cinematic-mode) .vp-video {
+    object-fit: contain;
+  }
+}
+
+/* ============================================================
+   7. OFFLINE BANNER
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-offline-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: linear-gradient(90deg, rgba(229, 9, 20, 0.9), rgba(180, 0, 10, 0.85));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    color: #fff;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    justify-content: center;
+    transform: translateY(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vp-offline-banner.visible {
+    transform: translateY(0);
+  }
+
+  .vp-offline-banner.hidden {
+    display: none;
+  }
+
+  .vp-offline-banner-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    animation: offlinePulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes offlinePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.7); }
+  }
+}
+
+/* ============================================================
+   8. AUTOPLAY COUNTDOWN CARD
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-autoplay-card {
+    position: absolute;
+    bottom: 90px;
+    right: 16px;
+    z-index: 40;
+    width: 220px;
+    background: rgba(18, 18, 24, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    transform: translateX(240px);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vp-autoplay-card.visible {
+    transform: translateX(0);
+  }
+
+  .vp-autoplay-thumb {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+    background: #111;
+  }
+
+  .vp-autoplay-body {
+    padding: 10px 12px;
+  }
+
+  .vp-autoplay-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .vp-autoplay-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vp-autoplay-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .vp-autoplay-play-btn {
+    flex: 1;
+    padding: 7px 10px;
+    background: var(--accent, #e50914);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: background 0.2s;
+    font-family: var(--font-display, 'Inter', sans-serif);
+  }
+
+  .vp-autoplay-play-btn:hover { background: #c50818; }
+
+  .vp-autoplay-cancel-btn {
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: var(--font-display, 'Inter', sans-serif);
+  }
+
+  .vp-autoplay-cancel-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+  /* Countdown ring SVG */
+  .vp-autoplay-ring-wrap {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .vp-autoplay-ring {
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+
+  .vp-autoplay-ring-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 3;
+  }
+
+  .vp-autoplay-ring-fill {
+    fill: none;
+    stroke: var(--accent, #e50914);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+  }
+
+  .vp-autoplay-ring-count {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    font-family: var(--font-display, 'Inter', sans-serif);
+  }
+}
+
+/* ============================================================
+   9. MINI-PLAYER — sticky bottom bar when user navigates away
+   ============================================================ */
+#vp-mini-player {
+  display: none;
+  position: fixed;
+  bottom: 80px; /* above mobile bottom nav */
+  left: 12px;
+  right: 12px;
+  z-index: 9999;
+  background: rgba(18, 18, 24, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  animation: miniPlayerSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+#vp-mini-player.active {
+  display: flex;
+  align-items: stretch;
+}
+
+@keyframes miniPlayerSlideUp {
+  from { transform: translateY(120%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.vp-mini-thumb {
+  width: 100px;
+  min-width: 100px;
+  height: 60px;
+  object-fit: cover;
+  display: block;
+  background: #111;
+  cursor: pointer;
+}
+
+.vp-mini-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.vp-mini-title {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-display, 'Inter', sans-serif);
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vp-mini-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vp-mini-controls {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.vp-mini-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+
+.vp-mini-btn:hover,
+.vp-mini-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.vp-mini-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.vp-mini-close-btn {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Mini-player only shows on mobile (≤768px) */
+@media (min-width: 769px) {
+  #vp-mini-player {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   10. ROTATE-TO-LANDSCAPE PROMPT
+   ============================================================ */
+@media (max-width: 768px) {
+  .vp-rotate-prompt {
+    position: fixed;
+    bottom: 96px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 9998;
+    background: rgba(18, 18, 24, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-display, 'Inter', sans-serif);
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  .vp-rotate-prompt.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .vp-rotate-prompt svg {
+    width: 22px;
+    height: 22px;
+    color: var(--accent, #e50914);
+    animation: rotatePromptBounce 1.2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes rotatePromptBounce {
+    0%, 100% { transform: rotate(0deg); }
+    50%       { transform: rotate(90deg); }
+  }
+}
+
+/* ============================================================
+   11. FULLSCREEN FIT — landscape cinematic on mobile
+   ============================================================ */
+@media (max-width: 768px) {
+  /* When fullscreen on mobile, video fits entire viewport */
+  .vp-player:fullscreen,
+  .vp-player:-webkit-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  .vp-player:fullscreen .vp-video,
+  .vp-player:-webkit-full-screen .vp-video {
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: contain; /* letterbox by default */
+  }
+
+  /* If cinematic mode is also active in fullscreen → cover */
+  .vp-player.cinematic-mode:fullscreen .vp-video,
+  .vp-player.cinematic-mode:-webkit-full-screen .vp-video {
+    object-fit: cover !important;
+  }
+
+  /* Safe-area insets (iPhone notch) */
+  @supports (padding: max(0px)) {
+    .vp-player:fullscreen .vp-controls,
+    .vp-player:-webkit-full-screen .vp-controls {
+      padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+      padding-left:   max(16px, env(safe-area-inset-left)) !important;
+      padding-right:  max(16px, env(safe-area-inset-right)) !important;
+    }
+  }
+}
+
+/* ============================================================
+   12. MOBILE CONTROLS BAR REFINEMENT
+   Hide volume slider, show cinematic + lock in landscape
+   ============================================================ */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* Player fills available height in landscape */
+  .player-video-wrapper {
+    height: calc(100vh - 50px) !important;
+    aspect-ratio: unset !important;
+  }
+
+  /* Compact controls bar in landscape */
+  .vp-controls {
+    padding: 12px 16px 8px !important;
+    gap: 8px !important;
+  }
+
+  /* Keep lock btn visible */
+  .vp-lock-btn {
+    display: flex !important;
+  }
+}
+
+/* ============================================================
+   13. ACCESSIBILITY — prefers-reduced-motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .vp-seek-flash,
+  .vp-seek-flash::before,
+  .vp-swipe-overlay,
+  .vp-speed-toast,
+  .vp-autoplay-card,
+  #vp-mini-player,
+  .vp-rotate-prompt {
+    transition: none !important;
+    animation: none !important;
+  }
+}
