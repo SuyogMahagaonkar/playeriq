@@ -434,3 +434,110 @@
   33%       { transform: translateY(-20px) rotate(120deg); }
   66%       { transform: translateY(10px) rotate(240deg); }
 }
+
+/* ---- Email / Password Custom Form Styling ---- */
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.login-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  text-align: left;
+  width: 100%;
+}
+
+.login-form-group label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-input {
+  width: 100%;
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  transition: all var(--transition-normal);
+}
+
+.login-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+}
+
+.login-submit-btn {
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--gradient-accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-glow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.login-submit-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: var(--shadow-glow-md);
+}
+
+.login-submit-btn:active {
+  transform: scale(0.98);
+}
+
+.login-submit-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.login-submit-btn .btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.login-mode-switch {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-sm);
+}
+
+.login-mode-switch a {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.login-mode-switch a:hover {
+  text-decoration: underline;
+}
+

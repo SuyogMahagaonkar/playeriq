@@ -12,7 +12,9 @@ import {
   removeProgressFromCloud,
   getSettings,
   exportUserLibrary,
-  importUserLibrary
+  importUserLibrary,
+  loginWithEmail,
+  signUpWithEmail
 } from './firebase.js';
 import { getProgress, saveProgressLocal, removeProgressLocal, clearProgressLocal } from './storage.js';
 
@@ -127,6 +129,24 @@ export async function login() {
     await signInWithGoogle();
   } catch (err) {
     console.error('[Auth] Login failed:', err);
+    throw err;
+  }
+}
+
+export async function loginEmail(email, password) {
+  try {
+    return await loginWithEmail(email, password);
+  } catch (err) {
+    console.error('[Auth] Email login failed:', err);
+    throw err;
+  }
+}
+
+export async function signUpEmail(email, password, displayName) {
+  try {
+    return await signUpWithEmail(email, password, displayName);
+  } catch (err) {
+    console.error('[Auth] Email sign-up failed:', err);
     throw err;
   }
 }

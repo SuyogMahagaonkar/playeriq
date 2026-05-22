@@ -9,7 +9,10 @@ import {
   signInWithPopup,
   signInWithRedirect,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -60,6 +63,30 @@ export async function signInWithGoogle() {
     }
   } catch (err) {
     console.error('[Firebase] Sign-in error:', err);
+    throw err;
+  }
+}
+
+export async function loginWithEmail(email, password) {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (err) {
+    console.error('[Firebase] Email sign-in error:', err);
+    throw err;
+  }
+}
+
+export async function signUpWithEmail(email, password, displayName) {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    if (displayName) {
+      await updateProfile(result.user, { displayName });
+    }
+    // Return updated user
+    return result.user;
+  } catch (err) {
+    console.error('[Firebase] Email sign-up error:', err);
     throw err;
   }
 }

@@ -2,7 +2,7 @@
 // PlayerIQ — Login Page
 // ========================================
 
-import { login, onUserChange } from '../services/auth.js';
+import { login, loginEmail, signUpEmail, onUserChange } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 
 // Popular movie posters for the card fan decoration
@@ -95,8 +95,35 @@ export function renderLoginPage(container) {
         Sign-in failed. Please try again.
       </div>
 
+      <!-- Email / Password Form -->
+      <form class="login-form" id="login-email-form" style="margin-bottom: var(--space-xl);">
+        <div class="login-form-group" id="form-group-name" style="display: none;">
+          <label for="login-name">Name</label>
+          <input type="text" id="login-name" class="login-input" placeholder="Your Name" autocomplete="name" />
+        </div>
+
+        <div class="login-form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="login-input" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+
+        <div class="login-form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="login-input" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+
+        <button type="submit" class="login-submit-btn" id="login-submit-btn" style="margin-top: var(--space-xs);">
+          <span>Sign In</span>
+        </button>
+
+        <div class="login-mode-switch">
+          <span id="mode-label-text">Don't have an account?</span>
+          <a id="toggle-auth-mode">Sign Up</a>
+        </div>
+      </form>
+
       <!-- Divider -->
-      <div class="login-divider">Continue with</div>
+      <div class="login-divider">or continue with</div>
 
       <!-- Google Button -->
       <button class="login-google-btn" id="login-google-btn" aria-label="Sign in with Google">
@@ -120,10 +147,92 @@ export function renderLoginPage(container) {
 
   container.appendChild(page);
 
+  // ---- Form State & Toggles ----
+  let isSignUpMode = false;
+  const nameGroup = page.querySelector('#form-group-name');
+  const nameInput = page.querySelector('#login-name');
+  const emailInput = page.querySelector('#login-email');
+  const passwordInput = page.querySelector('#login-password');
+  const submitBtn = page.querySelector('#login-submit-btn');
+  const submitBtnText = submitBtn.querySelector('span');
+  const toggleModeBtn = page.querySelector('#toggle-auth-mode');
+  const modeLabelText = page.querySelector('#mode-label-text');
+  const errorEl = page.querySelector('#login-error');
+
+  toggleModeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    isSignUpMode = !isSignUpMode;
+    errorEl.classList.remove('visible');
+    
+    if (isSignUpMode) {
+      nameGroup.style.display = 'flex';
+      nameInput.required = true;
+      submitBtnText.textContent = 'Create Account';
+      modeLabelText.textContent = 'Already have an account?';
+      toggleModeBtn.textContent = 'Sign In';
+      passwordInput.autocomplete = 'new-password';
+    } else {
+      nameGroup.style.display = 'none';
+      nameInput.required = false;
+      submitBtnText.textContent = 'Sign In';
+      modeLabelText.textContent = "Don't have an account?";
+      toggleModeBtn.textContent = 'Sign Up';
+      passwordInput.autocomplete = 'current-password';
+    }
+  });
+
+  // ---- Event: Email Sign-In / Sign-Up ----
+  const emailForm = page.querySelector('#login-email-form');
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.classList.remove('visible');
+    submitBtn.classList.add('loading');
+    const originalText = submitBtnText.textContent;
+    submitBtn.innerHTML = `
+      <div class="btn-spinner"></div>
+      <span>${isSignUpMode ? 'Creating Account…' : 'Signing in…'}</span>
+    `;
+
+    try {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      if (isSignUpMode) {
+        const displayName = nameInput.value.trim();
+        await signUpEmail(email, password, displayName);
+      } else {
+        await loginEmail(email, password);
+      }
+      destroyLoginPage(container);
+    } catch (err) {
+      console.error('[Login] Email auth error:', err);
+      
+      let userFriendlyMsg = 'Authentication failed. Please try again.';
+      if (err.code === 'auth/invalid-email') {
+        userFriendlyMsg = 'Invalid email address format.';
+      } else if (err.code === 'auth/user-disabled') {
+        userFriendlyMsg = 'This account has been disabled.';
+      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        userFriendlyMsg = 'Incorrect email or password.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        userFriendlyMsg = 'An account with this email already exists.';
+      } else if (err.code === 'auth/weak-password') {
+        userFriendlyMsg = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        userFriendlyMsg = 'Email/Password sign-in is disabled in Firebase console.';
+      }
+
+      errorEl.textContent = userFriendlyMsg;
+      errorEl.classList.add('visible');
+
+      // Reset button
+      submitBtn.classList.remove('loading');
+      submitBtn.innerHTML = `<span>${originalText}</span>`;
+    }
+  });
+
   // ---- Event: Google Sign-In ----
   const googleBtn = page.querySelector('#login-google-btn');
   const btnText = page.querySelector('#login-google-btn-text');
-  const errorEl = page.querySelector('#login-error');
 
   googleBtn.addEventListener('click', async () => {
     googleBtn.classList.add('loading');
