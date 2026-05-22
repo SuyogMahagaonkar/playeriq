@@ -568,7 +568,7 @@
   }
 
   /* Remove hover-only visibility; ensure controls are always visible on touch */
-  .card-delete-btn, .vp-controls, .hero-nav {
+  .card-delete-btn, .vp-controls {
     opacity: 1 !important;
     visibility: visible !important;
     transform: none !important;
@@ -587,17 +587,9 @@
     align-items: center !important;
   }
 
-  /* Hero Slider Navigation Arrows Target Expansion */
+  /* Hero Slider Navigation Arrows — hidden on mobile (swipe to navigate) */
   .hero-nav {
-    width: 44px !important;
-    height: 44px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-  .hero-nav svg {
-    width: 22px !important;
-    height: 22px !important;
+    display: none !important;
   }
 
   /* Keyboard outlines */
@@ -632,6 +624,12 @@
   }
 
   /* --- Carousels & Horizontal Lists --- */
+  .content-row-arrow {
+    display: none !important;
+  }
+  .hero-nav {
+    display: none !important;
+  }
   .content-row-scroll {
     display: flex !important;
     overflow-x: auto !important;

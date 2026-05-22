@@ -31,6 +31,7 @@ if (currentSourceIndex >= SOURCES.length) currentSourceIndex = 0;
 let currentPlayerMode = localStorage.getItem('piq_player_mode') || 'custom'; // 'custom' or 'embed'
 let activePlayer = null;
 let iframeInterval = null;
+let isOfflinePlayback = false;
 
 function clearIframeTracker() {
   if (iframeInterval) {
@@ -208,7 +209,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
 
-  if (!navigator.onLine) {
+  if (!navigator.onLine || isOfflinePlayback) {
     currentPlayerMode = 'custom';
     const modeSelect = document.getElementById('mode-select');
     if (modeSelect) modeSelect.value = 'custom';
@@ -328,72 +329,76 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
   // Determine if we should try custom player
   if (currentPlayerMode === 'custom') {
-    if (!navigator.onLine) {
-      console.log('[PlayerPage] Device is offline. Bypassing fetch and launching offline mock player...');
-      const downloads = await DownloadManager.list();
-      const downloadId = isTV ? `tv_${id}_s${season}_e${episode}` : `movie_${id}`;
-      const match = downloads.find(x => x.id === downloadId && x.status === 'COMPLETED');
+    const downloads = await DownloadManager.list();
+    const downloadId = isTV ? `tv_${id}_s${season}_e${episode}` : `movie_${id}`;
+    const match = downloads.find(x => x.id === downloadId && x.status === 'COMPLETED');
 
+    const playOfflineMatch = (downloadedMatch) => {
+      const streamData = {
+        id: downloadedMatch.id,
+        url: '',
+        type: 'mp4',
+        isOffline: true,
+        duration: downloadedMatch.type === 'movie' ? 120 * 60 : 45 * 60,
+        title: downloadedMatch.title,
+        poster: downloadedMatch.posterPath,
+        provider: 'Offline DB'
+      };
+
+      if (tmdbRuntimeSeconds) {
+        streamData.duration = tmdbRuntimeSeconds;
+      }
+
+      // Clear wrapper and init custom player
+      wrapper.innerHTML = '';
+      activePlayer = createVideoPlayer(
+        wrapper,
+        streamData,
+        (currentTime, duration) => {
+          let epStill = posterPath;
+          let epTitle = '';
+          let epOverview = '';
+          if (isTV) {
+            epTitle = `Episode ${episode}`;
+            epOverview = 'Offline playback from IndexedDB.';
+          }
+
+          saveProgress({
+            id,
+            title,
+            type: isTV ? 'tv' : 'movie',
+            poster_path: posterPath,
+            backdrop_path: backdropPath,
+            season,
+            episode,
+            currentTime,
+            duration,
+            episode_title: epTitle,
+            episode_still: epStill,
+            episode_overview: epOverview
+          });
+
+          // Floating Next Episode button in last 60 seconds
+          const remaining = duration - currentTime;
+          const nextEpNum = episode + 1;
+          if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+            showNextEpisodeFloatingButton(nextEpNum);
+          } else {
+            hideNextEpisodeFloatingButton();
+          }
+        },
+        () => {
+          console.warn('[Player] Offline player error callback');
+        },
+        onEnded,
+        startTime
+      );
+    };
+
+    if (!navigator.onLine || isOfflinePlayback) {
+      console.log('[PlayerPage] Device is offline or in offline playback recovery. Bypassing fetch and launching offline mock player...');
       if (match) {
-        const streamData = {
-          id: downloadId,
-          url: '',
-          type: 'mp4',
-          isOffline: true,
-          duration: match.type === 'movie' ? 120 * 60 : 45 * 60,
-          title: match.title,
-          poster: match.posterPath,
-          provider: 'Offline DB'
-        };
-
-        if (tmdbRuntimeSeconds) {
-          streamData.duration = tmdbRuntimeSeconds;
-        }
-
-        // Clear wrapper and init custom player
-        wrapper.innerHTML = '';
-        activePlayer = createVideoPlayer(
-          wrapper,
-          streamData,
-          (currentTime, duration) => {
-            let epStill = posterPath;
-            let epTitle = '';
-            let epOverview = '';
-            if (isTV) {
-              epTitle = `Episode ${episode}`;
-              epOverview = 'Offline playback from IndexedDB.';
-            }
-
-            saveProgress({
-              id,
-              title,
-              type: isTV ? 'tv' : 'movie',
-              poster_path: posterPath,
-              backdrop_path: backdropPath,
-              season,
-              episode,
-              currentTime,
-              duration,
-              episode_title: epTitle,
-              episode_still: epStill,
-              episode_overview: epOverview
-            });
-
-            // Floating Next Episode button in last 60 seconds
-            const remaining = duration - currentTime;
-            const nextEpNum = episode + 1;
-            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
-              showNextEpisodeFloatingButton(nextEpNum);
-            } else {
-              hideNextEpisodeFloatingButton();
-            }
-          },
-          () => {
-            console.warn('[Player] Offline player error callback');
-          },
-          onEnded,
-          startTime
-        );
+        playOfflineMatch(match);
         return;
       } else {
         console.error('[PlayerPage] Requested item is not downloaded and we are offline.');
@@ -473,6 +478,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
         const loadIframeFallback = () => {
           console.warn('[Player] Loading fallback iframe embed...');
+          if (match) {
+            console.log('[PlayerPage] Switch to iframe bypassed. Local download found, playing offline...');
+            playOfflineMatch(match);
+            return;
+          }
           const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
           const iframe = document.createElement('iframe');
           iframe.id = 'player-iframe';
@@ -567,6 +577,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         return; // Success!
       } else {
         console.warn('Backend stream extraction failed, falling back to iframe');
+        if (match) {
+          console.log('[PlayerPage] Stream failed, local download found. Playing offline...');
+          playOfflineMatch(match);
+          return;
+        }
         // Let's execute fallback immediately
         const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
         const iframe = document.createElement('iframe');
@@ -602,6 +617,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       }
     } catch (err) {
       clearTimers();
+      if (match) {
+        console.log('[PlayerPage] Server not reachable, local download found. Playing offline...');
+        playOfflineMatch(match);
+        return;
+      }
       if (err.name === 'AbortError') {
         console.warn(`[Player] Stream fetch timed out after ${STREAM_TIMEOUT_MS / 1000}s, falling back to iframe`);
       } else {
@@ -787,20 +807,21 @@ export async function renderPlayerPage({ params, container }) {
   }
 
   let data;
-  let isOfflinePlayback = false;
+  isOfflinePlayback = false;
 
   try {
-    if (!navigator.onLine) {
-      const downloads = await DownloadManager.list();
-      let match = null;
-      if (isTV) {
-        const prefix = `tv_${id}_`;
-        match = downloads.find(x => x.id.startsWith(prefix) && x.status === 'COMPLETED');
-      } else {
-        const matchId = `movie_${id}`;
-        match = downloads.find(x => x.id === matchId && x.status === 'COMPLETED');
-      }
+    let match = null;
+    const downloads = await DownloadManager.list();
 
+    if (isTV) {
+      const prefix = `tv_${id}_`;
+      match = downloads.find(x => x.id.startsWith(prefix) && x.status === 'COMPLETED');
+    } else {
+      const matchId = `movie_${id}`;
+      match = downloads.find(x => x.id === matchId && x.status === 'COMPLETED');
+    }
+
+    if (!navigator.onLine) {
       if (match) {
         isOfflinePlayback = true;
         // Clean TV title format if present S1 E1: title
@@ -821,7 +842,31 @@ export async function renderPlayerPage({ params, container }) {
         throw new Error('OFFLINE_AND_NOT_DOWNLOADED');
       }
     } else {
-      data = isTV ? await getTVDetails(id) : await getMovieDetails(id);
+      try {
+        data = isTV ? await getTVDetails(id) : await getMovieDetails(id);
+      } catch (fetchErr) {
+        console.warn('[PlayerPage] Online details fetch failed. Checking for offline downloads fallback...', fetchErr);
+        if (match) {
+          console.log('[PlayerPage] Offline recovery: Completed local download found. Switching to offline playback...');
+          isOfflinePlayback = true;
+          const cleanName = match.title.split(': ').length > 1 ? match.title.split(': ').slice(1).join(': ') : match.title;
+          data = {
+            id: id,
+            title: cleanName,
+            name: cleanName,
+            poster_path: match.posterPath,
+            backdrop_path: match.posterPath,
+            overview: `Offline Playback • Locally stored title inside IndexedDB.`,
+            vote_average: 10.0,
+            genres: [{ name: 'Offline' }],
+            runtime: match.type === 'movie' ? 120 : 45,
+            seasons: [{ season_number: currentSeason, episode_count: 10 }]
+          };
+        } else {
+          console.error('[PlayerPage] Online details fetch failed and no local download exists.');
+          throw new Error('OFFLINE_AND_NOT_DOWNLOADED');
+        }
+      }
     }
 
     const imdbId = data.imdb_id || data.external_ids?.imdb_id || id;
@@ -1382,7 +1427,7 @@ export async function renderPlayerPage({ params, container }) {
 
   } catch (err) {
     console.error('Player page error:', err);
-    if (err.message === 'OFFLINE_AND_NOT_DOWNLOADED' || !navigator.onLine) {
+    if (err.message === 'OFFLINE_AND_NOT_DOWNLOADED' || !navigator.onLine || isOfflinePlayback) {
       container.innerHTML = `
         <div class="player-offline-error-overlay" style="margin-top: 60px;">
           <div class="player-offline-error-icon">
@@ -1432,7 +1477,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
 
   try {
     let episodes = [];
-    if (!navigator.onLine) {
+    if (!navigator.onLine || isOfflinePlayback) {
       const list = await DownloadManager.list();
       const prefix = `tv_${tvId}_s${seasonNumber}_e`;
       const tvDownloads = list.filter(item => item.id.startsWith(prefix) && item.status === 'COMPLETED');
@@ -1871,7 +1916,7 @@ async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data
     let validSeasons = [];
     let episodes = [];
 
-    if (!navigator.onLine) {
+    if (!navigator.onLine || isOfflinePlayback) {
       const list = await DownloadManager.list();
       const seasonSet = new Set();
       const prefix = `tv_${tvId}_s`;
