@@ -664,9 +664,41 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   }
 
   // ---- Controls Logic ----
+  // ---- Mobile auto-fullscreen helper ----
+  function requestMobileFullscreen() {
+    if (!isMobile()) return;
+    const fsTarget = player; // fullscreen the vp-player element
+    if (!document.fullscreenElement) {
+      (fsTarget.requestFullscreen?.() ||
+       fsTarget.webkitRequestFullscreen?.() ||
+       fsTarget.mozRequestFullScreen?.() ||
+       fsTarget.msRequestFullscreen?.())
+      ?.catch(() => {}); // silently ignore if denied
+    }
+  }
+
+  // Screen Wake Lock — prevent screen sleep during playback
+  let wakeLock = null;
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      if (!wakeLock || wakeLock.released) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (_) {}
+  }
+  function releaseWakeLock() {
+    if (wakeLock && !wakeLock.released) {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+  }
+
   function togglePlay() {
     if (video.paused) {
       video.play();
+      // On mobile: go fullscreen immediately (this is inside a user-gesture handler)
+      requestMobileFullscreen();
     } else {
       video.pause();
     }
@@ -807,10 +839,30 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   video.addEventListener('canplay', () => {
     loader.style.display = 'none';
   });
+  video.addEventListener('play', () => {
+    acquireWakeLock();
+  });
+  video.addEventListener('pause', () => {
+    releaseWakeLock();
+  });
   video.addEventListener('ended', () => {
     bigPlay.style.display = 'flex';
+    releaseWakeLock();
     if (onEnded) onEnded();
   });
+
+  // Auto-fullscreen when device rotates to landscape while playing
+  if (isMobile()) {
+    const onOrientationChange = () => {
+      const isLandscape = window.innerWidth > window.innerHeight;
+      if (isLandscape && !video.paused) {
+        requestMobileFullscreen();
+      }
+    };
+    window.addEventListener('orientationchange', onOrientationChange);
+    screen.orientation?.addEventListener('change', onOrientationChange);
+  }
+
   // For HLS and direct non-transcoded MP4 streams: update when browser learns real duration.
   // For transcoded streams: NEVER update from durationchange because fMP4 reports partial buffers.
   if (!isTranscoded) {
@@ -1516,6 +1568,12 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       // Clear MediaSession
       if ('mediaSession' in navigator) {
         try { navigator.mediaSession.metadata = null; } catch (_) {}
+      }
+      // Release wake lock
+      releaseWakeLock();
+      // Exit fullscreen if we entered it
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
       }
       subStyle.remove();
       if (!preserveVideo) {
