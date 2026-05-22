@@ -179,7 +179,7 @@
    4. LOCK SCREEN CONTROLS
    ============================================================ */
 @media (max-width: 768px) {
-  /* Lock toggle button — always visible in top-right of player */
+  /* Lock toggle button — fades with controls, stays dim when locked */
   .vp-lock-btn {
     position: absolute;
     top: 14px;
@@ -197,7 +197,9 @@
     border-radius: 50%;
     color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
-    transition: all 0.2s ease;
+    /* Start hidden — JS fades it in with showControls() */
+    opacity: 0;
+    transition: opacity 0.3s ease, background 0.2s ease, transform 0.2s ease;
     -webkit-tap-highlight-color: transparent;
     padding: 0;
     line-height: 1;
@@ -217,7 +219,7 @@
     color: #fff;
   }
 
-  /* Locked overlay — frosted glass over entire player */
+  /* Locked overlay — NO blur, video stays crystal clear */
   .vp-locked-overlay {
     position: absolute;
     inset: 0;
@@ -227,9 +229,8 @@
     align-items: center;
     justify-content: center;
     gap: 16px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    /* Subtle dark vignette only — no blur so video is fully visible */
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%);
     transition: opacity 0.25s ease;
   }
 

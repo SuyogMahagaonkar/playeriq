@@ -3220,6 +3220,9 @@
     align-items: center !important;
     justify-content: center !important;
     color: white !important;
+    /* Start hidden — JS fades it in with showControls() */
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
   }
   
   #vp-diag-hud {

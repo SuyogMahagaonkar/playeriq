@@ -760,15 +760,25 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   function showControls() {
     controls.classList.add('vp-visible');
     player.style.cursor = '';
+    // Also show the floating buttons that live outside the controls bar
+    const lockBtn  = document.getElementById('vp-lock-btn');
+    const diagBtn  = document.getElementById('vp-diag-btn');
+    if (lockBtn) lockBtn.style.opacity = '1';
+    if (diagBtn) diagBtn.style.opacity = '1';
     clearTimeout(controlsTimeout);
     controlsTimeout = setTimeout(hideControls, 5000);
-
   }
 
   function hideControls() {
     if (video.paused) return;
     controls.classList.remove('vp-visible');
     player.style.cursor = 'none';
+    // Also fade the floating buttons — but keep lock btn visible (dimly) when locked
+    const lockBtn  = document.getElementById('vp-lock-btn');
+    const diagBtn  = document.getElementById('vp-diag-btn');
+    const isLocked = player.classList.contains('vp-locked');
+    if (lockBtn) lockBtn.style.opacity = isLocked ? '0.45' : '0';
+    if (diagBtn) diagBtn.style.opacity = '0';
   }
 
   // ---- Event Listeners ----
@@ -1220,20 +1230,46 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   if (lockBtn && lockedOverlay && unlockBtn) {
     let isLocked = false;
     let unlockHoldTimer = null;
+    let overlayAutoHideTimer = null;
+
+    function showLockedOverlay() {
+      lockedOverlay.classList.remove('hidden');
+      clearTimeout(overlayAutoHideTimer);
+      // Auto-hide the unlock prompt after 3s — video stays clear
+      overlayAutoHideTimer = setTimeout(() => {
+        lockedOverlay.classList.add('hidden');
+      }, 3000);
+    }
 
     lockBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isLocked = !isLocked;
       player.classList.toggle('vp-locked', isLocked);
-      lockedOverlay.classList.toggle('hidden', !isLocked);
       lockBtn.setAttribute('aria-label', isLocked ? 'Controls locked — tap to see unlock' : 'Lock controls');
-      // Update lock icon
+      // Update lock icon (open shackle when locked, closed when unlocked)
       lockBtn.querySelector('path').setAttribute('d',
         isLocked
-          ? 'M7 11V7a5 5 0 0 1 9.9-1' // open shackle = unlocked icon when locked (to invite tapping)
-          : 'M7 11V7a5 5 0 0 1 10 0v4'  // closed shackle = locked
+          ? 'M7 11V7a5 5 0 0 1 9.9-1'
+          : 'M7 11V7a5 5 0 0 1 10 0v4'
       );
+      if (isLocked) {
+        showLockedOverlay();
+        // Keep lock btn visible (dim) when locked
+        lockBtn.style.opacity = '0.6';
+      } else {
+        clearTimeout(overlayAutoHideTimer);
+        lockedOverlay.classList.add('hidden');
+        lockBtn.style.opacity = '1';
+      }
     });
+
+    // Tapping lock btn again while locked shows the overlay again
+    lockBtn.addEventListener('touchstart', (e) => {
+      if (isLocked) {
+        e.stopPropagation();
+        showLockedOverlay();
+      }
+    }, { passive: true });
 
     // Unlock: hold for 800ms
     unlockBtn.addEventListener('touchstart', (e) => {
@@ -1242,9 +1278,12 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       unlockHoldTimer = setTimeout(() => {
         isLocked = false;
         player.classList.remove('vp-locked');
+        clearTimeout(overlayAutoHideTimer);
         lockedOverlay.classList.add('hidden');
         unlockBtn.classList.remove('holding');
+        lockBtn.style.opacity = '1';
         lockBtn.querySelector('path').setAttribute('d', 'M7 11V7a5 5 0 0 1 10 0v4');
+        showControls(); // restore all controls after unlock
       }, 800);
     }, { passive: true });
 
