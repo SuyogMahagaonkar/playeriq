@@ -761,7 +761,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     controls.classList.add('vp-visible');
     player.style.cursor = '';
     clearTimeout(controlsTimeout);
-    controlsTimeout = setTimeout(hideControls, 3000);
+    controlsTimeout = setTimeout(hideControls, 5000);
+
   }
 
   function hideControls() {
