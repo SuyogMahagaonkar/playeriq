@@ -1944,5 +1944,338 @@
   height: 100%;
 }
 
+/* ==========================================================================
+   📱 DYNAMIC HOTSTAR & NETFLIX MOBILE REDESIGN EXTENSIONS (≤767px)
+   ========================================================================== */
+@media (max-width: 767px) {
+  /* --- Goal 1: Collapse Header & Hide Avatar DOM/Space --- */
+  #navbar-avatar, 
+  .profile-wrapper {
+    display: none !important;
+  }
+  
+  .navbar-right {
+    margin-right: 0 !important;
+    gap: 8px !important;
+  }
+
+  .page-content {
+    padding-top: 0 !important;
+  }
+
+  /* Re-apply top margin/padding to pages that DO NOT have full-bleed hero banners or backdrops */
+  .movie-grid-page, 
+  .mobile-settings-page, 
+  .mobile-search-page, 
+  .watchlist-page, 
+  .watch-history-page {
+    padding-top: calc(var(--navbar-height) + 16px) !important;
+  }
+
+  /* --- Goal 2: Compact Segments for Slide Progress --- */
+  .hero-indicators {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 3px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    gap: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    z-index: 4 !important;
+  }
+
+  .hero-indicator {
+    flex: 1 !important;
+    height: 100% !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: unset !important;
+    min-width: unset !important;
+    transition: background 0.3s ease !important;
+  }
+
+  .hero-indicator.active {
+    background: #a855f7 !important; /* Premium neon purple progress bar segment */
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.8) !important;
+    border-radius: 0 !important;
+    width: auto !important;
+  }
+
+  /* --- Goal 3: Seasons & Episodes (Hotstar-style layout) --- */
+  .seasons-tabs-wrapper.mobile-seasons {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 12px 16px;
+    scrollbar-width: none;
+    display: flex;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .seasons-tabs-wrapper.mobile-seasons::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-seasons .season-tab {
+    scroll-snap-align: start;
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-secondary) !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: var(--radius-full) !important;
+    cursor: pointer !important;
+    min-width: unset !important;
+    min-height: unset !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .mobile-seasons .season-tab.active {
+    background: var(--gradient-purple) !important;
+    color: white !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3) !important;
+  }
+
+  /* Compact Hotstar Season / Episode Row style */
+  .mobile-episode-row {
+    display: flex !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    margin-bottom: 10px !important;
+    position: relative !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .mobile-episode-row:active {
+    background: rgba(255, 255, 255, 0.06) !important;
+    transform: scale(0.99) !important;
+  }
+
+  .mobile-episode-row.unaired {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+  }
+
+  .mobile-ep-thumb-wrapper {
+    position: relative !important;
+    width: 120px !important;
+    height: 68px !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+    background: var(--bg-tertiary) !important;
+  }
+
+  .mobile-ep-thumb {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .mobile-ep-duration {
+    position: absolute !important;
+    bottom: 4px !important;
+    right: 4px !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    padding: 1px 4px !important;
+    background: rgba(0, 0, 0, 0.75) !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+  }
+
+  .mobile-ep-lock {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #fff !important;
+  }
+
+  /* Episode inline progress indicator */
+  .episode-row-progress-container {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    z-index: 2;
+  }
+
+  .episode-row-progress {
+    height: 100% !important;
+    background: #a855f7 !important; /* glowing neon purple progress bar */
+    box-shadow: 0 0 4px rgba(168, 85, 247, 0.8) !important;
+  }
+
+  .mobile-ep-details {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .mobile-ep-meta-title {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+  }
+
+  .mobile-ep-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin: 0 !important;
+  }
+
+  .mobile-ep-description {
+    font-size: 11px !important;
+    color: var(--text-dim) !important;
+    line-height: 1.4 !important;
+    margin-top: 2px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-ep-actions {
+    display: flex !important;
+    gap: 8px !important;
+    margin-top: 6px !important;
+  }
+
+  .mobile-ep-action-btn {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-secondary) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+  }
+
+  .mobile-ep-action-btn:active {
+    background: rgba(168, 85, 247, 0.2) !important;
+    color: white !important;
+    border-color: #a855f7 !important;
+  }
+
+  .mobile-ep-action-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* Accordion hidden cards */
+  .mobile-episode-row.collapsed-hidden {
+    display: none !important;
+  }
+
+  .mobile-ep-show-all-btn {
+    width: 100% !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
+    cursor: pointer !important;
+    min-height: 44px !important;
+  }
+
+  .mobile-ep-show-all-btn i {
+    transition: transform 0.3s ease !important;
+  }
+
+  .mobile-ep-show-all-btn.expanded i {
+    transform: rotate(180deg) !important;
+  }
+
+  /* --- Goal 4: Premium Search Overlay Sheet --- */
+  .mobile-search-overlay {
+    position: fixed !important;
+    top: calc(var(--navbar-height) + 54px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(10, 10, 15, 0.98) !important;
+    backdrop-filter: blur(30px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    z-index: 999 !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+  }
+
+  .mobile-overlay-category-chips {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 8px 0 16px 0 !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    margin-bottom: 16px !important;
+  }
+
+  .mobile-overlay-category-chips::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .overlay-category-chip {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-secondary) !important;
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border-radius: var(--radius-full) !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    min-width: unset !important;
+    min-height: unset !important;
+  }
+
+  .overlay-category-chip.active {
+    background: var(--gradient-purple) !important;
+    color: white !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3) !important;
+  }
+}
+
 
 

@@ -6,6 +6,22 @@ import { searchMovieBox } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { addRecentSearch, getState } from '../services/state.js';
 import { createFooter } from '../components/Footer.js';
+import { getWatchHistory } from '../services/auth.js';
+
+function trackTelemetryEvent(eventName, eventData = {}) {
+  console.log(`[Telemetry] Event: ${eventName}`, eventData);
+  window.playeriqTelemetry = window.playeriqTelemetry || [];
+  window.playeriqTelemetry.push({ eventName, eventData, timestamp: Date.now() });
+}
+
+function checkAndCollapseHeader() {
+  if (window.innerWidth <= 767) {
+    const avatar = document.getElementById('navbar-avatar');
+    if (avatar) {
+      avatar.remove();
+    }
+  }
+}
 
 // Section header HTML
 function sectionHeader(title, count, icon) {
@@ -23,6 +39,189 @@ export async function renderSearchPage({ query, container }) {
   const isMobile = window.innerWidth <= 768;
 
   if (isMobile) {
+    checkAndCollapseHeader();
+
+    // ==== Mobile Category-Aware Offline Caching Helper ====
+    async function getCachedSearch(query) {
+      const cacheKey = 'playeriq_search_suggestions_cache';
+      let cache = {};
+      try {
+        cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+      } catch (e) {}
+
+      const cachedEntry = cache[query];
+      const now = Date.now();
+      const CACHE_TTL = 3600000; // 1 hour TTL
+
+      if (navigator.onLine) {
+        try {
+          const res = await searchMovieBox(query);
+          const items = res.results || [];
+          cache[query] = { items, timestamp: now };
+          localStorage.setItem(cacheKey, JSON.stringify(cache));
+          return items;
+        } catch (err) {
+          console.warn(`Fetch failed for query "${query}", using cache fallback:`, err);
+        }
+      }
+
+      if (cachedEntry) {
+        return cachedEntry.items;
+      }
+      return [];
+    }
+
+    // ==== Grouped suggestions HTML renderer ====
+    function renderSuggestionGroup(title, items) {
+      const groupItems = items.map(item => {
+        const isTV = item.type === 'tv' || item.subjectType === 2;
+        const mediaId = item.id?.startsWith('mb_') ? item.id : `mb_${item.id || item.subjectId}`;
+        const route = isTV ? `/tv/${mediaId}` : `/movie/${mediaId}`;
+        
+        const displayTitle = item.title || item.name || '';
+        const rating = item.vote_average || item.imdbRate || '—';
+        const year = (item.release_date || item.year || '').slice(0, 4) || '—';
+        const poster = item.poster_path || item.cover?.url || item.coverUrl || '';
+        const typeLabel = isTV ? 'Series' : 'Movie';
+
+        return `
+          <div class="search-suggestion-item" data-route="${route}" data-title="${displayTitle}" style="display:flex;align-items:center;gap:12px;padding:10px 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);" role="option">
+            <img src="${poster || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"><rect fill="%231a1a2e" width="100" height="150"/></svg>')}" alt="${displayTitle}" style="width:40px;height:55px;object-fit:cover;border-radius:4px;" loading="lazy" />
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:14px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${displayTitle}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;">
+                <span style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;color:var(--text-secondary);">${typeLabel}</span>
+                <span>⭐ ${rating}</span>
+                <span>•</span>
+                <span>${year}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="suggestion-group" style="margin-bottom: 20px;">
+          <h4 style="color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:700;">${title}</h4>
+          <div class="suggestion-group-list" role="listbox">
+            ${groupItems}
+          </div>
+        </div>
+      `;
+    }
+
+    async function fetchAndRenderSuggestions(queryValue, activeCategory = 'Trending') {
+      overlaySuggestions.innerHTML = `
+        <div style="display:flex;justify-content:center;padding:40px 0;">
+          <div class="load-more-spinner"></div>
+        </div>
+      `;
+
+      try {
+        // Group 1: Trending
+        let trendingData = [];
+        try {
+          trendingData = await getCachedSearch('Trending');
+        } catch (e) {
+          console.warn(e);
+        }
+
+        // Group 2: Personalized (History / Watchlist)
+        let personalizedData = [];
+        try {
+          const localWatchHistory = JSON.parse(localStorage.getItem('piq_continue_watching') || '[]');
+          personalizedData = localWatchHistory.slice(0, 3).map(item => ({
+            id: item.id,
+            title: item.title,
+            poster_path: item.poster_path,
+            vote_average: item.currentTime && item.duration ? 8.5 : 7.0,
+            release_date: '2024',
+            type: item.type,
+            isPersonalized: true
+          }));
+        } catch (e) {
+          console.warn(e);
+        }
+
+        // Group 3: Category specific
+        let categoryData = [];
+        if (activeCategory && activeCategory !== 'Trending') {
+          try {
+            categoryData = await getCachedSearch(activeCategory);
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+
+        // Group 4: Query Completions (Matches)
+        let queryCompletions = [];
+        if (queryValue) {
+          try {
+            queryCompletions = await getCachedSearch(queryValue);
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+
+        let suggestionsHTML = '';
+
+        const trendingItems = trendingData.slice(0, 3);
+        if (trendingItems.length > 0) {
+          suggestionsHTML += renderSuggestionGroup('Trending Now 🔥', trendingItems);
+        }
+
+        if (personalizedData.length > 0) {
+          suggestionsHTML += renderSuggestionGroup('For You 💖', personalizedData);
+        }
+
+        if (categoryData.length > 0) {
+          suggestionsHTML += renderSuggestionGroup(`${activeCategory} Top Picks ✨`, categoryData.slice(0, 3));
+        }
+
+        if (queryValue && queryCompletions.length > 0) {
+          const filteredCompletions = queryCompletions.filter(item => {
+            const idStr = `mb_${item.id || item.subjectId}`;
+            const trendingHas = trendingItems.some(x => `mb_${x.id || x.subjectId}` === idStr);
+            const categoryHas = categoryData.slice(0, 3).some(x => `mb_${x.id || x.subjectId}` === idStr);
+            return !trendingHas && !categoryHas;
+          }).slice(0, 3);
+
+          if (filteredCompletions.length > 0) {
+            suggestionsHTML += renderSuggestionGroup('Search Matches 🎬', filteredCompletions);
+          }
+        }
+
+        if (!suggestionsHTML) {
+          suggestionsHTML = `
+            <div style="padding:40px;color:var(--text-muted);text-align:center;">
+              <i data-lucide="compass" style="width:36px;height:36px;margin-bottom:12px;opacity:0.5;"></i>
+              <div>No suggestions found. Try another term!</div>
+            </div>
+          `;
+        }
+
+        overlaySuggestions.innerHTML = suggestionsHTML;
+        if (window.lucide) window.lucide.createIcons();
+
+        // Click suggest item logic
+        overlaySuggestions.querySelectorAll('.search-suggestion-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const route = item.dataset.route;
+            const title = item.dataset.title;
+            if (route) {
+              trackTelemetryEvent('suggestion_click', { suggestion_title: title, route: route });
+              overlay.style.display = 'none';
+              window.location.hash = route;
+            }
+          });
+        });
+
+      } catch (err) {
+        console.error('Suggestions rendering error:', err);
+        overlaySuggestions.innerHTML = `<div style="padding:20px;color:var(--text-muted);text-align:center;">Failed to fetch suggestions.</div>`;
+      }
+    }
+
     // ---- Render Mobile-Specific Premium Search Page ----
     container.innerHTML = `
       <div class="mobile-search-page">
@@ -53,7 +252,12 @@ export async function renderSearchPage({ query, container }) {
         </div>
 
         <!-- Suggestions Panel (Netflix-style full-screen overlay on focus/type) -->
-        <div class="mobile-search-overlay" id="mobile-search-overlay" style="display: none;">
+        <div class="mobile-search-overlay" id="mobile-search-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="Search suggestions">
+          <div class="mobile-overlay-category-chips" role="tablist">
+            <button class="overlay-category-chip active" role="tab" aria-selected="true" data-category="Trending">🔥 Trending</button>
+            <button class="overlay-category-chip" role="tab" aria-selected="false" data-category="Anime">✨ Anime</button>
+            <button class="overlay-category-chip" role="tab" aria-selected="false" data-category="Action">🍿 Action</button>
+          </div>
           <div class="mobile-overlay-suggestions" id="mobile-overlay-suggestions"></div>
         </div>
 
@@ -175,62 +379,46 @@ export async function renderSearchPage({ query, container }) {
       if (window.lucide) window.lucide.createIcons();
     }
 
-    // Input handlers
+    // Input focus handler -> open full screen suggestions sheet
     input.addEventListener('focus', () => {
+      checkAndCollapseHeader();
       overlay.style.display = 'block';
+      trackTelemetryEvent('search_open');
+      const activeChip = overlay.querySelector('.overlay-category-chip.active');
+      const activeCategory = activeChip ? activeChip.dataset.category : 'Trending';
+      fetchAndRenderSuggestions(input.value.trim(), activeCategory);
     });
 
+    // Debounced search suggestion input handler
     let mobSearchTimeout = null;
     input.addEventListener('input', (e) => {
       const val = e.target.value.trim();
       clearBtn.style.display = val ? 'flex' : 'none';
 
-      if (!val) {
-        overlaySuggestions.innerHTML = '';
-        return;
-      }
-
       if (mobSearchTimeout) clearTimeout(mobSearchTimeout);
-      mobSearchTimeout = setTimeout(async () => {
-        try {
-          const data = await searchMovieBox(val);
-          const suggestionsList = data.results.slice(0, 6);
-          if (suggestionsList.length > 0) {
-            overlaySuggestions.innerHTML = suggestionsList.map(item => {
-              const title = item.title || item.name;
-              const year = (item.releaseDate || item.year || '').slice(0, 4);
-              const rating = item.imdbRate ? parseFloat(item.imdbRate).toFixed(1) : '—';
-              const poster = item.cover?.url || item.poster_path || '';
-              const type = item.subjectType === 2 ? 'tv' : 'movie';
-              const route = `/${type}/mb_${item.subjectId || item.id}`;
+      mobSearchTimeout = setTimeout(() => {
+        const activeChip = overlay.querySelector('.overlay-category-chip.active');
+        const activeCategory = activeChip ? activeChip.dataset.category : 'Trending';
+        fetchAndRenderSuggestions(val, activeCategory);
+      }, 250);
+    });
 
-              return `
-                <div class="search-suggestion-item" data-route="${route}" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <img src="${poster}" alt="${title}" style="width:40px;height:55px;object-fit:cover;border-radius:4px;" />
-                  <div>
-                    <div style="font-weight:600;font-size:14px;color:white;">${title}</div>
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">⭐ ${rating} • ${year}</div>
-                  </div>
-                </div>
-              `;
-            }).join('');
-
-            overlaySuggestions.querySelectorAll('.search-suggestion-item').forEach(item => {
-              item.addEventListener('click', () => {
-                const route = item.dataset.route;
-                if (route) {
-                  overlay.style.display = 'none';
-                  window.location.hash = route;
-                }
-              });
-            });
-          } else {
-            overlaySuggestions.innerHTML = `<div style="padding:20px;color:var(--text-muted);text-align:center;">No suggestions</div>`;
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }, 200);
+    // Dialog Category chips clicks
+    const overlayChips = overlay.querySelectorAll('.overlay-category-chip');
+    overlayChips.forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        overlayChips.forEach(c => {
+          c.classList.remove('active');
+          c.setAttribute('aria-selected', 'false');
+        });
+        chip.classList.add('active');
+        chip.setAttribute('aria-selected', 'true');
+        
+        const category = chip.dataset.category;
+        trackTelemetryEvent('season_selected', { category_selected: category });
+        fetchAndRenderSuggestions(input.value.trim(), category);
+      });
     });
 
     input.addEventListener('keydown', (e) => {

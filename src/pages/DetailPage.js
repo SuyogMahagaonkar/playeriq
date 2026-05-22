@@ -5,10 +5,42 @@
 import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders } from '../services/api.js';
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
-import { getUser } from '../services/auth.js';
+import { getUser, getWatchHistory } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud } from '../services/firebase.js';
 
+function trackTelemetryEvent(eventName, eventData = {}) {
+  console.log(`[Telemetry] Event: ${eventName}`, eventData);
+  window.playeriqTelemetry = window.playeriqTelemetry || [];
+  window.playeriqTelemetry.push({ eventName, eventData, timestamp: Date.now() });
+}
+
+function announceToScreenReader(message) {
+  let announcer = document.getElementById('a11y-announcer');
+  if (!announcer) {
+    announcer = document.createElement('div');
+    announcer.id = 'a11y-announcer';
+    announcer.className = 'sr-only';
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(announcer);
+  }
+  announcer.textContent = '';
+  setTimeout(() => {
+    announcer.textContent = message;
+  }, 50);
+}
+
+function checkAndCollapseHeader() {
+  if (window.innerWidth <= 767) {
+    const avatar = document.getElementById('navbar-avatar');
+    if (avatar) {
+      avatar.remove();
+    }
+  }
+}
+
 export async function renderDetailPage({ params, container }) {
+  checkAndCollapseHeader();
   const isTV = window.location.hash.includes('#/tv/');
   const id = params.id;
 
@@ -31,17 +63,27 @@ export async function renderDetailPage({ params, container }) {
 
     let seasonsHTML = '';
     if (isTV && data.seasons?.length) {
+      const isMobile = window.innerWidth <= 767;
+      const seasonsTabsClass = isMobile ? 'seasons-tabs-wrapper mobile-seasons' : 'seasons-tabs';
+      const cleanSeasons = data.seasons.filter(s => s.season_number > 0);
+
       seasonsHTML = `
         <div class="detail-section">
           <h2 class="detail-section-title">Seasons & Episodes</h2>
-          <div class="seasons-tabs" id="seasons-tabs">
-            ${data.seasons.filter(s => s.season_number > 0).map((s, i) => `
-              <button class="season-tab ${i === 0 ? 'active' : ''}" data-season="${s.season_number}">
+          <div class="${seasonsTabsClass}" id="seasons-tabs" role="tablist" aria-label="Seasons">
+            ${cleanSeasons.map((s, i) => `
+              <button class="season-tab ${i === 0 ? 'active' : ''}" 
+                      data-season="${s.season_number}" 
+                      role="tab" 
+                      aria-selected="${i === 0 ? 'true' : 'false'}" 
+                      aria-controls="episode-list" 
+                      id="tab-season-${s.season_number}"
+                      tabindex="${i === 0 ? '0' : '-1'}">
                 Season ${s.season_number}
               </button>
             `).join('')}
           </div>
-          <div class="episode-list" id="episode-list">
+          <div class="episode-list" id="episode-list" role="tabpanel" aria-label="Episodes list">
             <div class="load-more-trigger"><div class="load-more-spinner"></div></div>
           </div>
         </div>
@@ -241,11 +283,36 @@ export async function renderDetailPage({ params, container }) {
       const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
       if (firstSeason) loadEpisodes(id, firstSeason.season_number, cleanTitle, year);
 
-      document.querySelectorAll('.season-tab').forEach(tab => {
+      const tabs = document.querySelectorAll('.season-tab');
+      tabs.forEach((tab, index) => {
         tab.addEventListener('click', () => {
-          document.querySelectorAll('.season-tab').forEach(t => t.classList.remove('active'));
+          tabs.forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+            t.setAttribute('tabindex', '-1');
+          });
           tab.classList.add('active');
-          loadEpisodes(id, parseInt(tab.dataset.season), cleanTitle, year);
+          tab.setAttribute('aria-selected', 'true');
+          tab.setAttribute('tabindex', '0');
+          
+          const seasonNum = parseInt(tab.dataset.season);
+          trackTelemetryEvent('season_selected', { tv_id: id, season: seasonNum });
+          announceToScreenReader(`Selected Season ${seasonNum}`);
+          loadEpisodes(id, seasonNum, cleanTitle, year);
+        });
+
+        tab.addEventListener('keydown', (e) => {
+          let nextIndex = index;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            nextIndex = (index + 1) % tabs.length;
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+          } else {
+            return;
+          }
+          e.preventDefault();
+          tabs[nextIndex].focus();
+          tabs[nextIndex].click();
         });
       });
     }
@@ -303,125 +370,356 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
   try {
     const season = await getSeasonDetails(tvId, seasonNumber, title, year);
     const todayStr = new Date().toISOString().slice(0, 10);
+    const isMobile = window.innerWidth <= 767;
 
-    const episodesHTML = (season.episodes || []).map(ep => {
-      const isUnaired = !ep.air_date || ep.air_date > todayStr;
-      const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
-      const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+    let history = [];
+    if (isMobile) {
+      try {
+        history = await getWatchHistory();
+      } catch (e) {
+        console.warn('Failed to fetch watch history in loadEpisodes:', e);
+      }
+    }
 
-      const cardClass = isUnaired ? 'episode-card unaired' : 'episode-card';
-      const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+    if (isMobile) {
+      // ==== Premium Mobile Hotstar-style episode list ====
+      const episodesHTML = (season.episodes || []).map((ep, i) => {
+        const isUnaired = !ep.air_date || ep.air_date > todayStr;
+        const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
+        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
 
-      return `
-        <div class="${cardClass}" ${routeStr}>
-          <div class="episode-still-container">
-            <img src="${ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>')}" alt="Episode ${ep.episode_number}" loading="lazy" />
-            ${isUnaired ? `
-              <div class="episode-lock-overlay">
-                <i data-lucide="lock"></i>
+        let cardClass = isUnaired ? 'mobile-episode-row unaired' : 'mobile-episode-row';
+        if (i >= 3) {
+          cardClass += ' collapsed-hidden';
+        }
+        
+        const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+
+        // Watch history progress mapping
+        const progressItem = history.find(item => item.id === tvId && parseInt(item.season) === parseInt(seasonNumber) && parseInt(item.episode) === parseInt(ep.episode_number));
+        let progressHTML = '';
+        if (progressItem && progressItem.currentTime > 0 && progressItem.duration > 0) {
+          const pct = Math.min(100, Math.max(0, (progressItem.currentTime / progressItem.duration) * 100));
+          progressHTML = `
+            <div class="episode-row-progress-container">
+              <div class="episode-row-progress" style="width: ${pct}%"></div>
+            </div>
+          `;
+        }
+
+        const durationStr = ep.runtime ? `${ep.runtime}m` : '45m';
+        const stillSrc = ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>');
+
+        return `
+          <div class="${cardClass}" ${routeStr} data-index="${i}">
+            <div class="mobile-ep-thumb-wrapper">
+              <img class="mobile-ep-thumb" data-src="${stillSrc}" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Episode ${ep.episode_number} still" />
+              <span class="mobile-ep-duration">${durationStr}</span>
+              ${isUnaired ? `
+                <div class="mobile-ep-lock">
+                  <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                </div>
+              ` : ''}
+              ${progressHTML}
+            </div>
+            <div class="mobile-ep-details">
+              <div class="mobile-ep-meta-title">
+                <h3 class="mobile-ep-title">S${seasonNumber} E${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}</h3>
               </div>
-            ` : ''}
-          </div>
-          <div class="episode-info">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-              <div class="episode-number">
-                Episode ${ep.episode_number}
-                ${isUnaired ? `<span style="color:#00a8e1; font-weight:700; margin-left:8px; font-size:11px;">Coming ${formattedDate}</span>` : ''}
+              <p class="mobile-ep-description">${ep.overview || 'No description available.'}</p>
+              <div class="mobile-ep-actions">
+                <button class="mobile-ep-action-btn ep-play-btn" data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}" title="Play Episode ${ep.episode_number}" aria-label="Play Episode ${ep.episode_number}">
+                  <i data-lucide="play"></i>
+                </button>
+                <button class="mobile-ep-action-btn ep-download-btn" title="Download Episode ${ep.episode_number}" aria-label="Download Episode ${ep.episode_number}">
+                  <i data-lucide="download"></i>
+                </button>
+                <button class="mobile-ep-action-btn ep-watchlist-btn" title="Save Episode ${ep.episode_number}" aria-label="Save Episode ${ep.episode_number}">
+                  <i data-lucide="bookmark"></i>
+                </button>
               </div>
             </div>
-            <div class="episode-name">${ep.name || ''}</div>
-            <div class="episode-overview">${ep.overview || 'No description available.'}</div>
-            
-            ${isUnaired ? `
-              <button class="notify-btn" data-ep-key="${epKey}" data-title="${ep.name || ''}" data-airdate="${ep.air_date || 'Soon'}">
-                <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
-                <span>Notify Me</span>
-              </button>
-            ` : ''}
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
 
-    listEl.innerHTML = episodesHTML;
-    if (window.lucide) window.lucide.createIcons();
-
-    // Setup toggle indicators
-    listEl.querySelectorAll('.notify-btn').forEach(btn => {
-      const epKey = btn.dataset.epKey;
-      const titleStr = btn.dataset.title;
-      const airdateStr = btn.dataset.airdate;
-      const user = getUser();
-
-      // Check if already notified
-      const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
-      if (alerts[epKey]) {
-        btn.classList.add('active');
-        btn.innerHTML = `<i data-lucide="bell-ring" style="width: 14px; height: 14px; fill: #00a8e1;"></i> <span>Notified</span>`;
-        if (window.lucide) window.lucide.createIcons();
+      let showAllHTML = '';
+      if (season.episodes && season.episodes.length > 3) {
+        showAllHTML = `
+          <button class="mobile-ep-show-all-btn" id="mobile-ep-show-all-btn" aria-expanded="false" aria-controls="episode-list">
+            <span>Show All Episodes (${season.episodes.length})</span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+          </button>
+        `;
       }
 
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const currentAlerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
-        const isActive = btn.classList.contains('active');
+      listEl.innerHTML = episodesHTML + showAllHTML;
 
-        if (isActive) {
-          delete currentAlerts[epKey];
-          localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
-          btn.classList.remove('active');
-          btn.innerHTML = `<i data-lucide="bell" style="width: 14px; height: 14px;"></i> <span>Notify Me</span>`;
+      // Click Play on row
+      listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
+        row.addEventListener('click', (e) => {
+          if (row.classList.contains('unaired')) {
+            showToast('This episode has not aired yet.', 'calendar');
+            return;
+          }
+          if (e.target.closest('.mobile-ep-action-btn')) return; // handled by button logic
+          const route = row.dataset.route;
+          if (route) {
+            trackTelemetryEvent('episode_play', { tv_id: tvId, season: seasonNumber, episode: parseInt(row.dataset.index) + 1 });
+            window.location.hash = route;
+          }
+        });
+      });
+
+      // Quick actions listeners
+      listEl.querySelectorAll('.ep-play-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const route = btn.dataset.route;
+          if (route) {
+            trackTelemetryEvent('episode_play', { tv_id: tvId, season: seasonNumber, episode: parseInt(btn.closest('.mobile-episode-row').dataset.index) + 1 });
+            window.location.hash = route;
+          }
+        });
+      });
+
+      listEl.querySelectorAll('.ep-download-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          trackTelemetryEvent('episode_download', { tv_id: tvId, season: seasonNumber, episode: parseInt(btn.closest('.mobile-episode-row').dataset.index) + 1 });
+          showToast('Download started. Available offline soon.', 'download');
+        });
+      });
+
+      listEl.querySelectorAll('.ep-watchlist-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          btn.classList.toggle('active');
+          const epNum = parseInt(btn.closest('.mobile-episode-row').dataset.index) + 1;
+          if (btn.classList.contains('active')) {
+            btn.style.color = '#a855f7';
+            btn.style.borderColor = '#a855f7';
+            showToast('Added to watchlist.', 'bookmark-check');
+            trackTelemetryEvent('episode_watchlist_toggle', { tv_id: tvId, season: seasonNumber, episode: epNum, state: 'added' });
+          } else {
+            btn.style.color = '';
+            btn.style.borderColor = '';
+            showToast('Removed from watchlist.', 'bookmark');
+            trackTelemetryEvent('episode_watchlist_toggle', { tv_id: tvId, season: seasonNumber, episode: epNum, state: 'removed' });
+          }
+        });
+      });
+
+      // Show All Button click handler
+      const showAllBtn = listEl.querySelector('#mobile-ep-show-all-btn');
+      if (showAllBtn) {
+        showAllBtn.addEventListener('click', () => {
+          const isExpanded = showAllBtn.classList.contains('expanded');
+          if (isExpanded) {
+            showAllBtn.classList.remove('expanded');
+            showAllBtn.setAttribute('aria-expanded', 'false');
+            showAllBtn.querySelector('span').textContent = `Show All Episodes (${season.episodes.length})`;
+            listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
+              const index = parseInt(row.dataset.index || '0');
+              if (index >= 3) {
+                row.classList.add('collapsed-hidden');
+              }
+            });
+            announceToScreenReader('Collapsed episodes list, showing first three episodes.');
+          } else {
+            showAllBtn.classList.add('expanded');
+            showAllBtn.setAttribute('aria-expanded', 'true');
+            showAllBtn.querySelector('span').textContent = 'Show Less';
+            listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
+              row.classList.remove('collapsed-hidden');
+            });
+            announceToScreenReader('Expanded episodes list, showing all episodes.');
+          }
+        });
+      }
+
+      // Intersection Observer for lazy loading thumbnails
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries, obs) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const imgEl = entry.target;
+              if (imgEl.dataset.src) {
+                imgEl.src = imgEl.dataset.src;
+                imgEl.removeAttribute('data-src');
+              }
+              obs.unobserve(imgEl);
+            }
+          });
+        }, { rootMargin: '100px' });
+
+        listEl.querySelectorAll('.mobile-ep-thumb[data-src]').forEach(imgEl => {
+          observer.observe(imgEl);
+        });
+      } else {
+        listEl.querySelectorAll('.mobile-ep-thumb[data-src]').forEach(imgEl => {
+          imgEl.src = imgEl.dataset.src;
+          imgEl.removeAttribute('data-src');
+        });
+      }
+
+      // Swipe Gestures for seasons
+      let touchStartX = 0;
+      let touchStartY = 0;
+      listEl.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      listEl.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+
+        // Ensure swipe is mostly horizontal and meets threshold
+        if (Math.abs(diffX) > 60 && Math.abs(diffY) < 40) {
+          const tabs = Array.from(document.querySelectorAll('.season-tab'));
+          const activeIndex = tabs.findIndex(t => t.classList.contains('active'));
           
-          if (user) {
-            await removeNotificationFromCloud(user.uid, epKey);
+          if (diffX < 0) {
+            // Swiped left -> load next season
+            if (activeIndex < tabs.length - 1 && activeIndex !== -1) {
+              const nextTab = tabs[activeIndex + 1];
+              nextTab.click();
+              nextTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+          } else {
+            // Swiped right -> load previous season
+            if (activeIndex > 0) {
+              const prevTab = tabs[activeIndex - 1];
+              prevTab.click();
+              prevTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
           }
-          showToast('Notification alert removed.', 'bell-off');
-        } else {
-          // Request browser push notification permission if default
-          if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-          }
+        }
+      }, { passive: true });
 
-          const notif = {
-            epKey,
-            tvId,
-            seasonNumber,
-            episodeNumber: String(epKey.split('_E')[1]),
-            title: titleStr,
-            airDate: airdateStr
-          };
-          currentAlerts[epKey] = notif;
-          localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
+    } else {
+      // ==== Standard Desktop Grid ====
+      const episodesHTML = (season.episodes || []).map(ep => {
+        const isUnaired = !ep.air_date || ep.air_date > todayStr;
+        const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
+        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+
+        const cardClass = isUnaired ? 'episode-card unaired' : 'episode-card';
+        const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+
+        return `
+          <div class="${cardClass}" ${routeStr}>
+            <div class="episode-still-container">
+              <img src="${ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>')}" alt="Episode ${ep.episode_number}" loading="lazy" />
+              ${isUnaired ? `
+                <div class="episode-lock-overlay">
+                  <i data-lucide="lock" style="width:16px;height:16px;"></i>
+                </div>
+              ` : ''}
+            </div>
+            <div class="episode-info">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div class="episode-number">
+                  Episode ${ep.episode_number}
+                  ${isUnaired ? `<span style="color:#00a8e1; font-weight:700; margin-left:8px; font-size:11px;">Coming ${formattedDate}</span>` : ''}
+                </div>
+              </div>
+              <div class="episode-name">${ep.name || ''}</div>
+              <div class="episode-overview">${ep.overview || 'No description available.'}</div>
+              
+              ${isUnaired ? `
+                <button class="notify-btn" data-ep-key="${epKey}" data-title="${ep.name || ''}" data-airdate="${ep.air_date || 'Soon'}">
+                  <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
+                  <span>Notify Me</span>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      listEl.innerHTML = episodesHTML;
+
+      // Desktop click listeners
+      listEl.querySelectorAll('.notify-btn').forEach(btn => {
+        const epKey = btn.dataset.epKey;
+        const titleStr = btn.dataset.title;
+        const airdateStr = btn.dataset.airdate;
+        const user = getUser();
+
+        const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+        if (alerts[epKey]) {
           btn.classList.add('active');
           btn.innerHTML = `<i data-lucide="bell-ring" style="width: 14px; height: 14px; fill: #00a8e1;"></i> <span>Notified</span>`;
-          
-          if (user) {
-            await addNotificationToCloud(user.uid, notif);
-          }
-          showToast(`Alert set! We will notify you when Episode ${notif.episodeNumber} airs.`, 'bell');
         }
-        if (window.lucide) window.lucide.createIcons();
-      });
-    });
 
-    listEl.querySelectorAll('.episode-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.notify-btn')) {
+        btn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          return;
-        }
+          const currentAlerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+          const isActive = btn.classList.contains('active');
 
-        if (card.classList.contains('unaired')) {
-          showToast('This episode has not aired yet.', 'calendar');
-          return;
-        }
+          if (isActive) {
+            delete currentAlerts[epKey];
+            localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
+            btn.classList.remove('active');
+            btn.innerHTML = `<i data-lucide="bell" style="width: 14px; height: 14px;"></i> <span>Notify Me</span>`;
+            
+            if (user) {
+              await removeNotificationFromCloud(user.uid, epKey);
+            }
+            showToast('Notification alert removed.', 'bell-off');
+          } else {
+            if ('Notification' in window && Notification.permission === 'default') {
+              Notification.requestPermission();
+            }
 
-        const route = card.dataset.route;
-        if (route) window.location.hash = route;
+            const notif = {
+              epKey,
+              tvId,
+              seasonNumber,
+              episodeNumber: String(epKey.split('_E')[1]),
+              title: titleStr,
+              airDate: airdateStr
+            };
+            currentAlerts[epKey] = notif;
+            localStorage.setItem('playeriq_notify_episodes', JSON.stringify(currentAlerts));
+            btn.classList.add('active');
+            btn.innerHTML = `<i data-lucide="bell-ring" style="width: 14px; height: 14px; fill: #00a8e1;"></i> <span>Notified</span>`;
+            
+            if (user) {
+              await addNotificationToCloud(user.uid, notif);
+            }
+            showToast(`Alert set! We will notify you when Episode ${notif.episodeNumber} airs.`, 'bell');
+          }
+          if (window.lucide) window.lucide.createIcons();
+        });
       });
-    });
+
+      listEl.querySelectorAll('.episode-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.notify-btn')) {
+            e.stopPropagation();
+            return;
+          }
+
+          if (card.classList.contains('unaired')) {
+            showToast('This episode has not aired yet.', 'calendar');
+            return;
+          }
+
+          const route = card.dataset.route;
+          if (route) window.location.hash = route;
+        });
+      });
+    }
+
+    if (window.lucide) window.lucide.createIcons();
 
   } catch (err) {
+    console.error('Failed to load episodes:', err);
     listEl.innerHTML = '<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>';
   }
 }
