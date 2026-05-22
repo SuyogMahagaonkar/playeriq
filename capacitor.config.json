@@ -1,0 +1,9 @@
+{
+  "appId": "com.suyogmahagaonkar.playeriq",
+  "appName": "PlayerIQ",
+  "webDir": "dist",
+  "server": {
+    "url": "https://playeriq.suyogmahagaonkar.me",
+    "cleartext": true
+  }
+}

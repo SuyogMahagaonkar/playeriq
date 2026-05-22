@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Rounded dark background -->
+  <rect width="512" height="512" rx="128" fill="#0a0a0f"/>
+  
+  <!-- Subtle circular border -->
+  <circle cx="256" cy="256" r="210" fill="url(#logo-grad)" stroke="#ff2a5f" stroke-width="8" stroke-opacity="0.3"/>
+  
+  <defs>
+    <radialGradient id="logo-grad" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+      <stop offset="0%" stop-color="#1b1b29" />
+      <stop offset="100%" stop-color="#0a0a0f" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Play Icon Glow -->
+  <polygon points="210,160 360,256 210,352" fill="#ff2a5f" fill-opacity="0.15" stroke="#ff2a5f" stroke-width="24" stroke-linejoin="round" filter="blur(8px)"/>
+  
+  <!-- Solid Play Icon in the Center -->
+  <polygon points="210,160 360,256 210,352" fill="#ff2a5f" stroke="#ff2a5f" stroke-width="12" stroke-linejoin="round"/>
+</svg>

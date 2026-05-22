@@ -113,7 +113,7 @@ input, textarea, select {
 }
 
 .page-content {
-  padding-top: var(--navbar-height);
+  padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
   min-height: 100vh;
 }
 

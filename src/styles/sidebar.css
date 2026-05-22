@@ -8,6 +8,7 @@
   top: 0;
   width: var(--sidebar-width);
   height: 100vh;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--gradient-sidebar);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
