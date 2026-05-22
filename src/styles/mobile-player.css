@@ -767,27 +767,91 @@
 }
 
 /* ============================================================
-   12. MOBILE CONTROLS BAR REFINEMENT
-   Hide volume slider, show cinematic + lock in landscape
+   12. LANDSCAPE MOBILE — full-screen video fill
+   The video wrapper breaks out of document flow and covers
+   the entire viewport so there are NO black bars.
    ============================================================ */
-@media (max-width: 768px) and (orientation: landscape) {
-  /* Player fills available height in landscape */
+@media (max-width: 900px) and (orientation: landscape) {
+
+  /* Hide top bar & episodes panel — video takes the whole screen */
+  .player-top-bar,
+  .player-episodes-panel,
+  .player-info,
+  .player-related,
+  .player-shortcuts-hint {
+    display: none !important;
+  }
+
+  /* Player page itself: no min-height, no overflow issues */
+  .player-page {
+    min-height: unset !important;
+    overflow: hidden !important;
+  }
+
+  .player-body {
+    flex-direction: row !important;
+  }
+
+  /* The wrapper breaks out of flow and fills the whole screen */
   .player-video-wrapper {
-    height: calc(100vh - 50px) !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;   /* dvh = dynamic viewport height, handles browser chrome */
     aspect-ratio: unset !important;
+    z-index: 9990 !important;
+    background: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
   }
 
-  /* Compact controls bar in landscape */
+  /* Video element itself fills the wrapper */
+  .player-video-wrapper .vp-player,
+  .player-video-wrapper #vp-player {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .player-video-wrapper .vp-video,
+  .player-video-wrapper #vp-video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;  /* letterbox by default, no crop */
+  }
+
+  /* Cinematic (cover) mode overrides contain */
+  .player-video-wrapper .vp-player.cinematic-mode .vp-video {
+    object-fit: cover !important;
+  }
+
+  /* Compact controls bar — fits the full-width landscape bar */
   .vp-controls {
-    padding: 12px 16px 8px !important;
-    gap: 8px !important;
+    padding: 8px max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left)) !important;
+    gap: 6px !important;
   }
 
-  /* Keep lock btn visible */
-  .vp-lock-btn {
-    display: flex !important;
+  /* Bottom bar controls: keep them in a single row */
+  .vp-bottom-bar {
+    flex-direction: row !important;
+  }
+
+  .vp-left-controls, .vp-right-controls {
+    width: auto !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Safe-area padding for notch phones (iPhone, etc.) */
+  @supports (padding: env(safe-area-inset-left)) {
+    .player-video-wrapper {
+      left: env(safe-area-inset-left) !important;
+      right: env(safe-area-inset-right) !important;
+      width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    }
   }
 }
+
 
 /* ============================================================
    13. ACCESSIBILITY — prefers-reduced-motion
