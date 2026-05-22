@@ -137,6 +137,10 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
             </button>
 
+            <button class="vp-btn" id="vp-cast-btn" title="Cast Video" aria-label="Cast Video" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+            </button>
+
             <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
               <svg class="vp-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
               <svg class="vp-icon-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
@@ -206,7 +210,22 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   const speedSelect = document.getElementById('vp-speed');
   const qualitySelect = document.getElementById('vp-quality');
   const pipBtn = document.getElementById('vp-pip-btn');
+  const vpCastBtn = document.getElementById('vp-cast-btn');
   const fsBtn = document.getElementById('vp-fs-btn');
+
+  // Show cast button on mobile viewports
+  if (window.innerWidth <= 767 && vpCastBtn) {
+    vpCastBtn.style.display = 'inline-block';
+  }
+
+  // Telemetry play event
+  let playTelemetryFired = false;
+  video.addEventListener('play', () => {
+    if (!playTelemetryFired && window.pushTelemetry) {
+      window.pushTelemetry('play_tapped', { mediaId: streamData.id || '' });
+      playTelemetryFired = true;
+    }
+  });
 
   // ---- Seeking state (must be declared here, not inside if blocks, to be
   //      accessible from both the seeking handler and quality switch handler) ----
@@ -342,6 +361,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       const triedUrls = new Set([streamData.url]);
       video.addEventListener('error', (e) => {
         console.error('[Player] Video error:', video.error?.code, video.error?.message);
+        if (window.pushTelemetry) {
+          window.pushTelemetry('player_error', { mediaId: streamData.id || '', error: video.error?.message || 'Unknown' });
+        }
         const nextStream = allStreams.find(s => s.url && !triedUrls.has(s.url));
         if (nextStream) {
           console.warn('[Player] Stream failed, trying next fallback stream:', nextStream.resolution);
@@ -360,10 +382,29 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       hls = new Hls({
         maxBufferLength: 30,
         maxMaxBufferLength: 60,
+        startLevel: 1, // Start on mobile-friendly 480p/720p resolution
       });
       hls.loadSource(streamData.url);
       hls.attachMedia(video);
       video._hls = hls; // Store on video element for reuse!
+
+      // Low-Bandwidth buffer stall warning
+      let bufferWarningCount = 0;
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+          bufferWarningCount++;
+          if (bufferWarningCount >= 2) {
+            bufferWarningCount = 0;
+            showPlayerHUD(`<span style="color:#fbbf24">Network slow - playing lower quality</span>`);
+            if (hls.currentLevel > 0) {
+              hls.currentLevel = hls.currentLevel - 1;
+              if (qualitySelect) {
+                qualitySelect.value = hls.currentLevel;
+              }
+            }
+          }
+        }
+      });
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         // Populate quality selector
@@ -522,8 +563,27 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   video.addEventListener('pause', updatePlayIcon);
   video.addEventListener('timeupdate', updateTime);
   video.addEventListener('progress', updateBuffer);
-  video.addEventListener('waiting', () => { loader.style.display = 'flex'; });
-  video.addEventListener('canplay', () => { loader.style.display = 'none'; });
+  let nonHlsStallCount = 0;
+  video.addEventListener('waiting', () => {
+    loader.style.display = 'flex';
+    if (!hls) {
+      nonHlsStallCount++;
+      if (nonHlsStallCount >= 2) {
+        nonHlsStallCount = 0;
+        showPlayerHUD(`<span style="color:#fbbf24">Network slow - playing lower quality</span>`);
+        if (qualitySelect && qualitySelect.options.length > 1) {
+          const nextIdx = Math.min(qualitySelect.options.length - 1, qualitySelect.selectedIndex + 1);
+          if (nextIdx !== qualitySelect.selectedIndex) {
+            qualitySelect.selectedIndex = nextIdx;
+            qualitySelect.dispatchEvent(new Event('change'));
+          }
+        }
+      }
+    }
+  });
+  video.addEventListener('canplay', () => {
+    loader.style.display = 'none';
+  });
   video.addEventListener('ended', () => {
     bigPlay.style.display = 'flex';
     if (onEnded) onEnded();
@@ -646,6 +706,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
   // Quality
   qualitySelect.addEventListener('change', (e) => {
+    if (window.pushTelemetry) {
+      window.pushTelemetry('quality_changed', { mediaId: streamData.id || '', quality: e.target.value });
+    }
     if (hls) {
       hls.currentLevel = parseInt(e.target.value);
     } else {
@@ -688,6 +751,16 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       video.requestPictureInPicture?.();
     }
   });
+
+  // Cast
+  if (vpCastBtn) {
+    vpCastBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window._triggerCastingFlow) {
+        window._triggerCastingFlow();
+      }
+    });
+  }
 
   // Fullscreen
   function toggleFs() {

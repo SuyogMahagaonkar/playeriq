@@ -1389,7 +1389,7 @@ function setupOrientationMonitor() {
         toastEl.className = 'rotate-toast';
         toastEl.innerHTML = `
           <span>Rotate to watch in cinematic landscape</span>
-          <button class="rotate-toast-btn" id="go-fullscreen-btn">Go Fullscreen</button>
+          <button class="rotate-toast-btn" id="go-fullscreen-btn" aria-label="Go Fullscreen">Go Fullscreen</button>
         `;
         document.body.appendChild(toastEl);
 
@@ -1535,6 +1535,134 @@ function setupMiniPlayer(videoElement, activePlayerInstance, id, type, season, e
   pushTelemetry('mini_player_opened', { id, type, season, episode });
 }
 
+// ---- Dynamic Casting Integrations ----
+function loadGoogleCastSDK() {
+  if (window.chrome && window.chrome.cast) return;
+  const script = document.createElement('script');
+  script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+  document.head.appendChild(script);
+}
+
+const SIMULATED_DEVICES = [
+  { id: 'chromecast-living', name: 'Living Room TV', type: 'Chromecast', status: 'ready', signal: 4 },
+  { id: 'airplay-bedroom', name: 'Bedroom Apple TV', type: 'AirPlay', status: 'ready', signal: 5 },
+  { id: 'dlna-basement', name: 'Basement Sony Bravia', type: 'Smart TV', status: 'ready', signal: 3 },
+  { id: 'chromecast-kitchen', name: 'Kitchen Hub', type: 'Chromecast', status: 'ready', signal: 2 }
+];
+
+function stopCastingFlow() {
+  if (window.castPollingInterval) {
+    clearInterval(window.castPollingInterval);
+    window.castPollingInterval = null;
+  }
+  const bar = document.getElementById('global-cast-session-bar');
+  if (bar) bar.remove();
+  localStorage.removeItem('piq_cast_session_id');
+}
+
+function startCastSessionPolling(sessionId) {
+  if (window.castPollingInterval) clearInterval(window.castPollingInterval);
+
+  window.castPollingInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/cast/session/status?sessionId=${sessionId}`);
+      if (!res.ok) {
+        stopCastingFlow();
+        return;
+      }
+      const status = await res.json();
+      updateCastBarUI(status);
+    } catch (err) {
+      console.error('[Cast Polling] Error:', err);
+    }
+  }, 2000);
+}
+
+function updateCastBarUI(status) {
+  const statusEl = document.getElementById('cast-bar-status');
+  const playBtn = document.getElementById('cast-bar-play-btn');
+  if (statusEl) {
+    statusEl.textContent = status.state === 'PLAYING' 
+      ? `Casting to ${status.deviceType}...` 
+      : `Paused on ${status.deviceType}`;
+  }
+  if (playBtn) {
+    if (status.state === 'PLAYING') {
+      playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+    } else {
+      playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+    }
+  }
+}
+
+function mountGlobalCastBar(sessionId, title, imagePath) {
+  const existing = document.getElementById('global-cast-session-bar');
+  if (existing) existing.remove();
+
+  const bar = document.createElement('div');
+  bar.className = 'cast-session-bar';
+  bar.id = 'global-cast-session-bar';
+  bar.innerHTML = `
+    <div class="cast-session-details">
+      <img class="cast-session-thumb" src="${imagePath ? img.backdrop(imagePath) : 'data:image/svg+xml,...'}" alt="Thumb" />
+      <div class="cast-session-info">
+        <h4 class="cast-session-title">${title}</h4>
+        <div class="cast-session-status" id="cast-bar-status">Connecting to TV...</div>
+      </div>
+    </div>
+    <div class="cast-session-controls">
+      <button class="cast-session-btn" id="cast-bar-play-btn" aria-label="Toggle Play">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="cast-session-btn disconnect" id="cast-bar-disconnect-btn" aria-label="Stop Casting">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(bar);
+
+  const playBtn = bar.querySelector('#cast-bar-play-btn');
+  const disconnectBtn = bar.querySelector('#cast-bar-disconnect-btn');
+
+  let isPlaying = true;
+
+  playBtn.addEventListener('click', async () => {
+    isPlaying = !isPlaying;
+    try {
+      const res = await fetch('/api/cast/session/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          action: isPlaying ? 'play' : 'pause'
+        })
+      });
+      if (res.ok) {
+        pushTelemetry('cast_control', { sessionId, action: isPlaying ? 'play' : 'pause' });
+      }
+    } catch (err) {
+      console.error('[Cast Bar Control] Failed:', err);
+    }
+  });
+
+  disconnectBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/cast/session/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          action: 'stop'
+        })
+      });
+      pushTelemetry('cast_control', { sessionId, action: 'stop' });
+    } catch (e) {}
+    stopCastingFlow();
+  });
+
+  startCastSessionPolling(sessionId);
+}
+
 async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data, goToEpisode) {
   const chipsContainer = document.getElementById('mobile-season-chips');
   const listContainer = document.getElementById('mobile-episodes-list');
@@ -1650,14 +1778,22 @@ async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data
     listContainer.querySelectorAll('.mobile-episode-row').forEach(row => {
       row.addEventListener('click', () => {
         const ep = parseInt(row.dataset.episode);
-        goToEpisode(activeSeason, ep);
+        if (window._checkAndTriggerRotation) {
+          window._checkAndTriggerRotation(() => goToEpisode(activeSeason, ep));
+        } else {
+          goToEpisode(activeSeason, ep);
+        }
       });
       row.querySelectorAll('.mobile-ep-action-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const ep = parseInt(row.dataset.episode);
           if (btn.classList.contains('play')) {
-            goToEpisode(activeSeason, ep);
+            if (window._checkAndTriggerRotation) {
+              window._checkAndTriggerRotation(() => goToEpisode(activeSeason, ep));
+            } else {
+              goToEpisode(activeSeason, ep);
+            }
           } else if (btn.classList.contains('download')) {
             pushTelemetry('download_requested', { id: tvId, type: 'tv', season: activeSeason, episode: ep });
             alert(`Download starting for Episode ${ep}...`);
@@ -1751,7 +1887,7 @@ async function renderMobileLayout({
             <div class="mobile-player-resume-title">Resume playback</div>
             <div class="mobile-player-resume-time" id="mobile-resume-time">Saved progress: 0:00</div>
           </div>
-          <button class="mobile-player-resume-btn" id="mobile-resume-btn">Resume</button>
+          <button class="mobile-player-resume-btn" id="mobile-resume-btn" aria-label="Resume Playback">Resume</button>
         </div>
 
         <div class="mobile-player-actions">
@@ -1771,7 +1907,7 @@ async function renderMobileLayout({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
             <span>Share</span>
           </button>
-          <button class="mobile-player-action-item" id="action-cast" aria-label="Cast">
+          <button class="mobile-player-action-item" id="action-cast" aria-label="Cast to TV">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.3"></rect></svg>
             <span>Cast</span>
           </button>
@@ -1781,7 +1917,7 @@ async function renderMobileLayout({
           <div class="mobile-player-episodes-section">
             <div class="seasons-tabs-wrapper mobile-seasons" id="mobile-season-chips" role="tablist"></div>
             <div class="mobile-episodes-list" id="mobile-episodes-list"></div>
-            <button class="mobile-ep-show-all-btn" id="mobile-show-all-btn" style="display: none;">
+            <button class="mobile-ep-show-all-btn" id="mobile-show-all-btn" style="display: none;" aria-label="Show All Episodes">
               <span>Show All</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
             </button>
@@ -1792,7 +1928,7 @@ async function renderMobileLayout({
           <div class="player-related" style="margin-top: 24px;">
             <h2 class="player-related-title" style="font-size: 16px; margin-bottom: 12px; font-weight: 700;">More Like This</h2>
             <div class="player-related-grid">
-              ${similar.map(m => createMovieCard(m, type)).join('')}
+              ${similar.map(m => createMovieCard(m, type, null, null, null, false, 'landscape')).join('')}
             </div>
           </div>
         ` : ''}
@@ -1801,6 +1937,7 @@ async function renderMobileLayout({
   `;
 
   setupWatchlistButton(id, type);
+  attachCardClicks(container);
 
   const synopsisEl = document.getElementById('mobile-synopsis');
   const moreLink = document.getElementById('mobile-more-link');
@@ -1811,13 +1948,282 @@ async function renderMobileLayout({
     });
   }
 
+  // ---- Rotation Interceptors for Play Controls ----
+  async function checkAndTriggerRotation(onAllowed) {
+    const consent = localStorage.getItem('piq_auto_rotate_consent');
+    if (consent === 'allowed' || consent === 'only_this_time_temp') {
+      await requestRotateAndFullscreen(onAllowed);
+    } else {
+      // Create beautifully overlayed non-blocking consent toast
+      const toast = document.createElement('div');
+      toast.className = 'rotate-consent-toast animate-slide-up';
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 80px;
+        left: 16px;
+        right: 16px;
+        background: rgba(15, 15, 24, 0.95);
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        border-radius: 12px;
+        padding: 12px 16px;
+        z-index: 10000;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      `;
+      toast.innerHTML = `
+        <div style="font-size: 12px; font-weight: 500; color: #fff; line-height: 1.4;">Tap Play to watch in landscape. Allow auto-rotate for full-screen?</div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="consent-only-time" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; min-height: 32px;">Only this time</button>
+          <button id="consent-allow" style="background: var(--accent); border: none; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow-sm); min-height: 32px;">Allow</button>
+        </div>
+      `;
+      document.body.appendChild(toast);
+
+      toast.querySelector('#consent-allow').addEventListener('click', async () => {
+        localStorage.setItem('piq_auto_rotate_consent', 'allowed');
+        toast.remove();
+        await requestRotateAndFullscreen(onAllowed);
+      });
+
+      toast.querySelector('#consent-only-time').addEventListener('click', async () => {
+        localStorage.setItem('piq_auto_rotate_consent', 'only_this_time_temp');
+        toast.remove();
+        await requestRotateAndFullscreen(onAllowed);
+      });
+    }
+  }
+
+  async function requestRotateAndFullscreen(onComplete) {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) {
+      onComplete();
+      return;
+    }
+
+    try {
+      if (wrapper.requestFullscreen) {
+        await wrapper.requestFullscreen();
+      } else if (wrapper.webkitRequestFullscreen) {
+        await wrapper.webkitRequestFullscreen();
+      }
+    } catch (e) {
+      console.warn('Fullscreen request failed:', e);
+    }
+
+    if (screen.orientation && screen.orientation.lock) {
+      try {
+        await screen.orientation.lock('landscape');
+        pushTelemetry('entered_landscape', { method: 'auto' });
+      } catch (err) {
+        console.warn('Orientation lock failed:', err);
+        showRotationFallbackModal(onComplete);
+        return;
+      }
+    } else {
+      showRotationFallbackModal(onComplete);
+      return;
+    }
+
+    onComplete();
+  }
+
+  function showRotationFallbackModal(onComplete) {
+    const existing = document.querySelector('.rotate-fallback-overlay');
+    if (existing) existing.remove();
+
+    const fallback = document.createElement('div');
+    fallback.className = 'rotate-fallback-overlay';
+    fallback.innerHTML = `
+      <div class="rotate-fallback-title">Rotate Your Device</div>
+      <div class="rotate-fallback-sub">Please rotate your device to landscape mode, or tap the button below to manually enter fullscreen.</div>
+      <button class="rotate-fallback-btn" id="fallback-fullscreen-btn" aria-label="Enter Fullscreen Manually">Go Fullscreen</button>
+      <button class="rotate-fallback-close" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 24px; cursor: pointer; min-height: 44px; min-width: 44px;" aria-label="Close modal">&times;</button>
+    `;
+    document.body.appendChild(fallback);
+
+    fallback.querySelector('#fallback-fullscreen-btn').addEventListener('click', () => {
+      const wrapper = document.getElementById('video-wrapper');
+      if (wrapper) {
+        if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+        else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+      }
+      fallback.remove();
+      pushTelemetry('entered_landscape', { method: 'manual' });
+      onComplete();
+    });
+
+    fallback.querySelector('.rotate-fallback-close').addEventListener('click', () => {
+      fallback.remove();
+      onComplete();
+    });
+  }
+
+  // Bind rotation check to global hook for episode row plays
+  window._checkAndTriggerRotation = checkAndTriggerRotation;
+
+  // Setup cast API dynamically
+  loadGoogleCastSDK();
+
+  // Expose global callback for VideoPlayer cast click
+  window._triggerCastingFlow = () => {
+    triggerCastDialog();
+  };
+
+  function triggerCastDialog() {
+    const consentModal = document.createElement('div');
+    consentModal.className = 'cast-picker-modal';
+    consentModal.innerHTML = `
+      <div class="cast-picker-content">
+        <div class="cast-picker-header">
+          <h3 class="cast-picker-title">Local Network Permission</h3>
+          <button class="cast-picker-close" id="consent-close" aria-label="Close Dialog">✕</button>
+        </div>
+        <p class="cast-microcopy">PlayerIQ needs local network permission to discover and connect to nearby Chromecast, AirPlay, or Smart TV devices.</p>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="consent-cancel" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; min-height: 44px;" aria-label="Cancel Search">Cancel</button>
+          <button id="consent-search" style="background: var(--accent); border: none; color: #fff; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow-sm); min-height: 44px;" aria-label="Search Devices">Search Devices</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(consentModal);
+
+    consentModal.querySelector('#consent-close').addEventListener('click', () => consentModal.remove());
+    consentModal.querySelector('#consent-cancel').addEventListener('click', () => consentModal.remove());
+    consentModal.querySelector('#consent-search').addEventListener('click', () => {
+      consentModal.remove();
+      showDevicePickerModal();
+    });
+  }
+
+  function showDevicePickerModal() {
+    const picker = document.createElement('div');
+    picker.className = 'cast-picker-modal';
+    picker.innerHTML = `
+      <div class="cast-picker-content">
+        <div class="cast-picker-header">
+          <h3 class="cast-picker-title">Select Cast Device</h3>
+          <button class="cast-picker-close" id="picker-close" aria-label="Close Device Picker">✕</button>
+        </div>
+        <div class="cast-microcopy" id="picker-scanning-msg">Searching for nearby casting devices on your local network...</div>
+        <div class="player-loading-spinner" id="picker-loader" style="margin: 20px auto; width: 30px; height: 30px;"></div>
+        <div class="cast-device-list" id="device-list-container" style="display: none;"></div>
+      </div>
+    `;
+    document.body.appendChild(picker);
+
+    picker.querySelector('#picker-close').addEventListener('click', () => picker.remove());
+
+    setTimeout(() => {
+      const loader = picker.querySelector('#picker-loader');
+      const msg = picker.querySelector('#picker-scanning-msg');
+      const listContainer = picker.querySelector('#device-list-container');
+      if (loader) loader.style.display = 'none';
+      if (msg) msg.textContent = 'Active casting targets found:';
+      if (listContainer) {
+        listContainer.style.display = 'flex';
+        listContainer.innerHTML = SIMULATED_DEVICES.map(device => {
+          let signalIcon = '📶';
+          if (device.signal <= 2) signalIcon = '📶 Low';
+          else if (device.signal === 3) signalIcon = '📶 Med';
+          
+          let iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>`;
+          if (device.type === 'AirPlay') {
+            iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H19M12 5L17 11H7L12 5Z" fill="currentColor"/></svg>`;
+          }
+          
+          return `
+            <div class="cast-device-item" data-id="${device.id}" role="button" aria-label="Cast to ${device.name}">
+              <div class="cast-device-info">
+                ${iconMarkup}
+                <div class="cast-device-details">
+                  <span class="cast-device-name">${device.name}</span>
+                  <span class="cast-device-type">${device.type} · ${signalIcon}</span>
+                </div>
+              </div>
+              <span class="cast-device-status" id="status-${device.id}">Ready</span>
+            </div>
+          `;
+        }).join('');
+
+        listContainer.querySelectorAll('.cast-device-item').forEach(item => {
+          item.addEventListener('click', async () => {
+            const deviceId = item.dataset.id;
+            const device = SIMULATED_DEVICES.find(d => d.id === deviceId);
+            if (!device) return;
+
+            const statusEl = item.querySelector(`#status-${deviceId}`);
+            if (statusEl) {
+              statusEl.className = 'cast-device-status connecting';
+              statusEl.textContent = 'Connecting...';
+            }
+
+            setTimeout(async () => {
+              try {
+                const activeVideo = document.getElementById('vp-video');
+                const currentLocalTime = activeVideo ? activeVideo.currentTime : 0;
+                
+                if (activeVideo && !activeVideo.paused) {
+                  activeVideo.pause();
+                }
+
+                const res = await fetch('/api/cast/session/start', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                     contentId: id,
+                     episodeId: isTV ? currentEpisode : null,
+                     deviceType: device.type,
+                     deviceId: device.id,
+                     startTime: currentLocalTime
+                  })
+                });
+
+                if (!res.ok) throw new Error('Failed to start session');
+                const dataResponse = await res.json();
+                const sessionId = dataResponse.sessionId;
+
+                if (statusEl) {
+                  statusEl.className = 'cast-device-status connected';
+                  statusEl.textContent = 'Connected';
+                }
+
+                pushTelemetry('cast_session_started', { deviceType: device.type, deviceId: device.id, mediaId: id });
+                localStorage.setItem('piq_cast_session_id', sessionId);
+                mountGlobalCastBar(sessionId, title, data.backdrop_path || poster_path);
+
+                setTimeout(() => {
+                  picker.remove();
+                }, 500);
+
+              } catch (err) {
+                console.error('[Casting] Session start failed:', err);
+                if (statusEl) {
+                  statusEl.className = 'cast-device-status';
+                  statusEl.style.color = '#ef4444';
+                  statusEl.textContent = 'Failed';
+                }
+              }
+            }, 1500);
+          });
+        });
+      }
+    }, 1500);
+  }
+
   const playBtn = document.getElementById('action-play');
   if (playBtn) {
     playBtn.addEventListener('click', () => {
       const activeVideo = document.getElementById('vp-video');
       if (activeVideo) {
-        if (activeVideo.paused) activeVideo.play();
-        else activeVideo.pause();
+        if (activeVideo.paused) {
+          checkAndTriggerRotation(() => activeVideo.play());
+        } else {
+          activeVideo.pause();
+        }
+      } else {
+        checkAndTriggerRotation(() => startPlayback(0));
       }
     });
   }
@@ -1849,7 +2255,7 @@ async function renderMobileLayout({
   const castBtn = document.getElementById('action-cast');
   if (castBtn) {
     castBtn.addEventListener('click', () => {
-      alert('Connecting to nearby Smart TV / Cast devices...');
+      triggerCastDialog();
     });
   }
 
@@ -2020,7 +2426,7 @@ async function renderMobileLayout({
         playOverlay.addEventListener('click', () => {
           localStorage.setItem('piq_autoplay', 'true');
           playOverlay.remove();
-          startPlayback(0);
+          checkAndTriggerRotation(() => startPlayback(0));
         });
       }
     }
@@ -2105,7 +2511,7 @@ async function renderMobileLayout({
           font-size: var(--text-sm);
           cursor: pointer;
           transition: all 0.3s;
-        ">Cancel</button>
+        " aria-label="Cancel Autoplay">Cancel</button>
         <button class="countdown-play-btn" style="
           padding: 10px 24px;
           border-radius: var(--radius-sm);
@@ -2117,7 +2523,7 @@ async function renderMobileLayout({
           cursor: pointer;
           box-shadow: var(--shadow-glow-sm);
           transition: all 0.3s;
-        ">Play Now</button>
+        " aria-label="Play Next Episode Now">Play Now</button>
       </div>
     `;
 
@@ -2191,7 +2597,7 @@ async function renderMobileLayout({
           display: flex;
           flex-direction: column;
           gap: var(--space-2xs);
-        ">
+        " role="button" aria-label="View ${item.title || item.name}">
           <div style="
             position: relative;
             width: 100%;
@@ -2247,7 +2653,7 @@ async function renderMobileLayout({
         font-weight: var(--weight-bold);
         cursor: pointer;
         transition: all 0.3s;
-      ">
+      " aria-label="Replay current video">
         Replay Video
       </button>
       <div style="font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-xs);">Finished Playing</div>
@@ -2300,6 +2706,15 @@ async function renderMobileLayout({
     disableRedirectGuard();
     clearIframeTracker();
     cleanupOrientation();
+
+    // Reset window orientation helper hook
+    window._checkAndTriggerRotation = null;
+
+    if (screen.orientation && screen.orientation.unlock) {
+      try {
+        screen.orientation.unlock();
+      } catch (e) {}
+    }
 
     if (_keyHandler) {
       window.removeEventListener('keydown', _keyHandler);

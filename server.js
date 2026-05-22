@@ -828,7 +828,95 @@ app.get('/api/proxy/transcode', async (req, res) => {
       console.warn(`[FFmpeg] Exited with code ${code}`);
     }
     if (!res.writableEnded) res.end();
+// ---- Mock Casting Session Database ----
+const castSessions = new Map();
+
+// Generate a random secure short-lived token/sessionId
+function generateSessionId() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+// Automatically simulate playback state changes (progress increment) for active sessions
+setInterval(() => {
+  castSessions.forEach((session) => {
+    if (session.state === 'PLAYING') {
+      session.currentTime += 1;
+      if (session.duration && session.currentTime >= session.duration) {
+        session.currentTime = session.duration;
+        session.state = 'ENDED';
+      }
+    }
   });
+}, 1000);
+
+app.post('/api/cast/session/start', (req, res) => {
+  const { contentId, episodeId, deviceType, deviceId, startTime } = req.body;
+  if (!contentId) return res.status(400).json({ error: 'Missing contentId' });
+
+  const sessionId = generateSessionId();
+  const session = {
+    sessionId,
+    contentId,
+    episodeId: episodeId || null,
+    deviceType: deviceType || 'Chromecast',
+    deviceId: deviceId || 'living-room-tv',
+    currentTime: parseFloat(startTime || '0') || 0,
+    duration: 3600, // standard mock duration 1 hour
+    state: 'PLAYING',
+    volume: 80,
+    muted: false,
+    timestamp: Date.now()
+  };
+
+  castSessions.set(sessionId, session);
+  console.log(`[Cast API] Started session ${sessionId} for content ${contentId} on device ${deviceType}`);
+  res.json({ sessionId, session });
+});
+
+app.post('/api/cast/session/control', (req, res) => {
+  const { sessionId, action, value } = req.body;
+  if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+
+  const session = castSessions.get(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  console.log(`[Cast API] Control session ${sessionId}: action=${action}, value=${value}`);
+
+  switch (action) {
+    case 'play':
+      session.state = 'PLAYING';
+      break;
+    case 'pause':
+      session.state = 'PAUSED';
+      break;
+    case 'seek':
+      session.currentTime = parseFloat(value) || 0;
+      break;
+    case 'volume':
+      session.volume = parseInt(value) || 80;
+      break;
+    case 'mute':
+      session.muted = value === true;
+      break;
+    case 'stop':
+      session.state = 'STOPPED';
+      castSessions.delete(sessionId);
+      break;
+    default:
+      return res.status(400).json({ error: `Unknown action: ${action}` });
+  }
+
+  res.json({ success: true, session });
+});
+
+app.get('/api/cast/session/status', (req, res) => {
+  const { sessionId } = req.query;
+  if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+
+  const session = castSessions.get(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  res.json(session);
 });
 
 // ---- Start server ----
