@@ -11,7 +11,7 @@ import Hls from 'hls.js';
  * @param {Function} [onProgress] - Callback (currentTime, duration)
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null, startTime = 0) {
+export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null, startTime = 0, existingVideo = null) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
@@ -150,9 +150,18 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
     </div>
   `;
 
+  if (existingVideo) {
+    const placeholder = container.querySelector('#vp-video');
+    if (placeholder) {
+      placeholder.parentNode.replaceChild(existingVideo, placeholder);
+      existingVideo.id = 'vp-video';
+      existingVideo.className = 'vp-video';
+    }
+  }
+
   // ---- Elements ----
   const player = document.getElementById('vp-player');
-  const video = document.getElementById('vp-video');
+  const video = existingVideo || document.getElementById('vp-video');
 
   // ---- 15s Playback Watchdog ----
   // Safari on iOS will stay stuck loading in a loop without firing a hard video.error event.
@@ -211,149 +220,191 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   const isTranscoded = !!streamData.url?.includes('/transcode');
   let seekLocked = false;
 
-  if (isMP4) {
-    // Populate quality selector from available streams
-    if (allStreams.length > 0) {
-      // Sort highest resolution first, deduplicate by resolution
-      const seen = new Set();
-      const sorted = [...allStreams]
-        .sort((a, b) => (b.resolution || 0) - (a.resolution || 0))
-        .filter(s => {
-          const r = s.resolution || 0;
-          if (seen.has(r)) return false;
-          seen.add(r);
-          return true;
-        });
-
-      qualitySelect.innerHTML = '';
-      sorted.forEach((s, i) => {
-        const res = s.resolution ? `${s.resolution}p` : `Stream ${i + 1}`;
-        const transcodeTag = s.url?.includes('/transcode') ? ' ⚡' : '';
-        const sizeMB = s.size ? ` · ${Math.round(parseInt(s.size) / 1024 / 1024)}MB` : '';
-        const isSelected = s.url === streamData.url;
-        qualitySelect.innerHTML += `<option value="${i}" data-url="${s.url}" ${isSelected ? 'selected' : ''}>${res}${transcodeTag}${sizeMB}</option>`;
-      });
-    }
-
-    // Update provider badge to show transcoding status
-    if (streamData.transcoded) {
-      const badge = document.getElementById('vp-provider');
-      if (badge) badge.textContent = `${streamData.provider || 'MovieBox'} · H.264 ⚡`;
-    }
-
-    // ---- Time offset tracking ----
-    // When we seek in a transcoded stream, FFmpeg restarts from seekTime but
-    // video.currentTime resets to 0. seekOffset tracks how many real seconds
-    // into the movie the current stream segment starts.
-    let seekOffset = 0;
-
-    // Play the stream
-    if (startTime > 0 && isTranscoded) {
-      seekOffset = Math.max(0, Math.floor(startTime));
-      video.src = `${currentBaseUrl}&start=${seekOffset}`;
-    } else {
-      video.src = streamData.url;
-    }
-    
-    loader.style.display = 'none';
-
-    if (startTime > 0 && !isTranscoded) {
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = startTime;
-      }, { once: true });
-    }
-
-    video.play().catch(err => console.log('[Autoplay] Blocked or interrupted:', err));
-
-    // ---- performSeek: restart FFmpeg from a specific timestamp ----
-    window._playerPerformSeek = function performSeek(targetSeconds) {
-      if (seekLocked) return;
-      seekLocked = true;
-
-      const savedDuration = knownDuration;
-      const wasPlaying = !video.paused;
-      loader.style.display = 'flex';
-
-      seekOffset = Math.max(0, Math.floor(targetSeconds));
-      const seekUrl = `${currentBaseUrl}&start=${seekOffset}`;
-      video.src = seekUrl;
-
-      video.addEventListener('loadedmetadata', () => {
-        knownDuration = savedDuration;
-        seekLocked = false;
-        loader.style.display = 'none';
-        updateTime();
-        if (wasPlaying) video.play();
-      }, { once: true });
-    };
-
-    // Expose seekOffset getter for updateTime/updateBuffer
-    window._playerGetSeekOffset = () => seekOffset;
-
-    const triedUrls = new Set([streamData.url]);
-    video.addEventListener('error', (e) => {
-      console.error('[Player] Video error:', video.error?.code, video.error?.message);
-      const nextStream = allStreams.find(s => s.url && !triedUrls.has(s.url));
-      if (nextStream) {
-        console.warn('[Player] Stream failed, trying next fallback stream:', nextStream.resolution);
-        triedUrls.add(nextStream.url);
-        currentBaseUrl = getBaseUrl(nextStream.url);
-        seekOffset = 0;
-        video.src = nextStream.url;
-      } else {
-        console.error('[Player] All streams failed. Triggering fatal error.');
-        clearTimeout(watchdogTimeout);
-        if (onFatalError) onFatalError();
-      }
-    });
-
-  } else if (streamData.type === 'hls' && Hls.isSupported()) {
-    hls = new Hls({
-      maxBufferLength: 30,
-      maxMaxBufferLength: 60,
-    });
-    hls.loadSource(streamData.url);
-    hls.attachMedia(video);
-
-    hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+  if (existingVideo) {
+    if (video._hls) {
+      hls = video._hls;
       // Populate quality selector
       qualitySelect.innerHTML = '<option value="-1">Auto</option>';
-      data.levels.forEach((level, i) => {
+      hls.levels.forEach((level, i) => {
         const height = level.height || '?';
         const bitrate = Math.round(level.bitrate / 1000);
         qualitySelect.innerHTML += `<option value="${i}">${height}p (${bitrate}k)</option>`;
       });
+      qualitySelect.value = hls.currentLevel;
+    } else if (isMP4) {
+      // MP4 streams
+      if (allStreams.length > 0) {
+        const seen = new Set();
+        const sorted = [...allStreams]
+          .sort((a, b) => (b.resolution || 0) - (a.resolution || 0))
+          .filter(s => {
+            const r = s.resolution || 0;
+            if (seen.has(r)) return false;
+            seen.add(r);
+            return true;
+          });
+
+        qualitySelect.innerHTML = '';
+        sorted.forEach((s, i) => {
+          const res = s.resolution ? `${s.resolution}p` : `Stream ${i + 1}`;
+          const transcodeTag = s.url?.includes('/transcode') ? ' ⚡' : '';
+          const sizeMB = s.size ? ` · ${Math.round(parseInt(s.size) / 1024 / 1024)}MB` : '';
+          const isSelected = s.url === streamData.url;
+          qualitySelect.innerHTML += `<option value="${i}" data-url="${s.url}" ${isSelected ? 'selected' : ''}>${res}${transcodeTag}${sizeMB}</option>`;
+        });
+      }
+    }
+    loader.style.display = 'none';
+  } else {
+    // Save metadata on the video element for future reuse
+    video._streamData = streamData;
+    video._knownDuration = knownDuration;
+
+    if (isMP4) {
+      // Populate quality selector from available streams
+      if (allStreams.length > 0) {
+        // Sort highest resolution first, deduplicate by resolution
+        const seen = new Set();
+        const sorted = [...allStreams]
+          .sort((a, b) => (b.resolution || 0) - (a.resolution || 0))
+          .filter(s => {
+            const r = s.resolution || 0;
+            if (seen.has(r)) return false;
+            seen.add(r);
+            return true;
+          });
+
+        qualitySelect.innerHTML = '';
+        sorted.forEach((s, i) => {
+          const res = s.resolution ? `${s.resolution}p` : `Stream ${i + 1}`;
+          const transcodeTag = s.url?.includes('/transcode') ? ' ⚡' : '';
+          const sizeMB = s.size ? ` · ${Math.round(parseInt(s.size) / 1024 / 1024)}MB` : '';
+          const isSelected = s.url === streamData.url;
+          qualitySelect.innerHTML += `<option value="${i}" data-url="${s.url}" ${isSelected ? 'selected' : ''}>${res}${transcodeTag}${sizeMB}</option>`;
+        });
+      }
+
+      // Update provider badge to show transcoding status
+      if (streamData.transcoded) {
+        const badge = document.getElementById('vp-provider');
+        if (badge) badge.textContent = `${streamData.provider || 'MovieBox'} · H.264 ⚡`;
+      }
+
+      // ---- Time offset tracking ----
+      // When we seek in a transcoded stream, FFmpeg restarts from seekTime but
+      // video.currentTime resets to 0. seekOffset tracks how many real seconds
+      // into the movie the current stream segment starts.
+      let seekOffset = 0;
+
+      // Play the stream
+      if (startTime > 0 && isTranscoded) {
+        seekOffset = Math.max(0, Math.floor(startTime));
+        video.src = `${currentBaseUrl}&start=${seekOffset}`;
+      } else {
+        video.src = streamData.url;
+      }
+      
+      loader.style.display = 'none';
+
+      if (startTime > 0 && !isTranscoded) {
+        video.addEventListener('loadedmetadata', () => {
+          video.currentTime = startTime;
+        }, { once: true });
+      }
+
+      video.play().catch(err => console.log('[Autoplay] Blocked or interrupted:', err));
+
+      // ---- performSeek: restart FFmpeg from a specific timestamp ----
+      window._playerPerformSeek = function performSeek(targetSeconds) {
+        if (seekLocked) return;
+        seekLocked = true;
+
+        const savedDuration = knownDuration;
+        const wasPlaying = !video.paused;
+        loader.style.display = 'flex';
+
+        seekOffset = Math.max(0, Math.floor(targetSeconds));
+        const seekUrl = `${currentBaseUrl}&start=${seekOffset}`;
+        video.src = seekUrl;
+
+        video.addEventListener('loadedmetadata', () => {
+          knownDuration = savedDuration;
+          seekLocked = false;
+          loader.style.display = 'none';
+          updateTime();
+          if (wasPlaying) video.play();
+        }, { once: true });
+      };
+
+      // Expose seekOffset getter for updateTime/updateBuffer
+      window._playerGetSeekOffset = () => seekOffset;
+
+      const triedUrls = new Set([streamData.url]);
+      video.addEventListener('error', (e) => {
+        console.error('[Player] Video error:', video.error?.code, video.error?.message);
+        const nextStream = allStreams.find(s => s.url && !triedUrls.has(s.url));
+        if (nextStream) {
+          console.warn('[Player] Stream failed, trying next fallback stream:', nextStream.resolution);
+          triedUrls.add(nextStream.url);
+          currentBaseUrl = getBaseUrl(nextStream.url);
+          seekOffset = 0;
+          video.src = nextStream.url;
+        } else {
+          console.error('[Player] All streams failed. Triggering fatal error.');
+          clearTimeout(watchdogTimeout);
+          if (onFatalError) onFatalError();
+        }
+      });
+
+    } else if (streamData.type === 'hls' && Hls.isSupported()) {
+      hls = new Hls({
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+      });
+      hls.loadSource(streamData.url);
+      hls.attachMedia(video);
+      video._hls = hls; // Store on video element for reuse!
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        // Populate quality selector
+        qualitySelect.innerHTML = '<option value="-1">Auto</option>';
+        data.levels.forEach((level, i) => {
+          const height = level.height || '?';
+          const bitrate = Math.round(level.bitrate / 1000);
+          qualitySelect.innerHTML += `<option value="${i}">${height}p (${bitrate}k)</option>`;
+        });
+        loader.style.display = 'none';
+        if (startTime > 0) {
+          video.currentTime = startTime;
+        }
+        video.play().catch(err => console.log('[HLS Autoplay] Blocked or interrupted:', err));
+      });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          console.error('[HLS] Fatal error:', data.type, data.details);
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          }
+        }
+      });
+    } else if (!isMP4 && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS (Safari)
+      video.src = streamData.url;
       loader.style.display = 'none';
       if (startTime > 0) {
-        video.currentTime = startTime;
+        video.addEventListener('loadedmetadata', () => {
+          video.currentTime = startTime;
+        }, { once: true });
       }
-      video.play().catch(err => console.log('[HLS Autoplay] Blocked or interrupted:', err));
-    });
-
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) {
-        console.error('[HLS] Fatal error:', data.type, data.details);
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad();
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          hls.recoverMediaError();
-        }
-      }
-    });
-  } else if (!isMP4 && video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Native HLS (Safari)
-    video.src = streamData.url;
-    loader.style.display = 'none';
-    if (startTime > 0) {
-      video.addEventListener('loadedmetadata', () => {
-        video.currentTime = startTime;
-      }, { once: true });
+      video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
     }
-    video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
   }
 
   // Load subtitles
-  if (streamData.subtitles?.length) {
+  if (!existingVideo && streamData.subtitles?.length) {
     streamData.subtitles.forEach((sub, i) => {
       const track = document.createElement('track');
       track.kind = 'subtitles';
@@ -757,8 +808,8 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
   // ---- Cleanup ----
   return {
-    destroy() {
-      if (hls) {
+    destroy(preserveVideo = false) {
+      if (hls && !preserveVideo) {
         hls.destroy();
         hls = null;
       }
@@ -766,7 +817,9 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
       clearTimeout(controlsTimeout);
       clearTimeout(watchdogTimeout);
       subStyle.remove();
-      container.innerHTML = '';
+      if (!preserveVideo) {
+        container.innerHTML = '';
+      }
     }
   };
 }

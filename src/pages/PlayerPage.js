@@ -7,7 +7,8 @@ import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { navigate } from '../services/router.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 
-import { saveProgress, getWatchHistory } from '../services/auth.js';
+import { saveProgress, getWatchHistory, getUser } from '../services/auth.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 
 // Embed sources — using TMDB ID
 // Nontongo is the primary working source (user-verified)
@@ -693,6 +694,29 @@ export async function renderPlayerPage({ params, container }) {
       tmdbRuntimeSeconds = null;
     }
 
+    const isMobile = window.innerWidth <= 767;
+    if (isMobile) {
+      return renderMobileLayout({
+        data,
+        type,
+        id,
+        isTV,
+        container,
+        imdbId,
+        title,
+        year,
+        rating,
+        genres,
+        runtime,
+        similar,
+        poster_path,
+        hashQuery,
+        urlParams,
+        currentSeason,
+        currentEpisode
+      });
+    }
+
     // Save initial progress (Movies only — TV shows will save after metadata loads)
     if (!isTV) {
       saveProgress({ id, title, type: 'movie', poster_path, season: currentSeason, episode: currentEpisode });
@@ -1307,4 +1331,992 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
     listEl.innerHTML = '<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>';
     return 0;
   }
+}
+
+// ====================================================
+// 📱 PORTRAIT-FIRST MOBILE REDESIGN IMPLEMENTATION
+// ====================================================
+
+function pushTelemetry(event, data) {
+  if (!window.playeriqTelemetry) {
+    window.playeriqTelemetry = [];
+  }
+  window.playeriqTelemetry.push({
+    event,
+    timestamp: Date.now(),
+    ...data
+  });
+  console.log(`[Telemetry] ${event}:`, data);
+}
+
+function setupSwipeGestures(element, onSwipeLeft, onSwipeRight) {
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  element.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  element.addEventListener('touchend', (e) => {
+    const diffX = e.changedTouches[0].screenX - touchStartX;
+    const diffY = e.changedTouches[0].screenY - touchStartY;
+
+    if (Math.abs(diffX) > 80 && Math.abs(diffY) < 40) {
+      if (diffX < 0) {
+        onSwipeLeft();
+      } else {
+        onSwipeRight();
+      }
+    }
+  }, { passive: true });
+}
+
+function setupOrientationMonitor() {
+  let toastEl = null;
+
+  function checkOrientation() {
+    const isMobile = window.innerWidth <= 767;
+    if (!isMobile) {
+      removeToast();
+      return;
+    }
+
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (isLandscape) {
+      if (!toastEl) {
+        toastEl = document.createElement('div');
+        toastEl.className = 'rotate-toast';
+        toastEl.innerHTML = `
+          <span>Rotate to watch in cinematic landscape</span>
+          <button class="rotate-toast-btn" id="go-fullscreen-btn">Go Fullscreen</button>
+        `;
+        document.body.appendChild(toastEl);
+
+        toastEl.querySelector('#go-fullscreen-btn').addEventListener('click', () => {
+          pushTelemetry('entered_fullscreen', { method: 'rotate' });
+          toggleFullscreen();
+          removeToast();
+        });
+      }
+    } else {
+      removeToast();
+    }
+  }
+
+  function removeToast() {
+    if (toastEl) {
+      toastEl.remove();
+      toastEl = null;
+    }
+  }
+
+  window.addEventListener('resize', checkOrientation);
+  window.addEventListener('orientationchange', checkOrientation);
+  checkOrientation();
+
+  return () => {
+    window.removeEventListener('resize', checkOrientation);
+    window.removeEventListener('orientationchange', checkOrientation);
+    removeToast();
+  };
+}
+
+function setupMiniPlayer(videoElement, activePlayerInstance, id, type, season, episode, title, posterPath, backdropPath) {
+  const existing = document.getElementById('global-mini-player');
+  if (existing) existing.remove();
+
+  const miniPlayer = document.createElement('div');
+  miniPlayer.id = 'global-mini-player';
+  miniPlayer.className = 'mini-player';
+  
+  const subText = type === 'tv' ? `Season ${season} · Episode ${episode}` : 'Movie';
+  
+  miniPlayer.innerHTML = `
+    <div class="mini-player-thumb-container" id="mini-player-thumb"></div>
+    <div class="mini-player-details">
+      <h4 class="mini-player-title">${title}</h4>
+      <p class="mini-player-sub">${subText}</p>
+    </div>
+    <div class="mini-player-controls">
+      <button class="mini-player-btn" id="mini-player-toggle" aria-label="Toggle Play">
+        <svg class="mini-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        <svg class="mini-icon-play" viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;display:none;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="mini-player-btn" id="mini-player-close" aria-label="Close Player">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="mini-player-progress-bar">
+      <div class="mini-player-progress" id="mini-player-progress-bar-fill" style="width: 0%;"></div>
+    </div>
+  `;
+
+  document.body.appendChild(miniPlayer);
+
+  const thumbContainer = miniPlayer.querySelector('#mini-player-thumb');
+  if (thumbContainer && videoElement) {
+    thumbContainer.appendChild(videoElement);
+    videoElement.style.width = '100%';
+    videoElement.style.height = '100%';
+    videoElement.style.objectFit = 'cover';
+  }
+
+  window.activeVideoElement = videoElement;
+  window.activeMediaId = id;
+  window.activeMediaType = type;
+  window.activeMediaSeason = season;
+  window.activeMediaEpisode = episode;
+  window.activeMediaTitle = title;
+  window.activeMediaPoster = posterPath;
+  window.activeMediaBackdrop = backdropPath;
+
+  const fill = miniPlayer.querySelector('#mini-player-progress-bar-fill');
+  const toggleBtn = miniPlayer.querySelector('#mini-player-toggle');
+  const iconPause = toggleBtn.querySelector('.mini-icon-pause');
+  const iconPlay = toggleBtn.querySelector('.mini-icon-play');
+
+  function updateMiniProgress() {
+    const cur = videoElement.currentTime;
+    const dur = videoElement.duration || 1;
+    if (fill && dur > 0) {
+      fill.style.width = `${(cur / dur) * 100}%`;
+    }
+  }
+  
+  videoElement.addEventListener('timeupdate', updateMiniProgress);
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (videoElement.paused) {
+      videoElement.play();
+      iconPause.style.display = 'block';
+      iconPlay.style.display = 'none';
+    } else {
+      videoElement.pause();
+      iconPause.style.display = 'none';
+      iconPlay.style.display = 'block';
+    }
+  });
+
+  videoElement.addEventListener('play', () => {
+    iconPause.style.display = 'block';
+    iconPlay.style.display = 'none';
+  });
+  
+  videoElement.addEventListener('pause', () => {
+    iconPause.style.display = 'none';
+    iconPlay.style.display = 'block';
+  });
+
+  const closeBtn = miniPlayer.querySelector('#mini-player-close');
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    videoElement.removeEventListener('timeupdate', updateMiniProgress);
+    if (videoElement._hls) {
+      videoElement._hls.destroy();
+    }
+    videoElement.pause();
+    videoElement.src = '';
+    videoElement.load();
+    miniPlayer.remove();
+    
+    window.activeVideoElement = null;
+    window.activeMediaId = null;
+    window.activeMediaType = null;
+    window.activeMediaSeason = null;
+    window.activeMediaEpisode = null;
+  });
+
+  miniPlayer.addEventListener('click', () => {
+    window.location.hash = `/watch/${type}/${id}?s=${season}&e=${episode}`;
+  });
+
+  pushTelemetry('mini_player_opened', { id, type, season, episode });
+}
+
+async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data, goToEpisode) {
+  const chipsContainer = document.getElementById('mobile-season-chips');
+  const listContainer = document.getElementById('mobile-episodes-list');
+  const showAllBtn = document.getElementById('mobile-show-all-btn');
+  if (!listContainer || !chipsContainer) return;
+
+  chipsContainer.innerHTML = `<div class="player-loading-overlay" style="position:relative;min-height:50px;"><div class="player-loading-spinner"></div></div>`;
+  listContainer.innerHTML = `<div class="player-loading-overlay" style="position:relative;min-height:100px;"><div class="player-loading-spinner"></div></div>`;
+
+  try {
+    const validSeasons = (data.seasons || []).filter(s => s.season_number > 0);
+    
+    chipsContainer.innerHTML = validSeasons.map(s => `
+      <button class="season-tab ${s.season_number === activeSeason ? 'active' : ''}" 
+              data-season="${s.season_number}" 
+              role="tab" 
+              aria-selected="${s.season_number === activeSeason ? 'true' : 'false'}">
+        Season ${s.season_number}
+      </button>
+    `).join('');
+
+    const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+    const year = (data.first_air_date || '').slice(0, 4);
+    const seasonDetails = await getSeasonDetails(tvId, activeSeason, cleanTitle, year);
+    const episodes = seasonDetails.episodes || [];
+
+    const history = await getWatchHistory().catch(() => []);
+
+    listContainer.innerHTML = episodes.map((ep, idx) => {
+      const epNum = ep.episode_number;
+      const epTitle = ep.name || `Episode ${epNum}`;
+      const epOverview = ep.overview || 'No description available.';
+      const runtimeStr = ep.runtime ? `${ep.runtime}m` : '';
+      const isCurrent = epNum === activeEpisode;
+      
+      let progressHTML = '';
+      const match = history.find(item => 
+        String(item.id) === String(tvId) && 
+        item.type === 'tv' && 
+        Number(item.season) === Number(activeSeason) && 
+        Number(item.episode) === Number(epNum)
+      );
+      if (match && match.duration > 0 && match.currentTime > 0) {
+        const pct = Math.min(100, Math.floor((match.currentTime / match.duration) * 100));
+        if (pct < 98) {
+          progressHTML = `
+            <div class="episode-row-progress-container">
+              <div class="episode-row-progress" style="width: ${pct}%;"></div>
+            </div>
+          `;
+        }
+      }
+
+      const thumbUrl = ep.still_path 
+        ? img.still(ep.still_path) 
+        : (data.backdrop_path ? img.backdrop(data.backdrop_path) : 'data:image/svg+xml,...');
+
+      const isHidden = idx >= 3;
+
+      return `
+        <div class="mobile-episode-row ${isCurrent ? 'active' : ''} ${isHidden ? 'collapsed-hidden' : ''}" 
+             data-episode="${epNum}" 
+             data-season="${activeSeason}">
+          <div class="mobile-ep-thumb-wrapper">
+            <img class="mobile-ep-thumb" src="${thumbUrl}" alt="${epTitle}" loading="lazy" />
+            ${runtimeStr ? `<span class="mobile-ep-duration">${runtimeStr}</span>` : ''}
+            ${progressHTML}
+          </div>
+          <div class="mobile-ep-details">
+            <div class="mobile-ep-meta-title">
+              <h4 class="mobile-ep-title">${epNum}. ${epTitle}</h4>
+            </div>
+            <p class="mobile-ep-description">${epOverview}</p>
+            <div class="mobile-ep-actions">
+              <button class="mobile-ep-action-btn play" aria-label="Play Episode">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <button class="mobile-ep-action-btn download" aria-label="Download Episode">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (episodes.length > 3) {
+      showAllBtn.style.display = 'flex';
+      showAllBtn.classList.remove('expanded');
+      showAllBtn.querySelector('span').textContent = `Show All (${episodes.length - 3} more)`;
+      
+      showAllBtn.onclick = () => {
+        const hiddenRows = listContainer.querySelectorAll('.mobile-episode-row.collapsed-hidden');
+        const allRows = listContainer.querySelectorAll('.mobile-episode-row');
+        
+        if (showAllBtn.classList.contains('expanded')) {
+          allRows.forEach((row, idx) => {
+            if (idx >= 3) row.classList.add('collapsed-hidden');
+          });
+          showAllBtn.classList.remove('expanded');
+          showAllBtn.querySelector('span').textContent = `Show All (${episodes.length - 3} more)`;
+          showAllBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          allRows.forEach(row => row.classList.remove('collapsed-hidden'));
+          showAllBtn.classList.add('expanded');
+          showAllBtn.querySelector('span').textContent = 'Show Less';
+        }
+      };
+    } else {
+      showAllBtn.style.display = 'none';
+    }
+
+    listContainer.querySelectorAll('.mobile-episode-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const ep = parseInt(row.dataset.episode);
+        goToEpisode(activeSeason, ep);
+      });
+      row.querySelectorAll('.mobile-ep-action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const ep = parseInt(row.dataset.episode);
+          if (btn.classList.contains('play')) {
+            goToEpisode(activeSeason, ep);
+          } else if (btn.classList.contains('download')) {
+            pushTelemetry('download_requested', { id: tvId, type: 'tv', season: activeSeason, episode: ep });
+            alert(`Download starting for Episode ${ep}...`);
+          }
+        });
+      });
+    });
+
+    chipsContainer.querySelectorAll('.season-tab').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const s = parseInt(chip.dataset.season);
+        loadMobileEpisodes(tvId, s, 1, title, data, goToEpisode);
+      });
+    });
+
+    episodes.forEach(ep => {
+      if (ep.runtime) {
+        episodeRuntimes.set(`S${activeSeason}E${ep.episode_number}`, ep.runtime * 60);
+      }
+      episodeDetails.set(`S${activeSeason}E${ep.episode_number}`, {
+        still_path: ep.still_path || null,
+        name: ep.name || `Episode ${ep.episode_number}`,
+        overview: ep.overview || ''
+      });
+    });
+
+    const activeEpRuntime = episodeRuntimes.get(`S${activeSeason}E${activeEpisode}`);
+    if (activeEpRuntime) tmdbRuntimeSeconds = activeEpRuntime;
+
+    if (window.lucide) window.lucide.createIcons();
+
+    return episodes.length;
+
+  } catch (err) {
+    console.error('[loadMobileEpisodes] error:', err);
+    listContainer.innerHTML = `<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>`;
+    return 0;
+  }
+}
+
+async function renderMobileLayout({
+  data,
+  type,
+  id,
+  isTV,
+  container,
+  imdbId,
+  title,
+  year,
+  rating,
+  genres,
+  runtime,
+  similar,
+  poster_path,
+  hashQuery,
+  urlParams,
+  currentSeason,
+  currentEpisode
+}) {
+  const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+
+  container.innerHTML = `
+    <div class="mobile-player-page animate-fade-in">
+      <div class="mobile-player-container" id="video-wrapper">
+        <div class="player-loading-overlay" id="player-loading">
+          <div class="player-loading-spinner"></div>
+          <div class="player-loading-text">Fetching stream...</div>
+        </div>
+      </div>
+
+      <div class="mobile-player-scroll-content">
+        <div class="mobile-player-meta">
+          <h1 class="mobile-player-title">${title}</h1>
+          
+          <div class="mobile-player-badges">
+            <span class="mobile-player-badge highlight">⭐ ${rating}</span>
+            ${year ? `<span class="mobile-player-badge">${year}</span>` : ''}
+            ${runtime ? `<span class="mobile-player-badge">${runtime}</span>` : ''}
+            <span class="mobile-player-badge">${isTV ? 'TV Series' : 'Movie'}</span>
+            ${genres ? genres.split(' • ').map(g => `<span class="mobile-player-badge">${g}</span>`).join('') : ''}
+          </div>
+
+          <div class="mobile-player-synopsis-container">
+            <p class="mobile-player-synopsis" id="mobile-synopsis">${data.overview || 'No description available.'}</p>
+            ${data.overview && data.overview.length > 100 ? `<span class="mobile-player-more-link" id="mobile-more-link">More</span>` : ''}
+          </div>
+        </div>
+
+        <div class="mobile-player-resume-card" id="mobile-resume-card" style="display: none;">
+          <div class="mobile-player-resume-info">
+            <div class="mobile-player-resume-title">Resume playback</div>
+            <div class="mobile-player-resume-time" id="mobile-resume-time">Saved progress: 0:00</div>
+          </div>
+          <button class="mobile-player-resume-btn" id="mobile-resume-btn">Resume</button>
+        </div>
+
+        <div class="mobile-player-actions">
+          <button class="mobile-player-action-item" id="action-play" aria-label="Play">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Play</span>
+          </button>
+          <button class="mobile-player-action-item" id="action-download" aria-label="Download">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download</span>
+          </button>
+          <button class="mobile-player-action-item" id="action-watchlist" aria-label="Add to Watchlist">
+            <svg id="watchlist-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+            <span id="watchlist-text">Watchlist</span>
+          </button>
+          <button class="mobile-player-action-item" id="action-share" aria-label="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <span>Share</span>
+          </button>
+          <button class="mobile-player-action-item" id="action-cast" aria-label="Cast">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.3"></rect></svg>
+            <span>Cast</span>
+          </button>
+        </div>
+
+        ${isTV ? `
+          <div class="mobile-player-episodes-section">
+            <div class="seasons-tabs-wrapper mobile-seasons" id="mobile-season-chips" role="tablist"></div>
+            <div class="mobile-episodes-list" id="mobile-episodes-list"></div>
+            <button class="mobile-ep-show-all-btn" id="mobile-show-all-btn" style="display: none;">
+              <span>Show All</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+        ` : ''}
+
+        ${similar.length ? `
+          <div class="player-related" style="margin-top: 24px;">
+            <h2 class="player-related-title" style="font-size: 16px; margin-bottom: 12px; font-weight: 700;">More Like This</h2>
+            <div class="player-related-grid">
+              ${similar.map(m => createMovieCard(m, type)).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  setupWatchlistButton(id, type);
+
+  const synopsisEl = document.getElementById('mobile-synopsis');
+  const moreLink = document.getElementById('mobile-more-link');
+  if (moreLink && synopsisEl) {
+    moreLink.addEventListener('click', () => {
+      synopsisEl.classList.toggle('expanded');
+      moreLink.textContent = synopsisEl.classList.contains('expanded') ? 'Less' : 'More';
+    });
+  }
+
+  const playBtn = document.getElementById('action-play');
+  if (playBtn) {
+    playBtn.addEventListener('click', () => {
+      const activeVideo = document.getElementById('vp-video');
+      if (activeVideo) {
+        if (activeVideo.paused) activeVideo.play();
+        else activeVideo.pause();
+      }
+    });
+  }
+
+  const downloadBtn = document.getElementById('action-download');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      pushTelemetry('download_requested', { id, type, season: currentSeason, episode: currentEpisode });
+      alert('Download starting...');
+    });
+  }
+
+  const shareBtn = document.getElementById('action-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', () => {
+      const shareUrl = window.location.href;
+      if (navigator.share) {
+        navigator.share({
+          title: `PlayerIQ - Watch ${title}`,
+          url: shareUrl
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(shareUrl);
+        alert('Share link copied to clipboard!');
+      }
+    });
+  }
+
+  const castBtn = document.getElementById('action-cast');
+  if (castBtn) {
+    castBtn.addEventListener('click', () => {
+      alert('Connecting to nearby Smart TV / Cast devices...');
+    });
+  }
+
+  async function setupWatchlistButton(contentId, contentType) {
+    const listBtn = document.getElementById('action-watchlist');
+    const listIcon = document.getElementById('watchlist-icon');
+    const listText = document.getElementById('watchlist-text');
+    if (!listBtn) return;
+
+    const user = getUser();
+    if (user) {
+      let inList = await isInWatchlist(user.uid, contentId);
+      
+      const updateButtonUI = (inListState) => {
+        if (inListState) {
+          listIcon.setAttribute('fill', 'currentColor');
+          listIcon.style.color = '#a855f7';
+          listText.textContent = 'Added';
+          listBtn.classList.add('in-list');
+        } else {
+          listIcon.setAttribute('fill', 'none');
+          listIcon.style.color = 'currentColor';
+          listText.textContent = 'Watchlist';
+          listBtn.classList.remove('in-list');
+        }
+      };
+
+      updateButtonUI(inList);
+
+      listBtn.addEventListener('click', async () => {
+        const isNowIn = listBtn.classList.contains('in-list');
+        listBtn.disabled = true;
+        
+        try {
+          if (isNowIn) {
+            await removeFromWatchlist(user.uid, contentId);
+            updateButtonUI(false);
+          } else {
+            const mediaObj = {
+              id: contentId,
+              title: title,
+              name: title,
+              type: contentType,
+              poster_path: poster_path,
+              backdrop_path: data.backdrop_path,
+              vote_average: data.vote_average,
+              release_date: data.release_date || '',
+              first_air_date: data.first_air_date || ''
+            };
+            await addToWatchlist(user.uid, mediaObj);
+            updateButtonUI(true);
+          }
+        } catch (err) {
+          console.error('[Watchlist Error]', err);
+        } finally {
+          listBtn.disabled = false;
+        }
+      });
+    } else {
+      listBtn.addEventListener('click', () => navigate('/watchlist'));
+    }
+  }
+
+  function formatTime(s) {
+    if (isNaN(s)) return '0:00';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}` : `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  const savedStartTime = await getSavedPlaybackTime(id, isTV, currentSeason, currentEpisode);
+  const resumeCard = document.getElementById('mobile-resume-card');
+  const resumeTimeText = document.getElementById('mobile-resume-time');
+  const resumeBtn = document.getElementById('mobile-resume-btn');
+
+  let startPlayTime = 0;
+  if (savedStartTime > 10) {
+    startPlayTime = savedStartTime;
+    if (resumeCard && resumeTimeText && resumeBtn) {
+      resumeTimeText.textContent = `Saved progress: ${formatTime(savedStartTime)}`;
+      resumeCard.style.display = 'flex';
+      
+      resumeBtn.onclick = () => {
+        resumeCard.style.display = 'none';
+        startPlayback(startPlayTime);
+      };
+    }
+  }
+
+  const activeVideo = window.activeVideoElement;
+  let reusedVideo = false;
+
+  if (activeVideo && 
+      String(window.activeMediaId) === String(id) && 
+      String(window.activeMediaType) === String(type) &&
+      Number(window.activeMediaSeason) === Number(currentSeason) &&
+      Number(window.activeMediaEpisode) === Number(currentEpisode)) {
+    
+    console.log('[Mobile Player] Relocating active video element back...');
+    const wrapper = document.getElementById('video-wrapper');
+    if (wrapper) {
+      const loaderEl = document.getElementById('player-loading');
+      if (loaderEl) loaderEl.remove();
+
+      reusedVideo = true;
+      const miniPlayer = document.getElementById('global-mini-player');
+      if (miniPlayer) miniPlayer.remove();
+
+      const streamData = activeVideo._streamData || { url: activeVideo.src, type: type === 'hls' ? 'hls' : 'mp4' };
+
+      activePlayer = createVideoPlayer(
+        wrapper,
+        streamData,
+        (currentTime, duration) => {
+          saveProgress({
+            id,
+            title,
+            type: isTV ? 'tv' : 'movie',
+            poster_path,
+            backdrop_path: data.backdrop_path,
+            season: currentSeason,
+            episode: currentEpisode,
+            currentTime,
+            duration
+          });
+        },
+        () => {
+          activePlayer.destroy();
+          activePlayer = null;
+          loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+        },
+        handlePlaybackEnded,
+        0,
+        activeVideo
+      );
+
+      window.activeVideoElement = null;
+      window.activeMediaId = null;
+      window.activeMediaType = null;
+      window.activeMediaSeason = null;
+      window.activeMediaEpisode = null;
+    }
+  }
+
+  if (!reusedVideo) {
+    const piqAutoplay = localStorage.getItem('piq_autoplay');
+    
+    if (piqAutoplay === 'true') {
+      startPlayback(0);
+    } else {
+      const wrapper = document.getElementById('video-wrapper');
+      if (wrapper) {
+        const loaderEl = document.getElementById('player-loading');
+        if (loaderEl) loaderEl.remove();
+
+        const playOverlay = document.createElement('div');
+        playOverlay.className = 'mobile-player-play-overlay';
+        playOverlay.id = 'mobile-play-overlay';
+        playOverlay.innerHTML = `
+          <button class="mobile-player-play-btn" id="mobile-play-overlay-btn" aria-label="Play Video">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:28px;height:28px;margin-left:4px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <div style="font-size:14px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:1px;">Tap to Play</div>
+        `;
+        wrapper.appendChild(playOverlay);
+
+        playOverlay.addEventListener('click', () => {
+          localStorage.setItem('piq_autoplay', 'true');
+          playOverlay.remove();
+          startPlayback(0);
+        });
+      }
+    }
+  }
+
+  function startPlayback(seekTime = 0) {
+    loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+  }
+
+  function nextEpisode() {
+    if (currentEpisode < totalEpisodes) {
+      goToEpisode(currentSeason, currentEpisode + 1);
+    }
+  }
+
+  function prevEpisode() {
+    if (currentEpisode > 1) {
+      goToEpisode(currentSeason, currentEpisode - 1);
+    }
+  }
+
+  async function goToEpisode(season, episode) {
+    currentSeason = season;
+    currentEpisode = episode;
+    window.location.hash = `/watch/${type}/${id}?s=${season}&e=${episode}`;
+  }
+
+  function handlePlaybackEnded() {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return;
+    wrapper.querySelectorAll('.vp-countdown-overlay, .vp-recommendations-overlay').forEach(el => el.remove());
+    const nextEpNum = currentEpisode + 1;
+    if (isTV && nextEpNum <= totalEpisodes) {
+      showAutoPlayCountdown(nextEpNum);
+    } else {
+      showRecommendationsOverlay();
+    }
+  }
+
+  function showAutoPlayCountdown(nextEpNum) {
+    let count = 5;
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'vp-countdown-overlay';
+    overlay.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+      color: #fff;
+      font-family: var(--font-display);
+      animation: fadeIn 0.4s ease;
+    `;
+
+    overlay.innerHTML = `
+      <div style="font-size: var(--text-lg); font-weight: var(--weight-medium); color: var(--text-secondary); margin-bottom: var(--space-xs);">Up Next</div>
+      <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); margin-bottom: var(--space-lg); text-align: center; max-width: 80%; text-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+        S${currentSeason} E${nextEpNum}
+      </div>
+      <div style="position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-xl);">
+        <svg width="120" height="120" style="transform: rotate(-90deg);">
+          <circle cx="60" cy="60" r="50" fill="transparent" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+          <circle class="countdown-circle" cx="60" cy="60" r="50" fill="transparent" stroke="var(--accent)" stroke-width="8" stroke-dasharray="314.16" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"></circle>
+        </svg>
+        <span class="countdown-seconds" style="position: absolute; font-size: var(--text-3xl); font-weight: var(--weight-bold); text-shadow: 0 2px 10px rgba(229,9,20,0.5);">5</span>
+      </div>
+      <div style="display: flex; gap: var(--space-md);">
+        <button class="countdown-cancel-btn" style="
+          padding: 10px 24px;
+          border-radius: var(--radius-sm);
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: var(--text-primary);
+          font-weight: var(--weight-semibold);
+          font-size: var(--text-sm);
+          cursor: pointer;
+          transition: all 0.3s;
+        ">Cancel</button>
+        <button class="countdown-play-btn" style="
+          padding: 10px 24px;
+          border-radius: var(--radius-sm);
+          background: var(--accent);
+          border: none;
+          color: white;
+          font-weight: var(--weight-semibold);
+          font-size: var(--text-sm);
+          cursor: pointer;
+          box-shadow: var(--shadow-glow-sm);
+          transition: all 0.3s;
+        ">Play Now</button>
+      </div>
+    `;
+
+    wrapper.appendChild(overlay);
+
+    const circle = overlay.querySelector('.countdown-circle');
+    const text = overlay.querySelector('.countdown-seconds');
+
+    const interval = setInterval(() => {
+      count--;
+      if (text) text.textContent = count;
+      if (circle) {
+        const dashoffset = 314.16 * ((5 - count) / 5);
+        circle.style.strokeDashoffset = dashoffset;
+      }
+
+      if (count <= 0) {
+        clearInterval(interval);
+        overlay.remove();
+        nextEpisode();
+      }
+    }, 1000);
+
+    overlay.querySelector('.countdown-cancel-btn').addEventListener('click', () => {
+      clearInterval(interval);
+      overlay.remove();
+      showRecommendationsOverlay();
+    });
+
+    overlay.querySelector('.countdown-play-btn').addEventListener('click', () => {
+      clearInterval(interval);
+      overlay.remove();
+      nextEpisode();
+    });
+  }
+
+  function showRecommendationsOverlay() {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper || !similar.length) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'vp-recommendations-overlay';
+    overlay.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 140;
+      color: #fff;
+      font-family: var(--font-display);
+      animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: var(--space-lg);
+    `;
+
+    const recCards = similar.slice(0, 3).map(item => {
+      const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : 'data:image/svg+xml,...';
+      const ratingVal = item.vote_average ? item.vote_average.toFixed(1) : '—';
+      const itemYear = (item.release_date || item.first_air_date || '').slice(0, 4);
+      const cardRoute = `/${type}/${item.id}`;
+      
+      return `
+        <div class="rec-card" data-route="${cardRoute}" style="
+          width: 140px;
+          cursor: pointer;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2xs);
+        ">
+          <div style="
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: var(--shadow-card);
+          ">
+            <img src="${posterUrl}" alt="${item.title || item.name}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s;" class="rec-poster" />
+            <div style="
+              position: absolute;
+              top: 8px;
+              right: 8px;
+              background: rgba(10,10,15,0.85);
+              backdrop-filter: blur(4px);
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 10px;
+              font-weight: var(--weight-bold);
+              color: var(--rating-high);
+              border: 1px solid rgba(255,255,255,0.06);
+            ">⭐ ${ratingVal}</div>
+          </div>
+          <div style="
+            font-size: var(--text-sm);
+            font-weight: var(--weight-bold);
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 4px;
+          ">${item.title || item.name}</div>
+          <div style="font-size: 10px; color: var(--text-muted);">${itemYear}</div>
+        </div>
+      `;
+    }).join('');
+
+    overlay.innerHTML = `
+      <button class="rec-replay-btn" style="
+        position: absolute;
+        top: var(--space-lg);
+        right: var(--space-lg);
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--text-xs);
+        font-weight: var(--weight-bold);
+        cursor: pointer;
+        transition: all 0.3s;
+      ">
+        Replay Video
+      </button>
+      <div style="font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: var(--space-xs);">Finished Playing</div>
+      <div style="font-size: var(--text-xl); font-weight: var(--weight-extrabold); margin-bottom: var(--space-xl);">More Like This</div>
+      <div class="rec-cards-container" style="
+        display: flex;
+        gap: var(--space-lg);
+        justify-content: center;
+        width: 100%;
+        margin-bottom: var(--space-lg);
+      ">
+        ${recCards}
+      </div>
+    `;
+
+    wrapper.appendChild(overlay);
+
+    overlay.querySelectorAll('.rec-card').forEach(card => {
+      const poster = card.querySelector('.rec-poster');
+      card.addEventListener('mouseenter', () => {
+        if (poster) poster.style.transform = 'scale(1.05)';
+      });
+      card.addEventListener('mouseleave', () => {
+        if (poster) poster.style.transform = 'none';
+      });
+      card.addEventListener('click', () => {
+        overlay.remove();
+        window.location.hash = card.dataset.route;
+      });
+    });
+
+    overlay.querySelector('.rec-replay-btn').addEventListener('click', () => {
+      overlay.remove();
+      startPlayback(0);
+    });
+  }
+
+  if (isTV) {
+    await loadMobileEpisodes(id, currentSeason, currentEpisode, title, data, goToEpisode);
+    const epList = document.getElementById('mobile-episodes-list');
+    if (epList) {
+      setupSwipeGestures(epList, nextEpisode, prevEpisode);
+    }
+  }
+
+  const cleanupOrientation = setupOrientationMonitor();
+  pushTelemetry('player_open', { id, type, season: currentSeason, episode: currentEpisode, source: 'mobile' });
+
+  return () => {
+    disableRedirectGuard();
+    clearIframeTracker();
+    cleanupOrientation();
+
+    if (_keyHandler) {
+      window.removeEventListener('keydown', _keyHandler);
+      _keyHandler = null;
+    }
+
+    const videoEl = document.getElementById('vp-video');
+    if (activePlayer && videoEl && !videoEl.paused) {
+      console.log('[Mobile Player] Page navigating away while playing. Staging mini-player...');
+      setupMiniPlayer(videoEl, activePlayer, id, type, currentSeason, currentEpisode, title, poster_path, data.backdrop_path);
+      activePlayer.destroy(true);
+      activePlayer = null;
+    } else {
+      if (activePlayer) {
+        activePlayer.destroy();
+        activePlayer = null;
+      }
+    }
+  };
 }

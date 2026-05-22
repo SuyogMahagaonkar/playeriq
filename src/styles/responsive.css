@@ -2275,6 +2275,372 @@
     border-color: rgba(168, 85, 247, 0.3) !important;
     box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3) !important;
   }
+
+  /* --- Portrait-First Mobile Player Overhaul --- */
+  .mobile-player-page {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #06060a !important;
+    color: #ffffff !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    padding-bottom: 80px !important; /* spacing for bottom nav & mini player */
+    overflow-x: hidden !important;
+  }
+
+  .mobile-player-container {
+    position: sticky !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 42vh !important; /* Compact player strip */
+    background: #000 !important;
+    z-index: 100 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  .mobile-player-container .vp-player,
+  .mobile-player-container .vp-video {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Compact controls for mobile */
+  .mobile-player-container .vp-controls {
+    padding: 10px !important;
+  }
+
+  .mobile-player-container .vp-bottom-bar {
+    gap: 8px !important;
+  }
+
+  .mobile-player-container .vp-volume-slider,
+  .mobile-player-container .vp-volume-group {
+    display: none !important; /* Hide volume slider on mobile for compact layout */
+  }
+
+  /* Custom portrait play overlay card when autoplay is blocked/disabled */
+  .mobile-player-play-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.85) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 99 !important;
+    cursor: pointer !important;
+  }
+
+  .mobile-player-play-btn {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    background: var(--gradient-purple) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #fff !important;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.6) !important;
+    border: none !important;
+    font-size: 24px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Metadata Block */
+  .mobile-player-scroll-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 16px !important;
+  }
+
+  .mobile-player-meta {
+    margin-bottom: 20px !important;
+  }
+
+  .mobile-player-title {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    margin: 0 0 8px 0 !important;
+    line-height: 1.3 !important;
+  }
+
+  .mobile-player-badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .mobile-player-badge {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--text-secondary) !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+  }
+
+  .mobile-player-badge.highlight {
+    background: rgba(168, 85, 247, 0.15) !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+    color: #c084fc !important;
+  }
+
+  .mobile-player-synopsis-container {
+    font-size: 12px !important;
+    color: var(--text-dim) !important;
+    line-height: 1.5 !important;
+    margin-top: 8px !important;
+  }
+
+  .mobile-player-synopsis {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .mobile-player-synopsis.expanded {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+  }
+
+  .mobile-player-more-link {
+    color: #a855f7 !important;
+    font-weight: 700 !important;
+    margin-left: 4px !important;
+    cursor: pointer !important;
+  }
+
+  /* Resume CTA Card */
+  .mobile-player-resume-card {
+    background: rgba(168, 85, 247, 0.1) !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .mobile-player-resume-info {
+    flex: 1 !important;
+  }
+
+  .mobile-player-resume-title {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #c084fc !important;
+    margin-bottom: 2px !important;
+  }
+
+  .mobile-player-resume-time {
+    font-size: 11px !important;
+    color: var(--text-dim) !important;
+  }
+
+  .mobile-player-resume-btn {
+    background: #a855f7 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    min-height: 32px !important;
+  }
+
+  /* Actions Row */
+  .mobile-player-actions {
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 12px 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    margin-bottom: 20px !important;
+  }
+
+  .mobile-player-action-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: none !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    cursor: pointer !important;
+    padding: 6px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    min-width: 50px !important;
+    min-height: 44px !important;
+  }
+
+  .mobile-player-action-item svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .mobile-player-action-item:active {
+    color: #a855f7 !important;
+  }
+
+  /* Persistent Sticky Bottom Mini-Player */
+  .mini-player {
+    position: fixed !important;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    right: 8px !important;
+    height: 60px !important;
+    background: rgba(15, 15, 25, 0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    z-index: 299 !important; /* sit just below bottom navbar (z: 300) */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 8px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    overflow: hidden !important;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    cursor: pointer !important;
+  }
+
+  .mini-player-thumb-container {
+    width: 80px !important;
+    height: 45px !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    background: #000 !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mini-player-thumb-container video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .mini-player-details {
+    flex: 1 !important;
+    padding: 0 10px !important;
+    min-width: 0 !important;
+  }
+
+  .mini-player-title {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin: 0 !important;
+  }
+
+  .mini-player-sub {
+    font-size: 10px !important;
+    color: var(--text-dim) !important;
+    margin: 2px 0 0 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .mini-player-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .mini-player-btn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+  }
+
+  .mini-player-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .mini-player-progress-bar {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 2px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .mini-player-progress {
+    height: 100% !important;
+    background: #a855f7 !important;
+  }
+
+  /* Device Landscape Rotation Toast Notification */
+  .rotate-toast {
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: rgba(15, 15, 25, 0.9) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(168, 85, 247, 0.2) !important;
+    color: #fff !important;
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    animation: fadeInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .rotate-toast-btn {
+    background: #a855f7 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    min-height: 30px !important;
+  }
+
+  /* CSS Animations */
+  @keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes fadeInDown {
+    from { transform: translate(-50%, -20px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
 }
 
 
