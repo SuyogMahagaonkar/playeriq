@@ -41,9 +41,81 @@ import { renderSettingsPage } from './pages/SettingsPage.js';
 import { render18PlusPage } from './pages/18PlusPage.js';
 import { renderCategoryPage } from './pages/CategoryPage.js';
 
+// ---- Connectivity Monitoring ----
+function setupConnectivityMonitoring() {
+  const updateConnectivityUI = () => {
+    const isOnline = navigator.onLine;
+    let banner = document.getElementById('piq-connectivity-banner');
+    
+    if (!isOnline) {
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'piq-connectivity-banner';
+        banner.className = 'piq-connectivity-banner';
+        banner.innerHTML = `
+          <span class="banner-icon">📴</span>
+          <span class="banner-text">Offline Mode — Only downloaded episodes are playable</span>
+        `;
+        document.body.appendChild(banner);
+        // Trigger reflow then add visible
+        setTimeout(() => banner.classList.add('visible'), 50);
+      } else {
+        banner.classList.add('visible');
+      }
+      showConnectivityToast('📴 Switched to Offline Mode', 'offline');
+    } else {
+      if (banner) {
+        banner.classList.remove('visible');
+        setTimeout(() => {
+          if (navigator.onLine && banner.parentNode) banner.remove();
+        }, 400);
+      }
+      showConnectivityToast('📶 Connection Restored', 'online');
+    }
+  };
+
+  window.addEventListener('online', updateConnectivityUI);
+  window.addEventListener('offline', updateConnectivityUI);
+
+  // Initial check
+  if (!navigator.onLine) {
+    setTimeout(() => {
+      let banner = document.getElementById('piq-connectivity-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'piq-connectivity-banner';
+        banner.className = 'piq-connectivity-banner';
+        banner.innerHTML = `
+          <span class="banner-icon">📴</span>
+          <span class="banner-text">Offline Mode — Only downloaded episodes are playable</span>
+        `;
+        document.body.appendChild(banner);
+        setTimeout(() => banner.classList.add('visible'), 50);
+      }
+    }, 500);
+  }
+}
+
+function showConnectivityToast(message, type) {
+  document.querySelectorAll('.piq-connectivity-toast').forEach(t => t.remove());
+  
+  const toast = document.createElement('div');
+  toast.className = `piq-connectivity-toast ${type}`;
+  toast.innerHTML = `<span class="toast-message">${message}</span>`;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 50);
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
+
 // ---- Boot App ----
 function initApp() {
   applyGlobalTheme();
+  setupConnectivityMonitoring();
   const app = document.getElementById('app');
 
   // Create layout

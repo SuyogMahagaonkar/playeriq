@@ -9,6 +9,7 @@ import { createVideoPlayer } from '../components/VideoPlayer.js';
 
 import { saveProgress, getWatchHistory, getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
+import { DownloadManager } from '../services/download.js';
 
 // Embed sources — using TMDB ID
 // Nontongo is the primary working source (user-verified)
@@ -207,6 +208,12 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
 
+  if (!navigator.onLine) {
+    currentPlayerMode = 'custom';
+    const modeSelect = document.getElementById('mode-select');
+    if (modeSelect) modeSelect.value = 'custom';
+  }
+
   clearIframeTracker();
 
   const startTime = await getSavedPlaybackTime(id, isTV, season, episode);
@@ -321,6 +328,95 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
   // Determine if we should try custom player
   if (currentPlayerMode === 'custom') {
+    if (!navigator.onLine) {
+      console.log('[PlayerPage] Device is offline. Bypassing fetch and launching offline mock player...');
+      const downloads = await DownloadManager.list();
+      const downloadId = isTV ? `tv_${id}_s${season}_e${episode}` : `movie_${id}`;
+      const match = downloads.find(x => x.id === downloadId && x.status === 'COMPLETED');
+
+      if (match) {
+        const streamData = {
+          id: downloadId,
+          url: '',
+          type: 'mp4',
+          isOffline: true,
+          duration: match.type === 'movie' ? 120 * 60 : 45 * 60,
+          title: match.title,
+          poster: match.posterPath,
+          provider: 'Offline DB'
+        };
+
+        if (tmdbRuntimeSeconds) {
+          streamData.duration = tmdbRuntimeSeconds;
+        }
+
+        // Clear wrapper and init custom player
+        wrapper.innerHTML = '';
+        activePlayer = createVideoPlayer(
+          wrapper,
+          streamData,
+          (currentTime, duration) => {
+            let epStill = posterPath;
+            let epTitle = '';
+            let epOverview = '';
+            if (isTV) {
+              epTitle = `Episode ${episode}`;
+              epOverview = 'Offline playback from IndexedDB.';
+            }
+
+            saveProgress({
+              id,
+              title,
+              type: isTV ? 'tv' : 'movie',
+              poster_path: posterPath,
+              backdrop_path: backdropPath,
+              season,
+              episode,
+              currentTime,
+              duration,
+              episode_title: epTitle,
+              episode_still: epStill,
+              episode_overview: epOverview
+            });
+
+            // Floating Next Episode button in last 60 seconds
+            const remaining = duration - currentTime;
+            const nextEpNum = episode + 1;
+            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+              showNextEpisodeFloatingButton(nextEpNum);
+            } else {
+              hideNextEpisodeFloatingButton();
+            }
+          },
+          () => {
+            console.warn('[Player] Offline player error callback');
+          },
+          onEnded,
+          startTime
+        );
+        return;
+      } else {
+        console.error('[PlayerPage] Requested item is not downloaded and we are offline.');
+        wrapper.innerHTML = `
+          <div class="player-offline-error-overlay">
+            <div class="player-offline-error-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"></path><path d="M5 12.5a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            </div>
+            <h3 class="player-offline-error-title">Episode Not Downloaded</h3>
+            <p class="player-offline-error-message">
+              This episode hasn't been downloaded for offline viewing. Please connect to the internet or watch downloaded episodes from your settings library.
+            </p>
+            <button class="player-offline-error-btn" onclick="window.location.hash = '#/settings'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Go to My Downloads</span>
+            </button>
+          </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+    }
+
     let countdownInterval = null;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
@@ -690,8 +786,44 @@ export async function renderPlayerPage({ params, container }) {
     `;
   }
 
+  let data;
+  let isOfflinePlayback = false;
+
   try {
-    const data = isTV ? await getTVDetails(id) : await getMovieDetails(id);
+    if (!navigator.onLine) {
+      const downloads = await DownloadManager.list();
+      let match = null;
+      if (isTV) {
+        const prefix = `tv_${id}_`;
+        match = downloads.find(x => x.id.startsWith(prefix) && x.status === 'COMPLETED');
+      } else {
+        const matchId = `movie_${id}`;
+        match = downloads.find(x => x.id === matchId && x.status === 'COMPLETED');
+      }
+
+      if (match) {
+        isOfflinePlayback = true;
+        // Clean TV title format if present S1 E1: title
+        const cleanName = match.title.split(': ').length > 1 ? match.title.split(': ').slice(1).join(': ') : match.title;
+        data = {
+          id: id,
+          title: cleanName,
+          name: cleanName,
+          poster_path: match.posterPath,
+          backdrop_path: match.posterPath,
+          overview: `Offline Playback • Locally stored title inside IndexedDB.`,
+          vote_average: 10.0,
+          genres: [{ name: 'Offline' }],
+          runtime: match.type === 'movie' ? 120 : 45,
+          seasons: [{ season_number: currentSeason, episode_count: 10 }]
+        };
+      } else {
+        throw new Error('OFFLINE_AND_NOT_DOWNLOADED');
+      }
+    } else {
+      data = isTV ? await getTVDetails(id) : await getMovieDetails(id);
+    }
+
     const imdbId = data.imdb_id || data.external_ids?.imdb_id || id;
     const title = data.title || data.name;
     const year = (data.release_date || data.first_air_date || '').slice(0, 4);
@@ -1250,17 +1382,35 @@ export async function renderPlayerPage({ params, container }) {
 
   } catch (err) {
     console.error('Player page error:', err);
-    container.innerHTML = `
-      <div class="player-container">
-        <button class="player-back-btn" onclick="window.history.back()">
-          <i data-lucide="arrow-left" style="width:24px;height:24px"></i>
-        </button>
-        <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:white;flex-direction:column;gap:16px;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <div style="font-size:1.2rem;font-weight:500;">Failed to load player</div>
+    if (err.message === 'OFFLINE_AND_NOT_DOWNLOADED' || !navigator.onLine) {
+      container.innerHTML = `
+        <div class="player-offline-error-overlay" style="margin-top: 60px;">
+          <div class="player-offline-error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"></path><path d="M5 12.5a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+          </div>
+          <h3 class="player-offline-error-title">Episode Not Downloaded</h3>
+          <p class="player-offline-error-message">
+            This episode hasn't been downloaded for offline viewing. Please connect to the internet or watch downloaded episodes from your settings library.
+          </p>
+          <button class="player-offline-error-btn" onclick="window.location.hash = '#/settings'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Go to My Downloads</span>
+          </button>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      container.innerHTML = `
+        <div class="player-container">
+          <button class="player-back-btn" onclick="window.history.back()">
+            <i data-lucide="arrow-left" style="width:24px;height:24px"></i>
+          </button>
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:white;flex-direction:column;gap:16px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div style="font-size:1.2rem;font-weight:500;">Failed to load player</div>
+          </div>
+        </div>
+      `;
+    }
     if (window.lucide) window.lucide.createIcons();
   }
 }
@@ -1281,8 +1431,34 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
   `;
 
   try {
-    const season = await getSeasonDetails(tvId, seasonNumber, cleanTitle, year);
-    listEl.innerHTML = (season.episodes || []).map(ep => `
+    let episodes = [];
+    if (!navigator.onLine) {
+      const list = await DownloadManager.list();
+      const prefix = `tv_${tvId}_s${seasonNumber}_e`;
+      const tvDownloads = list.filter(item => item.id.startsWith(prefix) && item.status === 'COMPLETED');
+      
+      episodes = tvDownloads.map(item => {
+        const match = item.id.match(/_e(\d+)$/);
+        const epNum = match ? parseInt(match[1]) : 1;
+        return {
+          episode_number: epNum,
+          name: item.title.split(': ')[1] || `Episode ${epNum}`,
+          runtime: 45,
+          still_path: item.posterPath || null,
+          overview: 'Offline playback from IndexedDB.'
+        };
+      }).sort((a, b) => a.episode_number - b.episode_number);
+    } else {
+      const season = await getSeasonDetails(tvId, seasonNumber, cleanTitle, year);
+      episodes = season.episodes || [];
+    }
+
+    if (episodes.length === 0) {
+      listEl.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center;">No downloaded episodes found for this season.</p>';
+      return 0;
+    }
+
+    listEl.innerHTML = episodes.map(ep => `
       <div class="player-episode-item ${ep.episode_number === activeEpisode ? 'active' : ''}" 
            data-episode="${ep.episode_number}" data-season="${seasonNumber}">
         <div class="player-episode-num">${ep.episode_number}</div>
@@ -1295,7 +1471,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
     `).join('');
 
     // Store per-episode runtimes and metadata details
-    (season.episodes || []).forEach(ep => {
+    episodes.forEach(ep => {
       if (ep.runtime) {
         episodeRuntimes.set(`S${seasonNumber}E${ep.episode_number}`, ep.runtime * 60);
       }
@@ -1692,8 +1868,57 @@ async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data
   listContainer.innerHTML = `<div class="player-loading-overlay" style="position:relative;min-height:100px;"><div class="player-loading-spinner"></div></div>`;
 
   try {
-    const validSeasons = (data.seasons || []).filter(s => s.season_number > 0);
-    
+    let validSeasons = [];
+    let episodes = [];
+
+    if (!navigator.onLine) {
+      const list = await DownloadManager.list();
+      const seasonSet = new Set();
+      const prefix = `tv_${tvId}_s`;
+      
+      const tvDownloads = list.filter(item => item.id.startsWith(prefix) && item.status === 'COMPLETED');
+      
+      tvDownloads.forEach(item => {
+        const match = item.id.match(/_s(\d+)_e/);
+        if (match) {
+          seasonSet.add(parseInt(match[1]));
+        }
+      });
+      
+      validSeasons = Array.from(seasonSet).sort((a, b) => a - b).map(sNum => ({
+        season_number: sNum,
+        name: `Season ${sNum}`
+      }));
+      
+      const seasonPrefix = `tv_${tvId}_s${activeSeason}_e`;
+      const activeDownloads = tvDownloads.filter(item => item.id.startsWith(seasonPrefix));
+      
+      episodes = activeDownloads.map(item => {
+        const match = item.id.match(/_e(\d+)$/);
+        const epNum = match ? parseInt(match[1]) : 1;
+        return {
+          episode_number: epNum,
+          name: item.title.split(': ')[1] || `Episode ${epNum}`,
+          runtime: 45,
+          still_path: item.posterPath || null,
+          overview: 'Offline playback from IndexedDB.'
+        };
+      }).sort((a, b) => a.episode_number - b.episode_number);
+    } else {
+      validSeasons = (data.seasons || []).filter(s => s.season_number > 0);
+      const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+      const year = (data.first_air_date || '').slice(0, 4);
+      const seasonDetails = await getSeasonDetails(tvId, activeSeason, cleanTitle, year);
+      episodes = seasonDetails.episodes || [];
+    }
+
+    if (validSeasons.length === 0 && episodes.length === 0) {
+      chipsContainer.innerHTML = '';
+      listContainer.innerHTML = `<p style="color:var(--text-muted);padding:20px;text-align:center;">No downloaded seasons found.</p>`;
+      if (showAllBtn) showAllBtn.style.display = 'none';
+      return 0;
+    }
+
     chipsContainer.innerHTML = validSeasons.map(s => `
       <button class="season-tab ${s.season_number === activeSeason ? 'active' : ''}" 
               data-season="${s.season_number}" 
@@ -1702,11 +1927,6 @@ async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data
         Season ${s.season_number}
       </button>
     `).join('');
-
-    const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
-    const year = (data.first_air_date || '').slice(0, 4);
-    const seasonDetails = await getSeasonDetails(tvId, activeSeason, cleanTitle, year);
-    const episodes = seasonDetails.episodes || [];
 
     const history = await getWatchHistory().catch(() => []);
 

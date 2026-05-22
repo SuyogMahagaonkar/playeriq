@@ -1446,6 +1446,12 @@ export async function renderSettingsPage({ container }) {
             ? `${(item.totalSize / (1024 * 1024)).toFixed(1)} MB` 
             : `Downloading (${item.progress}%)`;
           
+          const playButtonHTML = isCompleted
+            ? `<button class="play-download-btn" data-id="${item.id}" aria-label="Play offline title" style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); color:#c084fc; width:34px; height:34px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: all 0.2s; padding:0; flex-shrink:0;">
+                 <i data-lucide="play" style="width:14px; height:14px; fill:#c084fc; margin-left: 2px;"></i>
+               </button>`
+            : '';
+
           return `
             <div class="offline-item" style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:8px 12px;">
               <img src="${item.posterPath || 'https://via.placeholder.com/60x90'}" alt="${item.title}" style="width:40px; height:60px; border-radius:6px; object-fit:cover; background:#111;" />
@@ -1453,12 +1459,33 @@ export async function renderSettingsPage({ container }) {
                 <div style="font-weight:600; font-size:13px; color:#fff; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;">${item.title}</div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${item.type === 'movie' ? 'Movie' : 'TV Episode'} • ${progressText}</div>
               </div>
-              <button class="delete-download-btn" data-id="${item.id}" aria-label="Delete offline title" style="background:transparent; border:none; color:#ef4444; padding:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                <i data-lucide="trash-2" style="width:18px; height:18px;"></i>
-              </button>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${playButtonHTML}
+                <button class="delete-download-btn" data-id="${item.id}" aria-label="Delete offline title" style="background:transparent; border:none; color:#ef4444; padding:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                  <i data-lucide="trash-2" style="width:18px; height:18px;"></i>
+                </button>
+              </div>
             </div>
           `;
         }).join('');
+
+        // Bind play actions
+        listContainer.querySelectorAll('.play-download-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (id.startsWith('movie_')) {
+              const tmdbId = id.replace('movie_', '');
+              window.location.hash = `#/watch/movie/${tmdbId}`;
+            } else if (id.startsWith('tv_')) {
+              const match = id.match(/^tv_(\d+)_s(\d+)_e(\d+)$/);
+              if (match) {
+                const [_, tmdbId, season, episode] = match;
+                window.location.hash = `#/watch/tv/${tmdbId}?s=${season}&e=${episode}`;
+              }
+            }
+          });
+        });
 
         // Bind delete actions
         listContainer.querySelectorAll('.delete-download-btn').forEach(btn => {
