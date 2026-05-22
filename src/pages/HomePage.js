@@ -148,7 +148,7 @@ export async function renderHomePage({ container }) {
               transition: all 0.3s;
             ">${index + 1}</div>
             
-            <div style="
+            <div class="top10-poster-wrapper" style="
               width: 140px;
               height: 210px;
               border-radius: 8px;
@@ -167,9 +167,10 @@ export async function renderHomePage({ container }) {
       }).join('');
 
       top10MoviesHTML = `
-        <section class="content-row">
-          <div class="content-row-header" style="padding-left: 45px;">
+        <section class="content-row top10-movies-section">
+          <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#ff0055;"></i> Top 10 Movies Today</h2>
+            <a href="#/ranking" class="top10-see-all-desktop" style="color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-right: 45px;">See All <i data-lucide="chevron-right" style="width:16px;height:16px;"></i></a>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
             <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
@@ -218,7 +219,7 @@ export async function renderHomePage({ container }) {
               transition: all 0.3s;
             ">${index + 1}</div>
             
-            <div style="
+            <div class="top10-poster-wrapper" style="
               width: 140px;
               height: 210px;
               border-radius: 8px;
@@ -237,9 +238,10 @@ export async function renderHomePage({ container }) {
       }).join('');
 
       top10SeriesHTML = `
-        <section class="content-row">
-          <div class="content-row-header" style="padding-left: 45px;">
+        <section class="content-row top10-shows-section">
+          <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#00a8e1;"></i> Top 10 Shows Today</h2>
+            <a href="#/ranking" class="top10-see-all-desktop" style="color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-right: 45px;">See All <i data-lucide="chevron-right" style="width:16px;height:16px;"></i></a>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
             <div class="content-row-cards" style="display: flex; gap: 0px; overflow-x: auto; padding: 20px 20px 20px 45px; scrollbar-width: none; overflow-y: hidden;">
@@ -284,12 +286,21 @@ export async function renderHomePage({ container }) {
       }));
 
       // Only first 3 rows load immediately, rest are handled by intersection observer (or just render all since data is already fetched!)
-      // Since we already have the data, we can just render them directly.
       const icon = index % 2 === 0 ? 'film' : 'tv';
       return createContentRow(`<i data-lucide="${icon}" class="search-section-icon"></i> ${rowObj.title}`, mappedItems, 'mixed', null, 'portrait');
     }).join('');
 
-    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + top10MoviesHTML + top10SeriesHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
+    const top10ToggleHTML = `
+      <div class="top10-mobile-toggle" style="display: none;">
+        <div class="top10-toggle-pills">
+          <button class="top10-toggle-pill active" data-target="movies">Movies</button>
+          <button class="top10-toggle-pill" data-target="shows">Shows</button>
+        </div>
+        <a href="#/ranking" class="top10-mobile-see-all">See All <i data-lucide="chevron-right" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i></a>
+      </div>
+    `;
+
+    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
 
     // Inject outline top 10 style
     const top10Style = document.createElement('style');
@@ -306,6 +317,35 @@ export async function renderHomePage({ container }) {
     const cleanupHero = initHeroBanner();
     initContentRows(container);
     if (window.lucide) window.lucide.createIcons();
+
+    // Wire up Top 10 Mobile Toggle
+    const togglePills = container.querySelectorAll('.top10-toggle-pill');
+    if (togglePills.length > 0) {
+      const moviesSection = container.querySelector('.top10-movies-section');
+      const showsSection = container.querySelector('.top10-shows-section');
+
+      togglePills.forEach(pill => {
+        pill.addEventListener('click', () => {
+          togglePills.forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+
+          const target = pill.dataset.target;
+          if (target === 'movies') {
+            if (moviesSection) moviesSection.style.setProperty('display', 'block', 'important');
+            if (showsSection) showsSection.style.setProperty('display', 'none', 'important');
+          } else {
+            if (moviesSection) moviesSection.style.setProperty('display', 'none', 'important');
+            if (showsSection) showsSection.style.setProperty('display', 'block', 'important');
+          }
+        });
+      });
+
+      // Default initial state for mobile view: show movies, hide shows
+      if (window.innerWidth <= 768) {
+        if (moviesSection) moviesSection.style.setProperty('display', 'block', 'important');
+        if (showsSection) showsSection.style.setProperty('display', 'none', 'important');
+      }
+    }
 
     // Wire up Top 10 clicks
     container.querySelectorAll('.top10-card').forEach(card => {
