@@ -16,6 +16,9 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "@consumet/extensions": "^1.8.8",
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",

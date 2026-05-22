@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PlayerIQ</string>
+    <string name="title_activity_main">PlayerIQ</string>
+    <string name="package_name">com.suyogmahagaonkar.playeriq</string>
+    <string name="custom_url_scheme">com.suyogmahagaonkar.playeriq</string>
+</resources>

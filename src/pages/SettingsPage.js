@@ -79,6 +79,10 @@ export async function renderSettingsPage({ container }) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
               <span>Storage & Backups</span>
             </button>
+            <button class="settings-nav-btn" data-tab="mobile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              <span>Mobile App</span>
+            </button>
             <button class="settings-nav-btn" data-tab="account">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="8" r="5"/></svg>
               <span>Account Session</span>
@@ -337,6 +341,44 @@ export async function renderSettingsPage({ container }) {
                     <button class="settings-danger-btn" id="btn-purge-cache" style="border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
                       <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg> Purge Cache
                     </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab: Mobile App -->
+            <div class="settings-tab-panel" id="panel-mobile">
+              <!-- Android Download -->
+              <div class="settings-section">
+                <div class="settings-section-title">Android Native App</div>
+                <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Download Android APK</div>
+                    <div class="settings-row-desc">Install the full-screen, native-wrapped Android app. Safe, fast, and completely free of Store charges.</div>
+                  </div>
+                  <a href="./playeriq.apk" download="playeriq.apk" class="settings-action-btn" style="background:#00c853;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:10px;margin-top:8px;transition:all 0.2s;box-shadow:0 4px 15px rgba(0,200,83,0.3)">
+                    <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Android APK (4.5 MB)
+                  </a>
+                </div>
+              </div>
+
+              <!-- iOS App Installer -->
+              <div class="settings-section">
+                <div class="settings-section-title">iOS App (Add to Home Screen)</div>
+                <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Install on iPhone & iPad</div>
+                    <div class="settings-row-desc">PlayerIQ is optimized as a high-performance Progressive Web App (PWA) for iOS devices. No App Store needed.</div>
+                  </div>
+                  
+                  <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box;">
+                    <h4 style="margin: 0 0 12px 0; color: #fff; font-size: 15px; font-weight: 600;">How to install on iOS:</h4>
+                    <ol style="margin: 0; padding-left: 20px; color: var(--text-dim); font-size: 14px; line-height: 1.8;">
+                      <li style="margin-bottom: 8px;">Open **Safari** browser and go to <a href="https://playeriq.suyogmahagaonkar.me" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">playeriq.suyogmahagaonkar.me</a></li>
+                      <li style="margin-bottom: 8px;">Tap the **Share** button <span style="display:inline-flex;vertical-align:middle;background:rgba(255,255,255,0.1);padding:4px;border-radius:6px;margin:0 4px;"><svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span> at the bottom of the screen.</li>
+                      <li style="margin-bottom: 8px;">Scroll down and tap **Add to Home Screen** <span style="display:inline-flex;vertical-align:middle;background:rgba(255,255,255,0.1);padding:4px;border-radius:6px;margin:0 4px;"><svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>.</li>
+                      <li>Launch **PlayerIQ** from your home screen for a gorgeous, fullscreen notch-safe cinematic experience!</li>
+                    </ol>
                   </div>
                 </div>
               </div>
