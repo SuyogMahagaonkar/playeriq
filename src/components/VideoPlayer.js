@@ -1030,7 +1030,7 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   // ========================================================
   // MOBILE-ONLY ENHANCEMENTS
   // ========================================================
-  const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+  function isMobile() { return window.innerWidth <= 768 || ('ontouchstart' in window); }
 
   // ---- Cinematic Mode Toggle (cover ↔ contain) ----
   const cinematicBtn = document.getElementById('vp-cinematic-btn');
