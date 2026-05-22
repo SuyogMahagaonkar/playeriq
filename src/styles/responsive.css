@@ -880,3 +880,302 @@
   }
 }
 
+/* ==========================================================================
+   🚫 REMOVE SIDEBAR & DRAWER FOR MOBILE DEVICE LAYOUT (≤991px)
+   ========================================================================== */
+@media (max-width: 991px) {
+  .sidebar, 
+  .sidebar-overlay, 
+  .navbar-hamburger {
+    display: none !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+
+  .navbar {
+    left: 0 !important;
+  }
+}
+
+/* ==========================================================================
+   ✨ PREMIUM PROFILE, SEARCH BAR & HERO BANNER MOBILE IMPROVEMENTS (≤768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* ---- Search Bar & Suggestions ---- */
+  .search-container {
+    width: 100% !important;
+  }
+
+  .search-input-wrapper {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    transition: all 0.25s ease !important;
+    height: 42px !important;
+  }
+
+  .search-input-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.35) !important;
+  }
+
+  .search-input {
+    font-size: 15px !important;
+    color: white !important;
+  }
+
+  /* Ultra-Premium Glassmorphic Suggestions Panel */
+  .search-suggestions {
+    background: rgba(10, 10, 15, 0.76) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top: none !important;
+    border-radius: 0 0 20px 20px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75) !important;
+    padding: 8px 12px !important;
+    max-height: 75vh !important;
+  }
+
+  .search-suggestion-item {
+    border-radius: 10px !important;
+    padding: 8px 10px !important;
+    margin-bottom: 4px !important;
+    transition: background 0.2s ease, transform 0.2s ease !important;
+    border-bottom: none !important;
+  }
+
+  .search-suggestion-item:hover,
+  .search-suggestion-item:active {
+    background: rgba(168, 85, 247, 0.15) !important;
+    transform: translateX(4px) !important;
+  }
+
+  .search-suggestion-poster {
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .search-suggestion-title {
+    font-size: 14px !important;
+    font-weight: var(--weight-semibold) !important;
+    color: white !important;
+  }
+
+  .search-suggestion-meta {
+    font-size: 11px !important;
+    color: var(--text-secondary) !important;
+  }
+
+  /* ---- Settings / Profile Layout Overhaul ---- */
+  .settings-grid-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .settings-nav-sidebar {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding: 6px !important;
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    gap: 8px !important;
+    scrollbar-width: none !important;
+  }
+  
+  .settings-nav-sidebar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .settings-nav-btn {
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
+    margin: 0 !important;
+  }
+
+  .settings-nav-btn.active {
+    background: var(--gradient-purple) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3) !important;
+  }
+
+  .settings-nav-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 4px !important;
+  }
+
+  /* Profile card centering & glow effect */
+  .settings-profile-row {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 24px var(--space-md) !important;
+    background: linear-gradient(180deg, rgba(26, 26, 46, 0.6) 0%, rgba(10, 10, 15, 0.9) 100%) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .settings-profile-avatar {
+    width: 90px !important;
+    height: 90px !important;
+    border-radius: 50% !important;
+    font-size: 2.2rem !important;
+    border: 3px solid #a855f7 !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.5) !important;
+    margin-bottom: 12px !important;
+    transition: transform 0.3s ease !important;
+  }
+
+  .settings-profile-info {
+    margin-bottom: 8px !important;
+  }
+
+  .settings-profile-name {
+    font-size: var(--text-xl) !important;
+    font-weight: var(--weight-bold) !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  .settings-profile-badge {
+    align-self: center !important;
+    font-size: 11px !important;
+    padding: 4px 12px !important;
+    border-radius: var(--radius-full) !important;
+    background: var(--gradient-purple) !important;
+    color: white !important;
+    font-weight: var(--weight-bold) !important;
+    box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3) !important;
+  }
+
+  /* ---- Hero Banner Premium Layout Overhaul ---- */
+  .hero-banner {
+    height: 440px !important;
+    min-height: 440px !important;
+    border-radius: 0 0 24px 24px !important;
+    overflow: hidden !important;
+  }
+
+  .hero-slide {
+    border-radius: 0 0 24px 24px !important;
+    overflow: hidden !important;
+  }
+
+  .hero-backdrop {
+    object-position: center 20% !important;
+  }
+
+  .hero-gradient-bottom {
+    background: linear-gradient(to top, var(--bg-primary) 0%, rgba(10, 10, 15, 0.4) 60%, transparent 100%) !important;
+  }
+
+  .hero-content {
+    bottom: 40px !important;
+    left: 16px !important;
+    max-width: calc(100% - 32px) !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .hero-badge {
+    background: rgba(168, 85, 247, 0.15) !important;
+    color: #a855f7 !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.2) !important;
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+    border-radius: var(--radius-full) !important;
+    margin-bottom: 10px !important;
+    align-self: center !important;
+  }
+
+  .hero-title {
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.2 !important;
+    color: white !important;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8) !important;
+    margin-bottom: 8px !important;
+  }
+
+  .hero-meta {
+    justify-content: center !important;
+    font-size: 12px !important;
+    color: var(--text-secondary) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .hero-rating svg {
+    color: #a855f7 !important;
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6)) !important;
+  }
+
+  .hero-actions {
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .hero-btn-primary {
+    background: var(--gradient-purple) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
+    border: none !important;
+    transition: all 0.25s ease !important;
+  }
+
+  .hero-btn-primary:active {
+    transform: scale(0.96) !important;
+  }
+
+  .hero-btn-secondary {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: white !important;
+    transition: all 0.25s ease !important;
+  }
+
+  .hero-btn-secondary:active {
+    transform: scale(0.96) !important;
+  }
+
+  /* Dynamic capsule-pill indicators */
+  .hero-indicators {
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    gap: 6px !important;
+  }
+
+  .hero-indicator {
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .hero-indicator.active {
+    width: 18px !important;
+    border-radius: 3px !important;
+    background: #a855f7 !important;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.6) !important;
+  }
+}
+
+
