@@ -828,6 +828,9 @@ app.get('/api/proxy/transcode', async (req, res) => {
       console.warn(`[FFmpeg] Exited with code ${code}`);
     }
     if (!res.writableEnded) res.end();
+  });
+});
+
 // ---- Mock Casting Session Database ----
 const castSessions = new Map();
 
