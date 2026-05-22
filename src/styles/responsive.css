@@ -567,12 +567,14 @@
     height: 28px !important; /* Enlarge icon inside */
   }
 
-  /* Remove hover-only visibility; ensure controls are always visible on touch */
-  .card-delete-btn, .vp-controls {
+  /* Delete buttons: always visible on touch (no hover available) */
+  .card-delete-btn {
     opacity: 1 !important;
     visibility: visible !important;
     transform: none !important;
   }
+  /* NOTE: .vp-controls visibility is managed by JS (.vp-visible class).
+     Do NOT force opacity/visibility here — it breaks auto-hide on mobile. */
   
   /* Completely hide the play button overlay on movie card thumbnails for mobile */
   .movie-card-play {

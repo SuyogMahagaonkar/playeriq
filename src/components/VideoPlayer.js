@@ -1281,8 +1281,15 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   });
 
   // Auto-hide controls
-  player.addEventListener('mousemove', showControls);
+  player.addEventListener('mousemove',  showControls);
   player.addEventListener('mouseleave', hideControls);
+  // Mobile: reset the 5s timer on any touch anywhere in the player
+  player.addEventListener('touchstart',  showControls, { passive: true });
+  // Also start the timer as soon as playback begins
+  video.addEventListener('play', () => {
+    clearTimeout(controlsTimeout);
+    controlsTimeout = setTimeout(hideControls, 5000);
+  });
   showControls();
 
   // Keyboard shortcuts
