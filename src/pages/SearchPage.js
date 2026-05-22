@@ -26,12 +26,25 @@ export async function renderSearchPage({ query, container }) {
     container.innerHTML = `
       <div class="movie-grid-page">
         <h1 class="movie-grid-title">Search</h1>
+        
+        <!-- Hotstar-style Popular Genre Pills -->
+        <p style="color:var(--text-muted);margin-bottom:var(--space-md)">Popular Categories</p>
+        <div class="genre-pills" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 8px;">
+          <button class="genre-pill" data-search="Trending">🔥 Trending</button>
+          <button class="genre-pill" data-search="Action">🍿 Action</button>
+          <button class="genre-pill" data-search="Comedy">😂 Comedy</button>
+          <button class="genre-pill" data-search="Drama">🎭 Drama</button>
+          <button class="genre-pill" data-search="Anime">✨ Anime</button>
+          <button class="genre-pill" data-search="Sci-Fi">🚀 Sci-Fi</button>
+        </div>
+
         ${recent.length ? `
-          <p style="color:var(--text-muted);margin-bottom:var(--space-md)">Recent searches</p>
-          <div class="genre-pills">
+          <p style="color:var(--text-muted);margin-bottom:var(--space-sm);margin-top:var(--space-md)">Recent Searches</p>
+          <div class="genre-pills" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 8px;">
             ${recent.map(r => `<button class="genre-pill" data-search="${r}">${r}</button>`).join('')}
           </div>
         ` : ''}
+
         <div class="empty-state">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <div class="empty-state-title">Search for Movies &amp; TV Shows</div>
@@ -42,7 +55,14 @@ export async function renderSearchPage({ query, container }) {
     `;
     container.querySelectorAll('[data-search]').forEach(btn => {
       btn.addEventListener('click', () => {
-        window.location.hash = `/search?q=${encodeURIComponent(btn.dataset.search)}`;
+        const queryStr = btn.dataset.search;
+        const navInput = document.getElementById('search-input');
+        if (navInput) {
+          navInput.value = queryStr;
+          const clearBtn = document.getElementById('search-clear');
+          if (clearBtn) clearBtn.style.display = 'flex';
+        }
+        window.location.hash = `/search?q=${encodeURIComponent(queryStr)}`;
       });
     });
     if (window.lucide) window.lucide.createIcons();

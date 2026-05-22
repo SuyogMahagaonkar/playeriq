@@ -20,7 +20,7 @@ export function createHeroBanner(items) {
     const bannerSizes = `sizes="(max-width: 768px) 100vw, 100vw"`;
 
     return `
-      <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}">
+      <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}" data-detail-route="/${type}/${m.id}">
         <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'original')}" ${bannerSrcset} ${bannerSizes} alt="${title}" loading="eager" />
         <div class="hero-gradient-left"></div>
         <div class="hero-gradient-bottom"></div>
@@ -137,7 +137,21 @@ export function initHeroBanner() {
 
   // Button clicks
   banner.querySelectorAll('[data-route]').forEach(btn => {
-    btn.addEventListener('click', () => navigate(btn.dataset.route));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigate(btn.dataset.route);
+    });
+  });
+
+  // Slide background clicks (tap to details directly)
+  slides.forEach(slide => {
+    slide.addEventListener('click', (e) => {
+      if (e.target.closest('.hero-actions') || e.target.closest('.hero-indicators') || e.target.closest('.hero-nav')) {
+        return;
+      }
+      const detailRoute = slide.dataset.detailRoute;
+      if (detailRoute) navigate(detailRoute);
+    });
   });
 
   return () => clearInterval(interval);

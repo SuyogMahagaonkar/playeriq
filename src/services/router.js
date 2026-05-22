@@ -40,9 +40,20 @@ export function navigate(path) {
   window.location.hash = path;
 }
 
+let lastActiveHash = '#/';
+
 async function handleRoute() {
   const hash = getHash();
   const { path, query } = parseQuery(hash);
+
+  if (path === '/settings' && window.innerWidth > 768) {
+    import('../components/SettingsDrawer.js').then(m => m.openSettingsDrawer());
+    history.replaceState(null, '', lastActiveHash);
+    return;
+  }
+
+  // Update last active hash for future settings drawer triggers
+  lastActiveHash = window.location.hash || '#/';
 
   // Run cleanup of previous page
   if (currentCleanup) {

@@ -109,9 +109,19 @@ export async function renderSettingsPage({ container }) {
                       ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
                       : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
                   </div>
-                  <div class="settings-profile-info">
-                    <div class="settings-profile-name">${user.displayName ?? 'User'}</div>
-                    <div class="settings-profile-email">${user.email ?? ''}</div>
+                  <div class="settings-profile-info" style="flex:1; display:flex; flex-direction:column; align-items:flex-start;">
+                    <div class="settings-profile-name-container" style="display:flex;align-items:center;gap:8px">
+                      <span class="settings-profile-name" id="profile-name-text" style="font-weight:var(--weight-bold); font-size:var(--text-lg);">${user.displayName ?? 'User'}</span>
+                      <button class="edit-name-btn" id="edit-name-btn" style="background:transparent;border:none;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;padding:2px" title="Edit Name">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                      </button>
+                    </div>
+                    <div class="settings-profile-name-edit" id="profile-name-edit-container" style="display:none;align-items:center;gap:6px;margin-bottom:4px">
+                      <input type="text" class="settings-input" id="profile-name-input" value="${user.displayName ?? 'User'}" style="background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:6px;padding:3px 6px;color:white;font-size:13px;width:130px" />
+                      <button class="save-name-btn" id="save-name-btn" style="background:var(--gradient-purple);border:none;border-radius:4px;padding:3px 8px;color:white;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 2px 6px rgba(168,85,247,0.3)">Save</button>
+                      <button class="cancel-name-btn" id="cancel-name-btn" style="background:transparent;border:1px solid var(--border-color);border-radius:4px;padding:3px 6px;color:var(--text-secondary);font-size:11px;cursor:pointer">Cancel</button>
+                    </div>
+                    <div class="settings-profile-email" style="font-size:12px;color:var(--text-muted);margin-top:2px;">${user.email ?? ''}</div>
                   </div>
                   <span class="settings-profile-badge">Google</span>
                 </div>
@@ -865,6 +875,81 @@ export async function renderSettingsPage({ container }) {
       if (targetPanel) targetPanel.classList.add('active');
     });
   });
+
+  // Wire Editable Display Name Actions
+  const editNameBtn = container.querySelector('#edit-name-btn');
+  const saveNameBtn = container.querySelector('#save-name-btn');
+  const cancelNameBtn = container.querySelector('#cancel-name-btn');
+  const nameText = container.querySelector('#profile-name-text');
+  const nameInput = container.querySelector('#profile-name-input');
+  const textContainer = container.querySelector('.settings-profile-name-container');
+  const editContainer = container.querySelector('#profile-name-edit-container');
+
+  if (editNameBtn && saveNameBtn && cancelNameBtn && nameText && nameInput && textContainer && editContainer) {
+    editNameBtn.addEventListener('click', () => {
+      textContainer.style.display = 'none';
+      editContainer.style.display = 'flex';
+      nameInput.focus();
+    });
+
+    cancelNameBtn.addEventListener('click', () => {
+      editContainer.style.display = 'none';
+      textContainer.style.display = 'flex';
+      nameInput.value = nameText.textContent;
+    });
+
+    saveNameBtn.addEventListener('click', async () => {
+      const newName = nameInput.value.trim();
+      if (!newName) return;
+
+      saveNameBtn.textContent = 'Saving...';
+      saveNameBtn.disabled = true;
+
+      try {
+        const { updateProfile } = await import('firebase/auth');
+        const { saveUserProfile } = await import('../services/firebase.js');
+
+        // 1. Update Firebase Auth Profile
+        await updateProfile(user, { displayName: newName });
+
+        // 2. Update Firestore DB Profile
+        await saveUserProfile(user.uid, {
+          displayName: newName,
+          email: user.email,
+          photoURL: user.photoURL,
+          lastLogin: new Date().toISOString()
+        });
+
+        // 3. Update UI
+        nameText.textContent = newName;
+        editContainer.style.display = 'none';
+        textContainer.style.display = 'flex';
+
+        showToast('✓ Display name updated!');
+        
+        // Refresh sidebar and navbar updates
+        refreshSidebarNav();
+        const navbarAvatar = document.getElementById('navbar-avatar');
+        if (navbarAvatar) {
+          const inner = navbarAvatar.querySelector('.navbar-avatar-inner');
+          if (inner) {
+            if (user.photoURL) {
+              inner.innerHTML = `<img src="${user.photoURL}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+            } else {
+              inner.innerHTML = '';
+              inner.textContent = newName[0]?.toUpperCase() ?? 'U';
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to update profile name:', err);
+        showToast('❌ Failed to update name');
+      } finally {
+        saveNameBtn.textContent = 'Save';
+        saveNameBtn.disabled = false;
+      }
+    });
+  }
 
   if (window.lucide) window.lucide.createIcons();
 }

@@ -27,6 +27,9 @@ export function createNavbar() {
         <div class="search-input-wrapper">
           <i data-lucide="search"></i>
           <input type="text" class="search-input" id="search-input" placeholder="Search movies, shows..." autocomplete="off" />
+          <button class="search-voice" id="search-voice" title="Voice Search" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;margin-right:4px;">
+            <i data-lucide="mic"></i>
+          </button>
           <button class="search-clear" id="search-clear" style="display:none">
             <i data-lucide="x"></i>
           </button>
@@ -282,6 +285,81 @@ export function setupNavbarEvents() {
   const clearBtn = document.getElementById('search-clear');
 
   if (!input) return;
+
+  // Web Speech recognition voice search listener
+  const voiceBtn = document.getElementById('search-voice');
+  if (voiceBtn) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        voiceBtn.style.color = '#ff0055';
+        input.placeholder = 'Listening... Speak now';
+        
+        // Dynamic feedback visual indicator
+        const oldToast = document.querySelector('.voice-toast');
+        if (oldToast) oldToast.remove();
+        const toast = document.createElement('div');
+        toast.className = 'voice-toast';
+        toast.style.position = 'fixed';
+        toast.style.bottom = '80px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'rgba(168, 85, 247, 0.9)';
+        toast.style.color = 'white';
+        toast.style.padding = '8px 16px';
+        toast.style.borderRadius = '20px';
+        toast.style.fontSize = '12px';
+        toast.style.fontWeight = 'bold';
+        toast.style.zIndex = '99999';
+        toast.textContent = '🎙 Listening... Speak now';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+      };
+
+      recognition.onerror = (evt) => {
+        console.error('Speech recognition error', evt.error);
+        voiceBtn.style.color = 'var(--text-muted)';
+        input.placeholder = 'Search movies, shows...';
+        
+        const oldToast = document.querySelector('.voice-toast');
+        if (oldToast) oldToast.remove();
+      };
+
+      recognition.onend = () => {
+        voiceBtn.style.color = 'var(--text-muted)';
+        input.placeholder = 'Search movies, shows...';
+        const oldToast = document.querySelector('.voice-toast');
+        if (oldToast) oldToast.remove();
+      };
+
+      recognition.onresult = (evt) => {
+        const transcript = evt.results[0][0].transcript;
+        input.value = transcript;
+        if (clearBtn) clearBtn.style.display = 'flex';
+        addRecentSearch(transcript);
+        navigate(`/search?q=${encodeURIComponent(transcript)}`);
+        suggestions.style.display = 'none';
+        input.blur();
+      };
+
+      voiceBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          recognition.start();
+        } catch (err) {
+          console.warn('Recognition already started', err);
+        }
+      });
+    } else {
+      voiceBtn.style.display = 'none';
+    }
+  }
 
   // Search input
   input.addEventListener('input', (e) => {
