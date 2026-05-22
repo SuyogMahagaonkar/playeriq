@@ -7,6 +7,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
@@ -42,8 +43,21 @@ const provider = new GoogleAuthProvider();
 
 export async function signInWithGoogle() {
   try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
+    // Detect mobile WebViews or mobile devices where popups are blocked or extremely slow
+    const isMobileOrWebView = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                              (window.Capacitor && window.Capacitor.isNative) ||
+                              navigator.userAgent.includes('wv');
+
+    if (isMobileOrWebView) {
+      console.log('[Firebase] Mobile or WebView detected, using signInWithRedirect...');
+      await signInWithRedirect(auth, provider);
+      // Under redirect, the page will reload and redirect back, so return a pending promise
+      return new Promise(() => {}); 
+    } else {
+      console.log('[Firebase] Desktop detected, using signInWithPopup...');
+      const result = await signInWithPopup(auth, provider);
+      return result.user;
+    }
   } catch (err) {
     console.error('[Firebase] Sign-in error:', err);
     throw err;
