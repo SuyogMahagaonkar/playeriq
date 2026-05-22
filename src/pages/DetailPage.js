@@ -7,6 +7,7 @@ import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud } from '../services/firebase.js';
+import { DownloadManager } from '../services/download.js';
 
 function trackTelemetryEvent(eventName, eventData = {}) {
   console.log(`[Telemetry] Event: ${eventName}`, eventData);
@@ -37,6 +38,128 @@ function checkAndCollapseHeader() {
       avatar.remove();
     }
   }
+}
+
+async function setupDownloadButton(btn, downloadId, type, title, posterPath) {
+  if (!btn) return;
+  
+  const updateButtonUI = (status, progress) => {
+    btn.innerHTML = '';
+    btn.className = btn.className.replace(/\b(downloading|completed|paused|expired)\b/g, '').trim();
+    
+    // Check if it is a detail button or episode button
+    const isDetailBtn = btn.classList.contains('detail-btn');
+    
+    if (status === 'DOWNLOADING') {
+      btn.classList.add('downloading');
+      btn.innerHTML = `
+        <svg class="progress-ring" width="20" height="20" style="transform: rotate(-90deg); margin-right: ${isDetailBtn ? '8px' : '0'};">
+          <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.1)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10"/>
+          <circle class="progress-ring-bar" stroke="var(--primary, #a855f7)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10" 
+            stroke-dasharray="50.2" stroke-dashoffset="${50.2 - (50.2 * progress) / 100}"/>
+        </svg>
+        <span>${isDetailBtn ? `Downloading (${progress}%)` : ''}</span>
+      `;
+      btn.title = `Downloading... ${progress}%`;
+    } else if (status === 'COMPLETED') {
+      btn.classList.add('completed');
+      btn.innerHTML = `
+        <i data-lucide="check-circle" style="color:#10b981; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
+        <span>${isDetailBtn ? 'Downloaded' : ''}</span>
+      `;
+      btn.title = 'Downloaded';
+    } else if (status === 'PAUSED') {
+      btn.classList.add('paused');
+      btn.innerHTML = `
+        <i data-lucide="play-circle" style="color:#fbbf24; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
+        <span>${isDetailBtn ? 'Paused' : ''}</span>
+      `;
+      btn.title = 'Paused';
+    } else if (status === 'EXPIRED') {
+      btn.classList.add('expired');
+      btn.innerHTML = `
+        <i data-lucide="alert-circle" style="color:#ef4444; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
+        <span>${isDetailBtn ? 'License Expired' : ''}</span>
+      `;
+      btn.title = 'License Expired - Tap to Renew';
+    } else {
+      btn.innerHTML = `
+        <i data-lucide="download" style="width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
+        <span>${isDetailBtn ? 'Download' : ''}</span>
+      `;
+      btn.title = 'Download';
+    }
+    
+    // Re-initialize lucide icons
+    if (window.lucide) window.lucide.createIcons();
+  };
+
+  // Get initial status
+  const initial = await DownloadManager.getStatus(downloadId);
+  updateButtonUI(initial.status, initial.progress);
+
+  // Click handler
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const curr = await DownloadManager.getStatus(downloadId);
+    if (curr.status === 'IDLE') {
+      try {
+        await DownloadManager.start(downloadId, type, title, posterPath);
+        updateButtonUI('DOWNLOADING', 0);
+      } catch (err) {
+        showToast(err.message || 'Download failed.', 'alert-triangle');
+      }
+    } else if (curr.status === 'DOWNLOADING') {
+      await DownloadManager.pause(downloadId);
+      updateButtonUI('PAUSED', curr.progress);
+    } else if (curr.status === 'PAUSED') {
+      await DownloadManager.resume(downloadId);
+      updateButtonUI('DOWNLOADING', curr.progress);
+    } else if (curr.status === 'EXPIRED') {
+      showToast('Renewing offline license...', 'refresh-cw');
+      const renewed = await DownloadManager.reauthorizeLicense(downloadId);
+      if (renewed) {
+        showToast('License renewed successfully!', 'check-circle');
+        updateButtonUI('COMPLETED', 100);
+      } else {
+        showToast('Failed to renew license.', 'alert-triangle');
+      }
+    } else if (curr.status === 'COMPLETED') {
+      // Show confirmation dialog/action sheet to delete
+      const confirmDelete = confirm(`Remove "${title}" from downloads?`);
+      if (confirmDelete) {
+        await DownloadManager.remove(downloadId);
+        updateButtonUI('IDLE', 0);
+        showToast('Removed from downloads.', 'trash-2');
+      }
+    }
+  });
+
+  // Listen for live progress updates
+  const progressListener = (e) => {
+    if (e.detail.id === downloadId) {
+      updateButtonUI(e.detail.status, e.detail.progress);
+    }
+  };
+
+  const statusListener = (e) => {
+    if (e.detail.id === downloadId) {
+      updateButtonUI(e.detail.status, 0);
+    }
+  };
+
+  window.addEventListener('download-progress', progressListener);
+  window.addEventListener('download-status-change', statusListener);
+  
+  // Cleanup listeners when page changes
+  const checkNavigation = () => {
+    window.removeEventListener('download-progress', progressListener);
+    window.removeEventListener('download-status-change', statusListener);
+    window.removeEventListener('hashchange', checkNavigation);
+  };
+  window.addEventListener('hashchange', checkNavigation);
 }
 
 export async function renderDetailPage({ params, container }) {
@@ -146,6 +269,12 @@ export async function renderDetailPage({ params, container }) {
                 <i data-lucide="bookmark" style="width:18px;height:18px"></i>
                 <span id="watchlist-btn-text">Watchlist</span>
               </button>
+              ${!isTV && window.innerWidth <= 767 ? `
+                <button class="detail-btn detail-btn-secondary detail-btn-download" id="detail-download-btn">
+                  <i data-lucide="download" style="width:18px;height:18px"></i>
+                  <span id="detail-download-btn-text">Download</span>
+                </button>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -175,6 +304,14 @@ export async function renderDetailPage({ params, container }) {
         navigate(`/watch/${type}/${id}`);
       }
     });
+
+    if (!isTV && window.innerWidth <= 767) {
+      const downloadBtn = document.getElementById('detail-download-btn');
+      if (downloadBtn) {
+        const posterPath = data.poster_path ? img.poster(data.poster_path, 'w500') : '';
+        setupDownloadButton(downloadBtn, `movie_${id}`, 'movie', title, posterPath);
+      }
+    }
 
     // Share button
     document.getElementById('share-btn')?.addEventListener('click', () => {
@@ -484,11 +621,16 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
       });
 
       listEl.querySelectorAll('.ep-download-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          trackTelemetryEvent('episode_download', { tv_id: tvId, season: seasonNumber, episode: parseInt(btn.closest('.mobile-episode-row').dataset.index) + 1 });
-          showToast('Download started. Available offline soon.', 'download');
-        });
+        const row = btn.closest('.mobile-episode-row');
+        if (!row) return;
+        const epIndex = parseInt(row.dataset.index);
+        const ep = season.episodes[epIndex];
+        if (ep) {
+          const downloadId = `tv_${tvId}_s${seasonNumber}_e${ep.episode_number}`;
+          const stillSrc = ep.still_path ? img.still(ep.still_path) : '';
+          const epTitle = `S${seasonNumber} E${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}`;
+          setupDownloadButton(btn, downloadId, 'tv', epTitle, stillSrc);
+        }
       });
 
       listEl.querySelectorAll('.ep-watchlist-btn').forEach(btn => {

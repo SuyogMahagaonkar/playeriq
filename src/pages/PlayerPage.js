@@ -655,21 +655,40 @@ export async function renderPlayerPage({ params, container }) {
   let currentEpisode = parseInt(urlParams.get('e')) || 1;
 
   // Initial loading skeleton
-  container.innerHTML = `
-    <div class="player-page">
-      <div class="player-top-bar">
-        <div style="width:60px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04)"></div>
-        <div style="width:160px;height:18px;border-radius:4px;background:rgba(255,255,255,0.04)"></div>
-        <div style="width:100px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04)"></div>
-      </div>
-      <div class="player-video-wrapper" style="display:flex;align-items:center;justify-content:center;">
-        <div class="player-loading-overlay">
-          <div class="player-loading-spinner"></div>
-          <div class="player-loading-text">Loading Player...</div>
+  if (window.innerWidth <= 767) {
+    container.innerHTML = `
+      <div class="player-page mobile-player-page">
+        <div class="skeleton-player-wrapper">
+          <div class="skeleton-player">
+            <div class="skeleton-player-controls">
+              <div class="skeleton-player-bar"></div>
+              <div class="skeleton-player-row">
+                <div class="skeleton-player-btn"></div>
+                <div class="skeleton-player-time"></div>
+                <div class="skeleton-player-btn"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="player-page">
+        <div class="player-top-bar">
+          <div style="width:60px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04)"></div>
+          <div style="width:160px;height:18px;border-radius:4px;background:rgba(255,255,255,0.04)"></div>
+          <div style="width:100px;height:28px;border-radius:6px;background:rgba(255,255,255,0.04)"></div>
+        </div>
+        <div class="player-video-wrapper" style="display:flex;align-items:center;justify-content:center;">
+          <div class="player-loading-overlay">
+            <div class="player-loading-spinner"></div>
+            <div class="player-loading-text">Loading Player...</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   try {
     const data = isTV ? await getTVDetails(id) : await getMovieDetails(id);
@@ -2123,89 +2142,197 @@ async function renderMobileLayout({
       if (msg) msg.textContent = 'Active casting targets found:';
       if (listContainer) {
         listContainer.style.display = 'flex';
+        const SIMULATED_DEVICE_DIAGS = {
+          'chromecast-living': { ip: '192.168.1.45', protocol: 'Chromecast (Ultra)', firmware: 'v1.56.275829', network: 'Home_WiFi_5G' },
+          'airplay-bedroom': { ip: '192.168.1.62', protocol: 'AirPlay 2', firmware: 'tvOS 15.4.1', network: 'Home_WiFi_5G' },
+          'dlna-basement': { ip: '192.168.1.88', protocol: 'DLNA / SmartTV OS', firmware: 'v4.9.1-sony', network: 'Home_WiFi_2G' },
+          'chromecast-kitchen': { ip: '192.168.1.12', protocol: 'Chromecast (v3)', firmware: 'v1.49.230485', network: 'Home_WiFi_5G' }
+        };
+
         listContainer.innerHTML = SIMULATED_DEVICES.map(device => {
-          let signalIcon = '📶';
-          if (device.signal <= 2) signalIcon = '📶 Low';
-          else if (device.signal === 3) signalIcon = '📶 Med';
-          
           let iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>`;
           if (device.type === 'AirPlay') {
             iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H19M12 5L17 11H7L12 5Z" fill="currentColor"/></svg>`;
           }
           
+          const diags = SIMULATED_DEVICE_DIAGS[device.id] || { ip: '192.168.1.1', protocol: 'Unknown', firmware: 'v1.0', network: 'Unknown' };
+          
           return `
-            <div class="cast-device-item" data-id="${device.id}" role="button" aria-label="Cast to ${device.name}">
-              <div class="cast-device-info">
-                ${iconMarkup}
-                <div class="cast-device-details">
-                  <span class="cast-device-name">${device.name}</span>
-                  <span class="cast-device-type">${device.type} · ${signalIcon}</span>
+            <div class="cast-device-item" data-id="${device.id}" aria-label="Cast device ${device.name}">
+              <div class="cast-device-item-top">
+                <div class="cast-device-info-left">
+                  <div class="cast-device-icon-wrap">${iconMarkup}</div>
+                  <div class="cast-device-details">
+                    <span class="cast-device-name">${device.name}</span>
+                    <span class="cast-device-type">${device.type}</span>
+                    <span class="cast-device-status-lbl" id="status-lbl-${device.id}">Ready</span>
+                  </div>
+                </div>
+                <div class="cast-signal-bars" title="Signal: ${device.signal}/5">
+                  <svg class="signal-svg" viewBox="0 0 24 24" width="24" height="24">
+                    <rect x="2" y="16" width="3" height="4" rx="1" fill="${device.signal >= 1 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
+                    <rect x="6" y="12" width="3" height="8" rx="1" fill="${device.signal >= 2 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
+                    <rect x="10" y="8" width="3" height="12" rx="1" fill="${device.signal >= 3 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
+                    <rect x="14" y="4" width="3" height="16" rx="1" fill="${device.signal >= 4 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
+                    <rect x="18" y="0" width="3" height="20" rx="1" fill="${device.signal >= 5 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
+                  </svg>
                 </div>
               </div>
-              <span class="cast-device-status" id="status-${device.id}">Ready</span>
+              <div class="cast-device-item-actions">
+                <button class="cast-act-btn connect-btn" id="connect-${device.id}" aria-label="Connect to ${device.name}">Connect</button>
+                <button class="cast-act-btn info-btn" id="info-${device.id}" aria-label="Toggle device diagnostics for ${device.name}">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </button>
+                <button class="cast-act-btn more-btn" id="more-${device.id}" aria-label="More actions for ${device.name}">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
+                  </svg>
+                </button>
+              </div>
+              <div class="cast-device-diag-details" id="diag-details-${device.id}" style="display: none; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.15); margin-top: 6px; font-size: 10px; font-family: monospace; color: rgba(255,255,255,0.6); line-height: 1.4;">
+                <div>IP Address: <span style="color: var(--accent, #e50914);">${diags.ip}</span></div>
+                <div>Protocol: <span>${diags.protocol}</span></div>
+                <div>Firmware: <span>${diags.firmware}</span></div>
+                <div>Network: <span>${diags.network}</span></div>
+              </div>
             </div>
           `;
         }).join('');
 
         listContainer.querySelectorAll('.cast-device-item').forEach(item => {
-          item.addEventListener('click', async () => {
-            const deviceId = item.dataset.id;
-            const device = SIMULATED_DEVICES.find(d => d.id === deviceId);
-            if (!device) return;
+          const deviceId = item.dataset.id;
+          const device = SIMULATED_DEVICES.find(d => d.id === deviceId);
+          const diags = SIMULATED_DEVICE_DIAGS[deviceId] || { ip: '192.168.1.1', protocol: 'Unknown', firmware: 'v1.0', network: 'Unknown' };
 
-            const statusEl = item.querySelector(`#status-${deviceId}`);
-            if (statusEl) {
-              statusEl.className = 'cast-device-status connecting';
-              statusEl.textContent = 'Connecting...';
-            }
+          // 1. Info click handler
+          const infoBtn = item.querySelector(`#info-${deviceId}`);
+          const diagDetails = item.querySelector(`#diag-details-${deviceId}`);
+          if (infoBtn && diagDetails) {
+            infoBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const isVisible = diagDetails.style.display === 'block';
+              diagDetails.style.display = isVisible ? 'none' : 'block';
+              infoBtn.classList.toggle('active', !isVisible);
+            });
+          }
 
-            setTimeout(async () => {
-              try {
-                const activeVideo = document.getElementById('vp-video');
-                const currentLocalTime = activeVideo ? activeVideo.currentTime : 0;
-                
-                if (activeVideo && !activeVideo.paused) {
-                  activeVideo.pause();
-                }
+          // 2. More actions click handler
+          const moreBtn = item.querySelector(`#more-${deviceId}`);
+          if (moreBtn) {
+            moreBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              alert(`Device Options for ${device.name}:\n- Protocol: ${diags.protocol}\n- Signal Strength: ${device.signal}/5\n- Network: ${diags.network}`);
+            });
+          }
 
-                const res = await fetch('/api/cast/session/start', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                     contentId: id,
-                     episodeId: isTV ? currentEpisode : null,
-                     deviceType: device.type,
-                     deviceId: device.id,
-                     startTime: currentLocalTime
-                  })
-                });
-
-                if (!res.ok) throw new Error('Failed to start session');
-                const dataResponse = await res.json();
-                const sessionId = dataResponse.sessionId;
-
-                if (statusEl) {
-                  statusEl.className = 'cast-device-status connected';
-                  statusEl.textContent = 'Connected';
-                }
-
-                pushTelemetry('cast_session_started', { deviceType: device.type, deviceId: device.id, mediaId: id });
-                localStorage.setItem('piq_cast_session_id', sessionId);
-                mountGlobalCastBar(sessionId, title, data.backdrop_path || poster_path);
-
-                setTimeout(() => {
-                  picker.remove();
-                }, 500);
-
-              } catch (err) {
-                console.error('[Casting] Session start failed:', err);
-                if (statusEl) {
-                  statusEl.className = 'cast-device-status';
-                  statusEl.style.color = '#ef4444';
-                  statusEl.textContent = 'Failed';
-                }
+          // 3. Connect button click handler
+          const connectBtn = item.querySelector(`#connect-${deviceId}`);
+          if (connectBtn) {
+            connectBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const statusLbl = item.querySelector(`#status-lbl-${deviceId}`);
+              if (statusLbl) {
+                statusLbl.className = 'cast-device-status-lbl connecting';
+                statusLbl.textContent = 'Connecting...';
               }
-            }, 1500);
+              connectBtn.disabled = true;
+              connectBtn.textContent = 'Connecting';
+
+              setTimeout(async () => {
+                try {
+                  const activeVideo = document.getElementById('vp-video');
+                  const currentLocalTime = activeVideo ? activeVideo.currentTime : 0;
+                  
+                  if (activeVideo && !activeVideo.paused) {
+                    activeVideo.pause();
+                  }
+
+                  const res = await fetch('/api/cast/session/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                       contentId: id,
+                       episodeId: isTV ? currentEpisode : null,
+                       deviceType: device.type,
+                       deviceId: device.id,
+                       startTime: currentLocalTime
+                    })
+                  });
+
+                  if (!res.ok) throw new Error('Failed to start session');
+                  const dataResponse = await res.json();
+                  const sessionId = dataResponse.sessionId;
+
+                  if (statusLbl) {
+                    statusLbl.className = 'cast-device-status-lbl connected';
+                    statusLbl.textContent = 'Connected';
+                  }
+                  connectBtn.textContent = 'Connected';
+                  connectBtn.style.background = '#22c55e';
+
+                  pushTelemetry('cast_session_started', { deviceType: device.type, deviceId: device.id, mediaId: id });
+                  localStorage.setItem('piq_cast_session_id', sessionId);
+                  mountGlobalCastBar(sessionId, title, data.backdrop_path || poster_path);
+
+                  setTimeout(() => {
+                    picker.remove();
+                  }, 800);
+
+                } catch (err) {
+                  console.error('[Casting] Session start failed:', err);
+                  if (statusLbl) {
+                    statusLbl.className = 'cast-device-status-lbl';
+                    statusLbl.style.color = '#ef4444';
+                    statusLbl.textContent = 'Failed';
+                  }
+                  connectBtn.disabled = false;
+                  connectBtn.textContent = 'Connect';
+                }
+              }, 1500);
+            });
+          }
+
+          // 4. Long Press & Double Tap on the card itself to toggle diagnostics
+          let lastTap = 0;
+          let pressTimer = null;
+
+          item.addEventListener('click', (e) => {
+            // Check double tap
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 300 && tapLength > 0) {
+              e.preventDefault();
+              if (diagDetails) {
+                const isVisible = diagDetails.style.display === 'block';
+                diagDetails.style.display = isVisible ? 'none' : 'block';
+                if (infoBtn) infoBtn.classList.toggle('active', !isVisible);
+              }
+            }
+            lastTap = currentTime;
+          });
+
+          item.addEventListener('touchstart', (e) => {
+            pressTimer = setTimeout(() => {
+              if (diagDetails) {
+                const isVisible = diagDetails.style.display === 'block';
+                diagDetails.style.display = isVisible ? 'none' : 'block';
+                if (infoBtn) infoBtn.classList.toggle('active', !isVisible);
+              }
+            }, 600); // 600ms for long press
+          });
+
+          item.addEventListener('touchend', () => {
+            clearTimeout(pressTimer);
+          });
+
+          item.addEventListener('touchmove', () => {
+            clearTimeout(pressTimer);
           });
         });
       }

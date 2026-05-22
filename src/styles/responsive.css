@@ -2665,7 +2665,10 @@
 
   /* Custom controls adjustments in true landscape cinema mode */
   .mobile-player-page.landscape-mode .mobile-player-container .vp-controls {
-    padding: 16px 24px !important;
+    padding-top: max(16px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    padding-left: max(24px, env(safe-area-inset-left)) !important;
+    padding-right: max(24px, env(safe-area-inset-right)) !important;
     background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.8) 100%) !important;
   }
 
@@ -3018,6 +3021,354 @@
 
   .cast-session-btn.disconnect:active {
     background: rgba(239, 68, 68, 0.2) !important;
+  }
+
+  /* --- Premium Skeletons System --- */
+  .skeleton-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 80px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .skeleton-hero {
+    height: 42vh;
+    width: 100%;
+    position: relative;
+    background: linear-gradient(90deg, #141419 25%, #252530 50%, #141419 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 2s infinite;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 24px 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .skeleton-hero-badge {
+    width: 100px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+
+  .skeleton-hero-title {
+    width: 70%;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+
+  .skeleton-hero-meta {
+    width: 50%;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin-bottom: 16px;
+  }
+
+  .skeleton-hero-overview {
+    width: 90%;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .skeleton-hero-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .skeleton-hero-btn {
+    width: 110px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+  }
+
+  .skeleton-row-container {
+    padding: 0 16px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  /* Content visibility for offscreen layout performance */
+  .lazy-row {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 240px;
+  }
+
+  /* Video Player Skeleton */
+  .skeleton-player-wrapper {
+    height: 42vh;
+    background: #09090c;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .skeleton-player {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #09090c 25%, #181824 50%, #09090c 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 2s infinite;
+    position: relative;
+  }
+
+  .skeleton-player-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .skeleton-player-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-player-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background: var(--primary, #a855f7);
+    border-radius: 2px;
+  }
+
+  .skeleton-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .skeleton-player-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .skeleton-player-time {
+    width: 60px;
+    height: 12px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Respect prefers-reduced-motion: disable animations, fall back to simple pulsing glow */
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-hero,
+    .skeleton-player,
+    .movie-card-skeleton .skeleton-poster,
+    .movie-card-skeleton .skeleton-title {
+      animation: skeleton-pulse-glow 2s infinite ease-in-out !important;
+      background: var(--bg-secondary) !important;
+    }
+  }
+
+  @keyframes skeleton-pulse-glow {
+    0%, 100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* On-Screen Player Diagnostic Overlay (Mobile Only) */
+  #vp-diag-btn {
+    display: flex !important;
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    z-index: 1001 !important;
+    background: rgba(0,0,0,0.6) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+  }
+  
+  #vp-diag-hud {
+    position: absolute !important;
+    top: 60px !important;
+    right: 16px !important;
+    z-index: 1001 !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    border: 1px solid var(--accent, #e50914) !important;
+    color: white !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    font-family: monospace !important;
+    font-size: 11px !important;
+    width: 220px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    pointer-events: auto !important;
+    text-align: left !important;
+    line-height: 1.4 !important;
+  }
+  
+  .vp-diag-hud-title {
+    font-weight: bold !important;
+    border-bottom: 1px solid rgba(255,255,255,0.2) !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 8px !important;
+    color: var(--accent, #e50914) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  
+  .vp-diag-hud-live {
+    font-size: 9px !important;
+    background: rgba(255,255,255,0.2) !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+  }
+  
+  .vp-diag-hud-row {
+    margin-bottom: 4px !important;
+  }
+
+  /* Redesigned Cast Picker Modal (Mobile Layout overrides) */
+  .cast-picker-content {
+    width: 95% !important;
+    max-width: 360px !important;
+  }
+  
+  .cast-device-list {
+    max-height: 320px !important;
+    gap: 12px !important;
+  }
+  
+  .cast-device-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 12px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    cursor: default !important;
+    min-height: auto !important;
+    gap: 8px !important;
+  }
+  
+  .cast-device-item-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  
+  .cast-device-info-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+  
+  .cast-device-status-lbl {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--text-dim) !important;
+    margin-top: 2px !important;
+  }
+  
+  .cast-device-status-lbl.connecting {
+    color: #fbbf24 !important;
+  }
+  
+  .cast-device-status-lbl.connected {
+    color: #10b981 !important;
+  }
+  
+  .cast-signal-bars {
+    display: flex !important;
+    align-items: center !important;
+  }
+  
+  .signal-svg rect {
+    transform-origin: bottom;
+    transition: fill 0.3s ease;
+  }
+  
+  .cast-device-item-actions {
+    display: flex !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+    width: 100% !important;
+  }
+  
+  .cast-act-btn {
+    flex: 1 !important;
+    min-height: 44px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .cast-act-btn:active {
+    background: rgba(255, 255, 255, 0.16) !important;
+    transform: scale(0.98) !important;
+  }
+  
+  .cast-act-btn.connect-btn {
+    flex: 2 !important;
+    background: var(--accent, #e50914) !important;
+    border: none !important;
+  }
+  
+  .cast-act-btn.connect-btn:active {
+    background: #b91c1c !important;
+  }
+  
+  .cast-act-btn.info-btn svg, .cast-act-btn.more-btn svg {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  .cast-act-btn.info-btn.active {
+    background: rgba(168, 85, 247, 0.2) !important;
+    border-color: rgba(168, 85, 247, 0.4) !important;
   }
 }
 

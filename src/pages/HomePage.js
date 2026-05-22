@@ -6,10 +6,32 @@ import { createFooter } from '../components/Footer.js';
 import { getWatchHistory, removeFromHistory as removeProgress } from '../services/auth.js';
 
 export async function renderHomePage({ container }) {
-  // Show base skeleton for hero
-  container.innerHTML = `
-    <div style="height:600px;background:var(--bg-secondary);animation:shimmer 2s infinite;background-size:200% 100%;background-image:linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);"></div>
-  `;
+  if (window.innerWidth <= 767) {
+    container.innerHTML = `
+      <div class="skeleton-page">
+        <div class="skeleton-hero">
+          <div class="skeleton-hero-badge"></div>
+          <div class="skeleton-hero-title"></div>
+          <div class="skeleton-hero-meta"></div>
+          <div class="skeleton-hero-overview"></div>
+          <div class="skeleton-hero-actions">
+            <div class="skeleton-hero-btn"></div>
+            <div class="skeleton-hero-btn"></div>
+          </div>
+        </div>
+        <div class="skeleton-row-container">
+          ${createSkeletonRow('Latest from Netflix', '', 'portrait')}
+          ${createSkeletonRow('Latest from Prime Video', '', 'portrait')}
+          ${createSkeletonRow('Trending Movies', '', 'landscape')}
+        </div>
+      </div>
+    `;
+  } else {
+    // Show base skeleton for hero
+    container.innerHTML = `
+      <div style="height:600px;background:var(--bg-secondary);animation:shimmer 2s infinite;background-size:200% 100%;background-image:linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);"></div>
+    `;
+  }
 
   try {
     const [homeData, netflixData, primeData, top10MoviesData, top10SeriesData] = await Promise.all([

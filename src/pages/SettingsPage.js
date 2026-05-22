@@ -7,6 +7,7 @@ import { navigate } from '../services/router.js';
 import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig } from '../services/firebase.js';
 import { createFooter } from '../components/Footer.js';
 import { refreshSidebarNav } from '../components/Sidebar.js';
+import { DownloadManager } from '../services/download.js';
 
 export async function renderSettingsPage({ container }) {
   const user = await waitAuthReady();
@@ -32,9 +33,12 @@ export async function renderSettingsPage({ container }) {
 
   container.innerHTML = `<div class="user-page" style="display:flex;align-items:center;justify-content:center;min-height:60vh"><div class="load-more-spinner" style="width:40px;height:40px"></div></div>`;
 
-  const [prefs, globalConfig] = await Promise.all([
+  const [prefs, globalConfig, dlSettings, dlList, dlStorage] = await Promise.all([
     getSettings(user.uid).catch(() => ({ language: 'all', autoplay: true, quality: 'auto', safeSearch: true })),
-    getGlobalConfig()
+    getGlobalConfig(),
+    DownloadManager.getSettings(),
+    DownloadManager.list(),
+    DownloadManager.getStorageEstimate()
   ]);
 
   const isAdmin = user.email === 'suyogmahagaonkar183@gmail.com';
@@ -305,6 +309,78 @@ export async function renderSettingsPage({ container }) {
             </div>
           </div>
           ` : ''}
+          
+          <!-- Accordion: Download Manager -->
+          <div class="mobile-settings-accordion download-manager-accordion">
+            <button class="mobile-settings-accordion-header">
+              <div class="header-left">
+                <i data-lucide="download"></i>
+                <span>Download Manager</span>
+              </div>
+              <i data-lucide="chevron-down" class="accordion-chevron"></i>
+            </button>
+            <div class="mobile-settings-accordion-content">
+              <div class="accordion-inner-panel">
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Wi-Fi Only</div>
+                    <div class="settings-row-desc">Only download segments when connected to Wi-Fi</div>
+                  </div>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-download-wifi" ${dlSettings.wifiOnly ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <div class="settings-row-title">Download Quality</div>
+                    <div class="settings-row-desc">Preferred download quality preset</div>
+                  </div>
+                  <select class="settings-select" id="pref-download-quality">
+                    <option value="standard" ${dlSettings.quality === 'standard' ? 'selected' : ''}>Standard (480p)</option>
+                    <option value="high" ${dlSettings.quality === 'high' ? 'selected' : ''}>High (1080p)</option>
+                  </select>
+                </div>
+
+                <!-- Storage Info -->
+                <div class="settings-storage-section" style="margin-top:16px; margin-bottom:16px; text-align:left;">
+                  <div class="storage-labels" style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-bottom:6px;">
+                    <span>Storage Space</span>
+                    <span id="storage-summary-text">Calculating...</span>
+                  </div>
+                  <!-- Segmented progress bar -->
+                  <div class="storage-bar" style="display:flex; height:8px; border-radius:4px; overflow:hidden; background:rgba(255,255,255,0.08); margin-bottom:8px;">
+                    <div id="storage-bar-player" style="background:var(--accent); width:0%; transition:width 0.3s;"></div>
+                    <div id="storage-bar-other" style="background:#555; width:0%; transition:width 0.3s;"></div>
+                    <div id="storage-bar-free" style="background:#22c55e; width:0%; transition:width 0.3s;"></div>
+                  </div>
+                  <div class="storage-legend" style="display:flex; gap:12px; font-size:11px; color:var(--text-muted);">
+                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span> PlayerIQ</div>
+                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#555;"></span> Other Apps</div>
+                    <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span> Free</div>
+                  </div>
+                </div>
+
+                <!-- Low Storage space alert if < 1GB -->
+                <div id="low-storage-alert" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:12px; margin-bottom:16px; align-items:center; gap:10px; color:#f87171; font-size:12px; text-align:left;">
+                  <i data-lucide="alert-triangle" style="flex-shrink:0;"></i>
+                  <div>
+                    <strong style="display:block; font-weight:700; margin-bottom:2px;">Low Storage Space!</strong>
+                    Available storage space is below 1 GB. Offline downloads may fail.
+                  </div>
+                </div>
+
+                <!-- Downloaded Titles -->
+                <div class="settings-downloads-list-section" style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.08); padding-top:16px;">
+                  <div class="settings-row-title" style="margin-bottom:8px; text-align:left; font-size:14px; font-weight:600;">Offline Titles</div>
+                  <div id="settings-offline-list" style="display:flex; flex-direction:column; gap:10px;">
+                    <!-- Filled dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Accordion: Storage & Data -->
           <div class="mobile-settings-accordion">
@@ -1297,9 +1373,133 @@ export async function renderSettingsPage({ container }) {
         if (!isOpen) accordion.classList.add('open');
       });
     });
+
     container.querySelector('#mobile-downloads-card')?.addEventListener('click', () => {
-      alert("Offline Cache Active\n\nPlayerIQ caches recently played movies, shows, and your watchlist items automatically. Tapping play on any cached item starts the stream even when offline!");
+      const dmAcc = container.querySelector('.download-manager-accordion');
+      if (dmAcc) {
+        container.querySelectorAll('.mobile-settings-accordion').forEach(acc => acc.classList.remove('open'));
+        dmAcc.classList.add('open');
+        dmAcc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     });
+
+    // Wire Download Manager Toggles
+    const wifiToggle = container.querySelector('#pref-download-wifi');
+    wifiToggle?.addEventListener('change', async () => {
+      await DownloadManager.setSetting('wifiOnly', wifiToggle.checked);
+      showToast('✓ Download preferences updated');
+    });
+
+    const qualitySelect = container.querySelector('#pref-download-quality');
+    qualitySelect?.addEventListener('change', async () => {
+      await DownloadManager.setSetting('quality', qualitySelect.value);
+      showToast('✓ Download preferences updated');
+    });
+
+    // Update Storage & Downloads Dashboard
+    const updateDownloadDashboard = async () => {
+      const storageText = container.querySelector('#storage-summary-text');
+      const barPlayer = container.querySelector('#storage-bar-player');
+      const barOther = container.querySelector('#storage-bar-other');
+      const barFree = container.querySelector('#storage-bar-free');
+      const lowStorageAlert = container.querySelector('#low-storage-alert');
+      const listContainer = container.querySelector('#settings-offline-list');
+
+      if (!listContainer) return;
+
+      // Storage Estimate
+      const est = await DownloadManager.getStorageEstimate();
+      const formatGB = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(1);
+      
+      if (storageText) {
+        storageText.textContent = `${formatGB(est.freeSpace)} GB free of ${formatGB(est.totalDisk)} GB`;
+      }
+
+      const playerPct = (est.usage / est.totalDisk) * 100;
+      const otherPct = (est.otherApps / est.totalDisk) * 100;
+      const freePct = (est.freeSpace / est.totalDisk) * 100;
+
+      if (barPlayer) barPlayer.style.width = `${playerPct}%`;
+      if (barOther) barOther.style.width = `${otherPct}%`;
+      if (barFree) barFree.style.width = `${freePct}%`;
+
+      // Low storage alert: freeSpace < 1 GB (1,073,741,824 bytes)
+      if (lowStorageAlert) {
+        if (est.freeSpace < 1024 * 1024 * 1024) {
+          lowStorageAlert.style.display = 'flex';
+        } else {
+          lowStorageAlert.style.display = 'none';
+        }
+      }
+
+      // List downloads
+      const list = await DownloadManager.list();
+      if (list.length === 0) {
+        listContainer.innerHTML = `
+          <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">
+            No offline downloads found.
+          </div>`;
+      } else {
+        listContainer.innerHTML = list.map(item => {
+          const isCompleted = item.status === 'COMPLETED';
+          const progressText = isCompleted 
+            ? `${(item.totalSize / (1024 * 1024)).toFixed(1)} MB` 
+            : `Downloading (${item.progress}%)`;
+          
+          return `
+            <div class="offline-item" style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:8px 12px;">
+              <img src="${item.posterPath || 'https://via.placeholder.com/60x90'}" alt="${item.title}" style="width:40px; height:60px; border-radius:6px; object-fit:cover; background:#111;" />
+              <div style="flex:1; text-align:left;">
+                <div style="font-weight:600; font-size:13px; color:#fff; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;">${item.title}</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${item.type === 'movie' ? 'Movie' : 'TV Episode'} • ${progressText}</div>
+              </div>
+              <button class="delete-download-btn" data-id="${item.id}" aria-label="Delete offline title" style="background:transparent; border:none; color:#ef4444; padding:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                <i data-lucide="trash-2" style="width:18px; height:18px;"></i>
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        // Bind delete actions
+        listContainer.querySelectorAll('.delete-download-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const title = list.find(x => x.id === id)?.title || 'Title';
+            if (confirm(`Remove "${title}" from offline downloads?`)) {
+              await DownloadManager.remove(id);
+              showToast('✓ Removed from downloads');
+              await updateDownloadDashboard();
+            }
+          });
+        });
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    // Update once initially
+    await updateDownloadDashboard();
+
+    // Reactive event listener for live progress
+    const downloadProgressListener = async (e) => {
+      await updateDownloadDashboard();
+    };
+    window.addEventListener('download-progress', downloadProgressListener);
+    window.addEventListener('download-status-change', downloadProgressListener);
+
+    // Observer to unbind on page navigation
+    const listContainer = container.querySelector('#settings-offline-list');
+    if (listContainer) {
+      const observer = new MutationObserver((mutations, obs) => {
+        if (!document.body.contains(listContainer)) {
+          window.removeEventListener('download-progress', downloadProgressListener);
+          window.removeEventListener('download-status-change', downloadProgressListener);
+          obs.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
   }
 
   if (window.lucide) window.lucide.createIcons();

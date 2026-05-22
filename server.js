@@ -922,6 +922,51 @@ app.get('/api/cast/session/status', (req, res) => {
   res.json(session);
 });
 
+// ---- Download & Offline DRM License Endpoints ----
+app.get('/api/player/manifest', (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'Missing content ID' });
+  
+  res.json({
+    id,
+    title: 'ABR Adaptive Manifest',
+    type: 'application/x-mpegURL',
+    profiles: [
+      { quality: 'low', resolution: '480p', bitrate: 800000, url: `/api/stream/mock/${id}/480p/index.m3u8` },
+      { quality: 'standard', resolution: '720p', bitrate: 1800000, url: `/api/stream/mock/${id}/720p/index.m3u8` },
+      { quality: 'high', resolution: '1080p', bitrate: 4500000, url: `/api/stream/mock/${id}/1080p/index.m3u8` }
+    ],
+    drm: {
+      type: 'widevine-simulated',
+      licenseUrl: `/api/download/auth?id=${id}`
+    }
+  });
+});
+
+app.post('/api/download/auth', (req, res) => {
+  const { id, type } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing content id' });
+  
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  const token = Buffer.from(JSON.stringify({ id, type, expiresAt })).toString('base64').replace(/=/g, '');
+  
+  console.log(`[License API] Issued offline DRM license token for ${id}, expires in 7 days`);
+  res.json({
+    success: true,
+    token: `piq_lic_${token}`,
+    expiresAt
+  });
+});
+
+app.post('/api/download/revoke', (req, res) => {
+  const { id, token } = req.body;
+  console.log(`[License API] Revoking offline DRM license for content ${id}, token: ${token}`);
+  res.json({
+    success: true,
+    message: `License revoked successfully for id: ${id}`
+  });
+});
+
 // ---- Start server ----
 app.listen(PORT, () => {
   console.log(`\n  ⚡ PlayerIQ Proxy Server running at http://localhost:${PORT}`);
