@@ -97,46 +97,9 @@ export async function renderSettingsPage({ container }) {
         <!-- Premium List Sections -->
         <div class="mobile-settings-sections">
           
-          <!-- Section 1: Aesthetics & Layout -->
+          <!-- Section 1: General Settings -->
           <div class="mobile-settings-section-card">
-            <h3 class="section-card-title">Aesthetics & Personalization</h3>
-            
-            <!-- Row: Accent Theme -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="palette"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Accent Color</div>
-                  <div class="row-desc">Personalize app branding</div>
-                </div>
-              </div>
-              <div class="row-right">
-                <div class="settings-theme-selector" style="display:flex;gap:10px">
-                  <button class="theme-badge ${prefs.themeColor === 'purple' ? 'active' : ''}" data-color="purple" style="background:#a855f7;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Purple"></button>
-                  <button class="theme-badge ${prefs.themeColor === 'red' || !prefs.themeColor ? 'active' : ''}" data-color="red" style="background:#e50914;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Red"></button>
-                  <button class="theme-badge ${prefs.themeColor === 'blue' ? 'active' : ''}" data-color="blue" style="background:#0084ff;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Blue"></button>
-                  <button class="theme-badge ${prefs.themeColor === 'green' ? 'active' : ''}" data-color="green" style="background:#00c853;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Green"></button>
-                  <button class="theme-badge ${prefs.themeColor === 'gold' ? 'active' : ''}" data-color="gold" style="background:#e5a900;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Gold"></button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Row: OLED Pure Black -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="moon"></i></div>
-                <div class="row-text">
-                  <div class="row-title">OLED Pure Black</div>
-                  <div class="row-desc">Optimize for high-contrast dark theme</div>
-                </div>
-              </div>
-              <div class="row-right">
-                <label class="settings-toggle">
-                  <input type="checkbox" id="pref-oled" ${prefs.themeDark ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
-              </div>
-            </div>
+            <h3 class="section-card-title">General Settings</h3>
 
             <!-- Row: Content Language -->
             <div class="mobile-settings-row select-row">
@@ -529,8 +492,8 @@ export async function renderSettingsPage({ container }) {
             <!-- Left: Tab navigation sidebar -->
             <div class="settings-nav-sidebar">
               <button class="settings-nav-btn active" data-tab="general">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span>Profile & Themes</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Profile & Language</span>
               </button>
               <button class="settings-nav-btn" data-tab="playback">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
@@ -595,36 +558,6 @@ export async function renderSettingsPage({ container }) {
                       <div class="settings-profile-email" style="font-size:12px;color:var(--text-muted);margin-top:2px;">${user.email ?? ''}</div>
                     </div>
                     <span class="settings-profile-badge">Google</span>
-                  </div>
-                </div>
-
-                <!-- Color Themes & Mode -->
-                <div class="settings-section">
-                  <div class="settings-section-title">Aesthetics & Layout</div>
-                  
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Accent Theme</div>
-                      <div class="settings-row-desc">Personalize PlayerIQ with your favorite brand colors</div>
-                    </div>
-                    <div class="settings-theme-selector" style="display:flex;gap:16px;margin-top:8px">
-                      <button class="theme-badge ${prefs.themeColor === 'purple' ? 'active' : ''}" data-color="purple" style="background:#a855f7;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Purple"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'red' || !prefs.themeColor ? 'active' : ''}" data-color="red" style="background:#e50914;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Red"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'blue' ? 'active' : ''}" data-color="blue" style="background:#0084ff;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Blue"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'green' ? 'active' : ''}" data-color="green" style="background:#00c853;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Green"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'gold' ? 'active' : ''}" data-color="gold" style="background:#e5a900;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Gold"></button>
-                    </div>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">OLED Pure Black Mode</div>
-                      <div class="settings-row-desc">Optimize for high-contrast viewing on OLED and mobile screens</div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-oled" ${prefs.themeDark ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
                   </div>
                 </div>
 

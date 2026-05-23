@@ -1602,7 +1602,7 @@
     flex-direction: column;
     padding: calc(var(--navbar-height) + 16px) 16px 24px 16px !important;
     gap: 24px; /* Increased padding / spacing between sections */
-    background: linear-gradient(180deg, #0e0f19 0%, #06070a 100%); /* Elegant charcoal-navy gradient */
+    background: #000000; /* OLED pure black background */
     min-height: 100vh;
     box-sizing: border-box;
   }

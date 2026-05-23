@@ -4,29 +4,29 @@
 
 :root {
   /* ---- Colors ---- */
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #10101a;
-  --bg-tertiary: #16162a;
-  --bg-card: #1a1a2e;
-  --bg-card-hover: #222240;
-  --bg-surface: #1e1e36;
-  --bg-overlay: rgba(10, 10, 15, 0.85);
+  --bg-primary: #000000;      /* OLED Pure Black Background */
+  --bg-secondary: #000000;    /* OLED Pure Black Background */
+  --bg-tertiary: #0a0a0a;
+  --bg-card: #0d0d0d;
+  --bg-card-hover: #121212;
+  --bg-surface: #101010;
+  --bg-overlay: rgba(0, 0, 0, 0.95);
 
-  --accent: #e50914;
-  --accent-hover: #ff2a2a;
-  --accent-glow: rgba(229, 9, 20, 0.35);
-  --accent-soft: rgba(229, 9, 20, 0.12);
+  --accent: #a855f7;          /* Purple as Main Color */
+  --accent-hover: #c084fc;
+  --accent-glow: rgba(168, 85, 247, 0.35);
+  --accent-soft: rgba(168, 85, 247, 0.12);
 
-  --secondary: #6c5ce7;
-  --secondary-hover: #8577ed;
+  --secondary: #e8e8ed;       /* E8E8ED as Secondary Color */
+  --secondary-hover: #ffffff;
 
   --text-primary: #e8e8ed;
   --text-secondary: #b8b8cc;
   --text-muted: #6b6b82;
   --text-dim: #4a4a5e;
 
-  --border-color: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.12);
+  --border-color: rgba(255, 255, 255, 0.04);
+  --border-hover: rgba(255, 255, 255, 0.08);
 
   --success: #00c853;
   --warning: #ffc107;
@@ -39,12 +39,12 @@
   --rating-low: #db2360;
 
   /* ---- Gradients ---- */
-  --gradient-hero: linear-gradient(to right, rgba(10, 10, 15, 0.98) 0%, rgba(10, 10, 15, 0.7) 40%, transparent 70%);
+  --gradient-hero: linear-gradient(to right, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.7) 40%, transparent 70%);
   --gradient-hero-bottom: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
-  --gradient-card: linear-gradient(180deg, transparent 30%, rgba(10, 10, 15, 0.95) 100%);
-  --gradient-sidebar: linear-gradient(180deg, rgba(16, 16, 26, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
-  --gradient-accent: linear-gradient(135deg, #e50914 0%, #b20710 100%);
-  --gradient-purple: linear-gradient(135deg, #6c5ce7 0%, #a855f7 100%);
+  --gradient-card: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, 0.95) 100%);
+  --gradient-sidebar: linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+  --gradient-accent: linear-gradient(135deg, #a855f7 0%, #701a75 100%);
+  --gradient-purple: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
 
   /* ---- Spacing (4px base) ---- */
   --space-2xs: 4px;

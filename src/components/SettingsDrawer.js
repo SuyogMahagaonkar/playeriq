@@ -131,35 +131,6 @@ export async function openSettingsDrawer() {
         </div>
 
         <div class="settings-section">
-          <div class="settings-section-title">Aesthetics</div>
-          
-          <div class="settings-row">
-            <div class="settings-row-label">
-              <div class="settings-row-title">Accent Theme</div>
-              <div class="settings-row-desc">Personalize app accent colors</div>
-            </div>
-            <div class="settings-theme-selector" style="display:flex;gap:12px;margin-top:8px">
-              <button class="theme-badge ${prefs.themeColor === 'purple' ? 'active' : ''}" data-color="purple" style="background:#a855f7;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Purple"></button>
-              <button class="theme-badge ${prefs.themeColor === 'red' || !prefs.themeColor ? 'active' : ''}" data-color="red" style="background:#e50914;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Red"></button>
-              <button class="theme-badge ${prefs.themeColor === 'blue' ? 'active' : ''}" data-color="blue" style="background:#0084ff;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Blue"></button>
-              <button class="theme-badge ${prefs.themeColor === 'green' ? 'active' : ''}" data-color="green" style="background:#00c853;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Green"></button>
-              <button class="theme-badge ${prefs.themeColor === 'gold' ? 'active' : ''}" data-color="gold" style="background:#e5a900;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.2s" title="Gold"></button>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-row-label">
-              <div class="settings-row-title">Pure Black Mode</div>
-              <div class="settings-row-desc">Optimize for high-contrast OLED views</div>
-            </div>
-            <label class="settings-toggle">
-              <input type="checkbox" id="drawer-pref-oled" ${prefs.themeDark ? 'checked' : ''} />
-              <span class="settings-toggle-track"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="settings-section">
           <div class="settings-section-title">Language</div>
           <div class="settings-row">
             <div class="settings-row-label">

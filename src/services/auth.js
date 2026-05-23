@@ -190,10 +190,8 @@ export async function removeFromHistory(mediaId) {
  * Apply the current global HSL accent colors and dark mode theme.
  */
 export function applyGlobalTheme() {
-  const color = localStorage.getItem('piq_theme_color') || 'red';
-  const dark = localStorage.getItem('piq_theme_dark') || 'default';
-  document.documentElement.setAttribute('data-theme-color', color);
-  document.documentElement.setAttribute('data-theme-dark', dark);
+  document.documentElement.setAttribute('data-theme-color', 'purple');
+  document.documentElement.setAttribute('data-theme-dark', 'oled');
 }
 
 export async function exportLibrary() {
