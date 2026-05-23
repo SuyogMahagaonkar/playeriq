@@ -499,23 +499,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       hls.attachMedia(video);
       video._hls = hls; // Store on video element for reuse!
 
-      // Low-Bandwidth buffer stall warning
-      let bufferWarningCount = 0;
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-          bufferWarningCount++;
-          if (bufferWarningCount >= 2) {
-            bufferWarningCount = 0;
-            showPlayerHUD(`<span style="color:#fbbf24">Network slow - playing lower quality</span>`);
-            if (hls.currentLevel > 0) {
-              hls.currentLevel = hls.currentLevel - 1;
-              if (qualitySelect) {
-                qualitySelect.value = hls.currentLevel;
-              }
-            }
-          }
-        }
-      });
+      // Automatic quality downgrade logic removed to prevent forceful downgrades and stream reloading/restarting.
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         // Populate quality selector
@@ -771,23 +755,8 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   video.addEventListener('pause', updatePlayIcon);
   video.addEventListener('timeupdate', updateTime);
   video.addEventListener('progress', updateBuffer);
-  let nonHlsStallCount = 0;
   video.addEventListener('waiting', () => {
     loader.style.display = 'flex';
-    if (!hls) {
-      nonHlsStallCount++;
-      if (nonHlsStallCount >= 2) {
-        nonHlsStallCount = 0;
-        showPlayerHUD(`<span style="color:#fbbf24">Network slow - playing lower quality</span>`);
-        if (qualitySelect && qualitySelect.options.length > 1) {
-          const nextIdx = Math.min(qualitySelect.options.length - 1, qualitySelect.selectedIndex + 1);
-          if (nextIdx !== qualitySelect.selectedIndex) {
-            qualitySelect.selectedIndex = nextIdx;
-            qualitySelect.dispatchEvent(new Event('change'));
-          }
-        }
-      }
-    }
   });
   video.addEventListener('canplay', () => {
     loader.style.display = 'none';
