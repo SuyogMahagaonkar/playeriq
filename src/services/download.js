@@ -181,15 +181,23 @@ export const DownloadManager = {
     let progressListener = null;
     try {
       progressListener = await FileTransfer.addListener('progress', (progress) => {
-        if (progress.contentLength > 0) {
-          const pct = Math.min(98, Math.round((progress.bytes / progress.contentLength) * 100));
-          const cur = getDownloadsData();
-          if (cur[id] && cur[id].status === 'DOWNLOADING') {
-            cur[id].progress = pct;
-            cur[id].totalSize = progress.contentLength;
-            saveDownloadsData(cur);
-            dispatchProgress(id, pct);
-          }
+        const bytes = Number(progress.bytes) || 0;
+        let total = Number(progress.contentLength) || 0;
+
+        // Fallback if contentLength is missing or invalid
+        if (total <= 0) {
+          const isTv = id.startsWith('tv_');
+          // Standard estimate: 80MB for TV, 300MB for Movie
+          total = isTv ? 80 * 1024 * 1024 : 300 * 1024 * 1024;
+        }
+
+        const pct = Math.min(98, Math.round((bytes / total) * 100));
+        const cur = getDownloadsData();
+        if (cur[id] && cur[id].status === 'DOWNLOADING') {
+          cur[id].progress = pct;
+          cur[id].totalSize = total;
+          saveDownloadsData(cur);
+          dispatchProgress(id, pct);
         }
       });
     } catch (err) {
@@ -197,10 +205,11 @@ export const DownloadManager = {
     }
 
     try {
-      // Start download
+      // Start download using official relative path + directory options
       await FileTransfer.downloadFile({
         url: url,
-        path: targetPath,
+        path: fileName,
+        directory: Directory.Data,
         progress: true
       });
 
