@@ -809,8 +809,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         }, { once: true });
       };
 
-      // Expose seekOffset getter for updateTime/updateBuffer
+      // Expose seekOffset getter and setter for updateTime/updateBuffer
       window._playerGetSeekOffset = () => seekOffset;
+      window._playerSetSeekOffset = (val) => { seekOffset = val; };
 
       const triedUrls = new Set([streamData.url]);
       video.addEventListener('error', (e) => {
@@ -1267,7 +1268,8 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       const newRawUrl = selectedOpt.dataset.url;
       if (!newRawUrl) return;
 
-      const resumeTime = Math.floor(video.currentTime);
+      const offset = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
+      const resumeTime = Math.floor(video.currentTime + offset);
       const wasPlaying = !video.paused;
       const savedDuration = knownDuration;
 
@@ -1283,12 +1285,21 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         ? `${currentBaseUrl}&start=${resumeTime}`
         : newRawUrl;
 
+      // Update seekOffset setter for transcoded streams
+      if (isTranscoded && window._playerSetSeekOffset) {
+        window._playerSetSeekOffset(resumeTime);
+      }
+
       video.src = switchUrl;
 
       video.addEventListener('loadedmetadata', () => {
         if (savedDuration) knownDuration = savedDuration;
+        if (!isTranscoded && resumeTime > 0) {
+          video.currentTime = resumeTime;
+        }
         seekLocked = false;
         loader.style.display = 'none';
+        updateTime();
         if (wasPlaying) video.play();
       }, { once: true });
     }
