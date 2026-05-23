@@ -665,16 +665,30 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
 
   // ---- Controls Logic ----
   // ---- Mobile auto-fullscreen helper ----
+  let hasRequestedFullscreen = false;
   function requestMobileFullscreen() {
-    if (!isMobile()) return;
+    if (!isMobile() || hasRequestedFullscreen) return;
     const fsTarget = player; // fullscreen the vp-player element
     if (!document.fullscreenElement) {
-      (fsTarget.requestFullscreen?.() ||
-       fsTarget.webkitRequestFullscreen?.() ||
-       fsTarget.mozRequestFullScreen?.() ||
-       fsTarget.msRequestFullscreen?.())
-      ?.catch(() => {}); // silently ignore if denied
+      const p = fsTarget.requestFullscreen?.() || 
+                fsTarget.webkitRequestFullscreen?.() || 
+                fsTarget.mozRequestFullScreen?.() || 
+                fsTarget.msRequestFullscreen?.();
+      if (p && p.catch) {
+        p.then(() => { hasRequestedFullscreen = true; }).catch(() => {
+          hasRequestedFullscreen = false; // try again on next tap if denied
+        });
+      }
+    } else {
+      hasRequestedFullscreen = true;
     }
+  }
+
+  // Browsers block fullscreen if the video started via async autoplay.
+  // We bind it to the very first touch/click on the player to guarantee it fires inside a user gesture.
+  if (isMobile()) {
+    player.addEventListener('touchstart', requestMobileFullscreen);
+    player.addEventListener('click', requestMobileFullscreen);
   }
 
   // Screen Wake Lock — prevent screen sleep during playback
