@@ -112,34 +112,35 @@ export function renderDownloadsPage(ctx) {
       `;
     }).join('');
 
-    // Wire play buttons
+    // Wire play buttons — actually play the saved local file
     listArea.querySelectorAll('.btn-play-dl').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
         const item = items.find(x => x.id === id);
         if (!item) return;
-        if (id.startsWith('movie_')) {
-          window.location.hash = `#/movie/${id.replace('movie_', '')}`;
-        } else if (id.startsWith('tv_')) {
-          const match = id.match(/^tv_(.+)_s(\d+)_e(\d+)$/);
-          if (match) window.location.hash = `#/tv/${match[1]}`;
+
+        // Get the native file URI for playback
+        const localUrl = await DownloadManager.getOfflineUrl(id);
+        if (!localUrl) {
+          alert('Could not find the downloaded file. Please re-download.');
+          return;
         }
+
+        // Open fullscreen offline video player overlay
+        playOfflineVideo(localUrl, item.title);
       });
     });
 
-    // Wire card clicks
+    // Wire card clicks — play the offline file
     listArea.querySelectorAll('.dl-card').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', async () => {
         const id = card.dataset.id;
         const item = items.find(x => x.id === id);
         if (!item || item.status !== 'COMPLETED') return;
-        if (id.startsWith('movie_')) {
-          window.location.hash = `#/movie/${id.replace('movie_', '')}`;
-        } else if (id.startsWith('tv_')) {
-          const match = id.match(/^tv_(.+)_s(\d+)_e(\d+)$/);
-          if (match) window.location.hash = `#/tv/${match[1]}`;
-        }
+        const localUrl = await DownloadManager.getOfflineUrl(id);
+        if (!localUrl) { alert('File not found. Please re-download.'); return; }
+        playOfflineVideo(localUrl, item.title);
       });
     });
 
@@ -192,4 +193,56 @@ export function renderDownloadsPage(ctx) {
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// ---- Fullscreen Offline Video Player ----
+function playOfflineVideo(src, title) {
+  document.getElementById('offline-player-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'offline-player-overlay';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #000; z-index: 99999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  `;
+
+  overlay.innerHTML = `
+    <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:16px;background:linear-gradient(to bottom,rgba(0,0,0,0.85),transparent);z-index:2;">
+      <button id="offline-close-btn" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      <div style="color:#fff;font-weight:700;font-size:0.95rem;flex:1;text-align:center;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title} · Downloaded</div>
+      <div style="width:40px;"></div>
+    </div>
+    <video
+      id="offline-video"
+      src="${src}"
+      controls
+      autoplay
+      playsinline
+      style="width:100%;height:100%;object-fit:contain;background:#000;"
+    ></video>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Try to lock landscape for immersive playback
+  if (screen.orientation?.lock) {
+    screen.orientation.lock('landscape').catch(() => {});
+  }
+
+  const close = () => {
+    overlay.remove();
+    screen.orientation?.unlock?.();
+  };
+
+  overlay.querySelector('#offline-close-btn').addEventListener('click', close);
+  overlay.querySelector('#offline-video').addEventListener('ended', close);
+
+  // Close on browser back / hash change
+  const onHash = () => {
+    if (document.getElementById('offline-player-overlay')) close();
+    window.removeEventListener('hashchange', onHash);
+  };
+  window.addEventListener('hashchange', onHash);
 }
