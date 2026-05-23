@@ -16,10 +16,10 @@ function trackTelemetryEvent(eventName, eventData = {}) {
 
 function checkAndCollapseHeader() {
   if (window.innerWidth <= 767) {
-    /* const avatar = document.getElementById('navbar-avatar');
+    const avatar = document.getElementById('navbar-avatar');
     if (avatar) {
       avatar.remove();
-    } */
+    }
   }
 }
 
