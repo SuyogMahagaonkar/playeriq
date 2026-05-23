@@ -8,10 +8,10 @@ import Hls from 'hls.js';
  * Renders a custom HTML5 video player with full controls
  * @param {HTMLElement} container - The wrapper element
  * @param {Object} streamData - { url, type, subtitles, provider }
- * @param {Function} [onProgress] - Callback (currentTime, duration)
+ * @param {Object} options - { onProgress, onFatalError, onEnded, startTime, existingVideo }
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, onProgress = null, onFatalError = null, onEnded = null, startTime = 0, existingVideo = null) {
+export function createVideoPlayer(container, streamData, { onProgress = null, onFatalError = null, onEnded = null, startTime = 0, existingVideo = null } = {}) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
@@ -668,7 +668,7 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   function remoteLog(msg, level = 'info') {
     try {
       // Send log back to our PM2 backend
-      const proxyUrl = window.NODE_PROXY || '';
+      const proxyUrl = streamData.url ? new URL(streamData.url).origin : '';
       fetch(`${proxyUrl}/api/client-log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
