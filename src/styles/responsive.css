@@ -4033,10 +4033,10 @@
     stroke-width: 2.2 !important;
   }
 
-  /* 4. Left-aligned Vertical Brightness Slider (Netflix brightness bar) */
+  /* 4. Left-aligned Vertical Brightness Slider — hidden by default, visible on left swipe */
   .mobile-player-container .vp-brightness-slider-group {
     position: absolute !important;
-    left: max(20px, env(safe-area-inset-left)) !important;
+    left: max(28px, env(safe-area-inset-left)) !important; /* slightly inward from edge */
     top: 50% !important;
     transform: translateY(-50%) !important;
     display: flex !important;
@@ -4044,8 +4044,16 @@
     align-items: center !important;
     gap: 12px !important;
     z-index: 105 !important;
-    pointer-events: auto !important;
+    pointer-events: none !important; /* default: no interaction */
     width: 36px !important;
+    opacity: 0 !important; /* hidden by default */
+    transition: opacity 0.3s ease !important;
+  }
+
+  /* Shown only when left swipe gesture is active */
+  .mobile-player-container .vp-brightness-slider-group.vp-brightness-active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   .mobile-player-container .vp-brightness-icon {
@@ -4085,10 +4093,72 @@
     z-index: 10 !important;
     margin: 0 !important;
     padding: 0 !important;
-    -webkit-appearance: slider-vertical !important; /* Makes it drag vertically on native engines */
+    -webkit-appearance: slider-vertical !important;
   }
 
-  /* 5. Center controls group (Play/Pause, Skip Back, Skip Forward 10s) */
+  /* 4b. Right-aligned Vertical Volume Slider — mirror of brightness */
+  .mobile-player-container .vp-volume-slider-group {
+    position: absolute !important;
+    right: max(28px, env(safe-area-inset-right)) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    z-index: 105 !important;
+    pointer-events: none !important;
+    width: 36px !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+  }
+
+  .mobile-player-container .vp-volume-slider-group.vp-volume-active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .mobile-player-container .vp-volume-slider-icon {
+    width: 22px !important;
+    height: 22px !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important;
+  }
+
+  .mobile-player-container .vp-volume-slider-track {
+    position: relative !important;
+    width: 6px !important;
+    height: 130px !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-radius: 3px !important;
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    overflow: visible !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+  }
+
+  .mobile-player-container .vp-volume-slider-fill {
+    width: 100% !important;
+    background: #ffffff !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 8px rgba(255,255,255,0.8) !important;
+  }
+
+  .mobile-player-container .vp-volume-slider-input {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-appearance: slider-vertical !important;
+  }
+
+  /* 5. Center controls group (Play/Pause — frosted glass translucent button) */
   .mobile-player-container #vp-play-btn {
     position: absolute !important;
     top: 50% !important;
@@ -4096,15 +4166,17 @@
     transform: translate(-50%, -50%) !important;
     width: 68px !important;
     height: 68px !important;
-    background: rgba(0, 0, 0, 0.55) !important;
-    border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+    background: rgba(0, 0, 0, 0.35) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     z-index: 100 !important;
     pointer-events: auto !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
   }
 
   .mobile-player-container #vp-play-btn svg {
@@ -4162,13 +4234,37 @@
   /* 6. Netflix-style Bottom Progress Bar & Time Layout */
   .mobile-player-container .vp-progress-wrap {
     position: absolute !important;
-    left: max(20px, env(safe-area-inset-left)) !important;
-    right: calc(max(20px, env(safe-area-inset-right)) + 80px) !important; /* spacing for time text on right */
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 96px) !important; /* above bottom options row + gap */
+    left: max(16px, env(safe-area-inset-left)) !important;
+    right: max(16px, env(safe-area-inset-right)) !important; /* full width — time labels flank below */
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 108px) !important; /* above options row + labels */
     height: 6px !important;
     width: auto !important;
     margin-bottom: 0 !important;
     pointer-events: auto !important;
+  }
+
+  /* Thumb pulse when dragging */
+  .mobile-player-container .vp-progress-input:active ~ .vp-progress-played::after,
+  .mobile-player-container .vp-progress-played::after {
+    content: '' !important;
+    position: absolute !important;
+    right: -7px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 14px !important;
+    height: 14px !important;
+    background: var(--accent, #A855F7) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.5) !important;
+    transition: box-shadow 0.2s ease !important;
+  }
+
+  .mobile-player-container .vp-progress-input:active ~ .vp-progress-played::after {
+    box-shadow: 0 0 0 8px rgba(168, 85, 247, 0.25), 0 0 0 0 rgba(168, 85, 247, 0) !important;
+  }
+
+  .mobile-player-container .vp-progress-wrap::before {
+    display: none !important;
   }
 
   .mobile-player-container .vp-progress-wrap::before {
@@ -4194,18 +4290,32 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
   }
 
-  /* Bottom right timestamp next to seek bar */
+  /* Hide combined vp-time on mobile — use flanking labels instead */
   .mobile-player-container .vp-time {
+    display: none !important;
+  }
+
+  /* Flanking time labels: current time left, total time right */
+  .mobile-player-container .vp-time-current,
+  .mobile-player-container .vp-time-total {
     position: absolute !important;
-    right: max(20px, env(safe-area-inset-right)) !important;
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 90px) !important;
-    font-size: 12px !important;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 116px) !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-family: inherit !important;
-    display: inline-block !important;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
-    z-index: 100 !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-family: var(--font-display, 'Inter', sans-serif) !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9) !important;
+    z-index: 110 !important;
+    pointer-events: none !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  .mobile-player-container .vp-time-current {
+    left: max(16px, env(safe-area-inset-left)) !important;
+  }
+
+  .mobile-player-container .vp-time-total {
+    right: max(16px, env(safe-area-inset-right)) !important;
   }
 
   /* 7. Bottom Navigation bar: now only hosts fullscreen button — speed/quality moved to options row */

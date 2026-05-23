@@ -281,7 +281,7 @@
   .vp-unlock-btn.holding::before {
     opacity: 1;
     border-top-color: var(--accent, #e50914);
-    animation: unlockSpin 0.8s linear forwards;
+    animation: unlockSpin 2s linear forwards;
   }
 
   @keyframes unlockSpin {

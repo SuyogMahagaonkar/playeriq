@@ -119,6 +119,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           <input type="range" class="vp-progress-input" id="vp-progress-input" min="0" max="1000" value="0" step="1">
           <div class="vp-progress-tooltip" id="vp-progress-tooltip">0:00</div>
         </div>
+        <!-- Flanking time labels (mobile only) -->
+        <span class="vp-time-current" id="vp-time-current">0:00</span>
+        <span class="vp-time-total" id="vp-time-total">0:00</span>
 
         <!-- Bottom bar -->
         <div class="vp-bottom-bar">
@@ -217,7 +220,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         <div class="vp-seek-arrows">
           <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="11 17 2 12 11 7 11 17"/><polygon points="22 17 13 12 22 7 22 17"/></svg>
         </div>
-        <span class="vp-seek-label">‹‹ 10s</span>
+        <span class="vp-seek-label">‹‹ 30s</span>
       </div>
 
       <!-- Double-tap seek flash — right (forward) -->
@@ -225,7 +228,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         <div class="vp-seek-arrows">
           <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 7 22 12 13 17 13 7"/><polygon points="2 7 11 12 2 17 2 7"/></svg>
         </div>
-        <span class="vp-seek-label">15s ››</span>
+        <span class="vp-seek-label">30s ››</span>
       </div>
 
       <!-- Long-press speed toast -->
@@ -244,7 +247,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
 
       <!-- Locked overlay -->
       <div id="vp-locked-overlay" class="vp-locked-overlay hidden" aria-label="Controls locked">
-        <div class="vp-locked-hint">Hold to unlock</div>
+        <div class="vp-locked-hint">Hold 2s to unlock</div>
         <button id="vp-unlock-btn" class="vp-unlock-btn" aria-label="Hold to unlock controls">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -481,6 +484,38 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+    // 4. Right-side vertical volume slider (mirror of brightness slider)
+    if (!document.getElementById('vp-volume-slider-group')) {
+      const volSlider = document.createElement('div');
+      volSlider.className = 'vp-volume-slider-group';
+      volSlider.id = 'vp-volume-slider-group';
+      volSlider.innerHTML = `
+        <svg class="vp-volume-slider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+        <div class="vp-volume-slider-track">
+          <input type="range" class="vp-volume-slider-input" id="vp-volume-slider" min="0" max="100" value="100" aria-label="Volume slider">
+          <div class="vp-volume-slider-fill" id="vp-volume-slider-fill" style="height: 100%;"></div>
+        </div>
+      `;
+      controls.appendChild(volSlider);
+      const vSliderInput = document.getElementById('vp-volume-slider');
+      const vSliderFillEl = document.getElementById('vp-volume-slider-fill');
+      if (vSliderInput) {
+        vSliderInput.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value) / 100;
+          const vid = document.getElementById('vp-video');
+          if (vid) { vid.volume = val; vid.muted = val === 0; }
+          if (vSliderFillEl) vSliderFillEl.style.height = e.target.value + '%';
+          // Sync main volume slider
+          const mainVol = document.getElementById('vp-volume');
+          if (mainVol) mainVol.value = e.target.value;
+        });
+      }
+    }
 
     // Expose method for PlayerPage to activate TV-only options and set onNext callback
     container._activateTVOptions = function(onNext) {
@@ -887,10 +922,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       showPlayerHUD(`<svg style="width:14px;height:14px;color:var(--accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Skipped Intro & Recap`);
     }
 
-    // On mobile, show remaining time. On desktop, show current/total.
-    if (window.innerWidth <= 768 || ('ontouchstart' in window)) {
-      const remaining = dur - cur;
-      timeDisplay.textContent = dur > 0 ? `-${formatTime(remaining)}` : '0:00';
+    // On mobile, populate flanking time labels. On desktop, use combined vp-time.
+    const timeCurrent = document.getElementById('vp-time-current');
+    const timeTotal   = document.getElementById('vp-time-total');
+    if ((window.innerWidth <= 768 || ('ontouchstart' in window)) && timeCurrent && timeTotal) {
+      timeCurrent.textContent = formatTime(cur);
+      timeTotal.textContent   = formatTime(dur);
+      timeDisplay.textContent = '';
     } else {
       timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
     }
@@ -932,7 +970,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     if (lockBtn) lockBtn.style.opacity = '1';
     if (diagBtn) diagBtn.style.opacity = '1';
     clearTimeout(controlsTimeout);
-    controlsTimeout = setTimeout(hideControls, 5000);
+    // Mobile: fade controls after 2s; desktop: after 5s
+    const timeout = (window.innerWidth <= 768 || ('ontouchstart' in window)) ? 2000 : 5000;
+    controlsTimeout = setTimeout(hideControls, timeout);
   }
 
   function hideControls() {
@@ -1321,8 +1361,20 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         if (volVal) volVal.textContent = pct + '%';
         if (volBar) volBar.style.height = pct + '%';
         if (volumeSlider) volumeSlider.value = pct;
+        // Sync vertical volume slider
+        const vSliderFill = document.getElementById('vp-volume-slider-fill');
+        const vSlider = document.getElementById('vp-volume-slider');
+        if (vSliderFill) vSliderFill.style.height = pct + '%';
+        if (vSlider) vSlider.value = pct;
         showSwipeOverlay(volOverlay, true);
         autoHideOverlay(volOverlay);
+        // Show vertical volume slider
+        const volSliderGroup = document.getElementById('vp-volume-slider-group');
+        if (volSliderGroup) {
+          volSliderGroup.classList.add('vp-volume-active');
+          clearTimeout(volSliderGroup._hideTimer);
+          volSliderGroup._hideTimer = setTimeout(() => volSliderGroup.classList.remove('vp-volume-active'), 1500);
+        }
         touchStartY = t.clientY; // reset for delta-style movement
       } else {
         // Brightness (CSS filter)
@@ -1332,8 +1384,20 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         const pct = Math.round(currentBrightness * 100);
         if (brightVal) brightVal.textContent = pct + '%';
         if (brightBar) brightBar.style.height = pct + '%';
+        // Sync vertical brightness slider
+        const bSliderFill = document.getElementById('vp-brightness-slider-fill');
+        const bSlider = document.getElementById('vp-brightness-slider');
+        if (bSliderFill) bSliderFill.style.height = pct + '%';
+        if (bSlider) bSlider.value = pct;
         showSwipeOverlay(brightOverlay, true);
         autoHideOverlay(brightOverlay);
+        // Show vertical brightness slider
+        const brightSliderGroup = document.getElementById('vp-brightness-slider-group');
+        if (brightSliderGroup) {
+          brightSliderGroup.classList.add('vp-brightness-active');
+          clearTimeout(brightSliderGroup._hideTimer);
+          brightSliderGroup._hideTimer = setTimeout(() => brightSliderGroup.classList.remove('vp-brightness-active'), 1500);
+        }
         touchStartY = t.clientY;
       }
     }
@@ -1362,19 +1426,19 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
         }
         if (side === 'left') {
-          // Rewind 10s
+          // Rewind 30s
           const off = (window._playerGetSeekOffset?.() || 0);
           const cur = video.currentTime + off;
-          if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 10));
-          else video.currentTime = Math.max(0, video.currentTime - 10);
+          if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
+          else video.currentTime = Math.max(0, video.currentTime - 30);
           showSeekFlash('left');
         } else {
-          // Forward 15s
+          // Forward 30s
           const off = (window._playerGetSeekOffset?.() || 0);
           const cur = video.currentTime + off;
           const dur = getEffectiveDuration();
-          if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 15));
-          else video.currentTime = Math.min(dur, video.currentTime + 15);
+          if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
+          else video.currentTime = Math.min(dur, video.currentTime + 30);
           showSeekFlash('right');
         }
         showControls();
@@ -1453,7 +1517,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     }, { passive: true });
 
-    // Unlock: hold for 800ms
+    // Unlock: hold for 2 seconds
     unlockBtn.addEventListener('touchstart', (e) => {
       e.stopPropagation();
       unlockBtn.classList.add('holding');
@@ -1466,7 +1530,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         lockBtn.style.opacity = '1';
         lockBtn.querySelector('path').setAttribute('d', 'M7 11V7a5 5 0 0 1 10 0v4');
         showControls(); // restore all controls after unlock
-      }, 800);
+      }, 2000);
     }, { passive: true });
 
     unlockBtn.addEventListener('touchend', () => {
