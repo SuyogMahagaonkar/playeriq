@@ -2,6 +2,10 @@
 // PlayerIQ — Custom Video Player (HLS.js)
 // ========================================
 
+import { NODE_PROXY } from '../services/api.js';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar } from '@capacitor/status-bar';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import Hls from 'hls.js';
 
 /**
@@ -681,12 +685,18 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   // ---- Mobile auto-fullscreen helper ----
   let hasRequestedFullscreen = false;
   function requestMobileFullscreen() {
-    remoteLog(`requestMobileFullscreen called. isMobile=${isMobile()}, hasReq=${hasRequestedFullscreen}, fsElement=${!!document.fullscreenElement}`);
+    remoteLog(`requestMobileFullscreen called. isMobile=${isMobile()}, hasReq=${hasRequestedFullscreen}`);
     if (!isMobile() || hasRequestedFullscreen) return;
     
+    // NATIVE CAPACITOR APP (APK)
+    if (Capacitor && Capacitor.isNativePlatform()) {
+      try {
+        StatusBar.hide().catch(() => {});
+      } catch(e) {}
+    }
+
     const fsTarget = player; // fullscreen the vp-player element
     if (!document.fullscreenElement) {
-      remoteLog('Attempting to call requestFullscreen on player element...');
       const p = fsTarget.requestFullscreen?.() || 
                 fsTarget.webkitRequestFullscreen?.() || 
                 fsTarget.mozRequestFullScreen?.() || 
@@ -695,18 +705,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       if (p && p.catch) {
         p.then(() => { 
           hasRequestedFullscreen = true; 
-          remoteLog('requestFullscreen Promise RESOLVED - Success!');
         }).catch((err) => {
           hasRequestedFullscreen = false; // try again on next tap if denied
-          remoteLog(`requestFullscreen Promise REJECTED: ${err.message || err}`, 'error');
         });
       } else {
-        remoteLog(`requestFullscreen called but returned no Promise (p=${typeof p}). Possibly sync or missing API.`);
-        // Note: webkitRequestFullscreen is often synchronous on older iOS, so it won't return a promise.
         hasRequestedFullscreen = true;
       }
     } else {
-      remoteLog('document.fullscreenElement is already active. Skipping.');
       hasRequestedFullscreen = true;
     }
   }
@@ -721,6 +726,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   // Screen Wake Lock — prevent screen sleep during playback
   let wakeLock = null;
   async function acquireWakeLock() {
+    if (Capacitor && Capacitor.isNativePlatform()) {
+      try { await KeepAwake.keepAwake(); } catch(e) {}
+      return;
+    }
     if (!('wakeLock' in navigator)) return;
     try {
       if (!wakeLock || wakeLock.released) {
@@ -729,6 +738,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     } catch (_) {}
   }
   function releaseWakeLock() {
+    if (Capacitor && Capacitor.isNativePlatform()) {
+      try { KeepAwake.allowSleep(); } catch(e) {}
+    }
     if (wakeLock && !wakeLock.released) {
       wakeLock.release().catch(() => {});
       wakeLock = null;
@@ -1612,9 +1624,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
       // Release wake lock
       releaseWakeLock();
-      // Exit fullscreen if we entered it
+      
+      // Exit fullscreen and restore native status bar
       if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
+      }
+      if (Capacitor && Capacitor.isNativePlatform()) {
+        try { StatusBar.show().catch(() => {}); } catch(e) {}
       }
       subStyle.remove();
       if (!preserveVideo) {
