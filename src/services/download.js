@@ -205,11 +205,10 @@ export const DownloadManager = {
     }
 
     try {
-      // Start download using official relative path + directory options
+      // Start download using official absolute path parameter
       await FileTransfer.downloadFile({
         url: url,
-        path: fileName,
-        directory: Directory.Data,
+        path: targetPath,
         progress: true
       });
 
@@ -223,7 +222,9 @@ export const DownloadManager = {
         dispatchStatusChange(id, 'SAVING');
       }
 
-      // Mark complete
+      // Mark complete after a short 500ms delay to resolve the asynchronous UI race condition
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const finalData = getDownloadsData();
       if (finalData[id]) {
         finalData[id].status = 'COMPLETED';
