@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Settings Dropdown - Mobile Refactor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+
+  <div class="demo-container">
+    <header class="demo-header">
+      <h1>PlayerIQ Settings Dropdown</h1>
+      <p>Compact, Scannable & Fully Accessible Hybrid Dropdown Mockup (Mobile Optimized)</p>
+      
+      <!-- Trigger Button for Dropdown -->
+      <button class="settings-trigger-btn" id="settingsTrigger" aria-haspopup="true" aria-expanded="false" aria-controls="settingsDropdown">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-gear">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings Menu</span>
+        <span class="badge-accent">Mobile Mode</span>
+      </button>
+    </header>
+
+    <main class="demo-viewport">
+      <!-- Phone Frame Mockup -->
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-navbar">
+            <span class="phone-title">PlayerIQ</span>
+            <div class="phone-time">20:56</div>
+          </div>
+          
+          <div class="phone-body">
+            <p class="body-placeholder-text">Click the Gear icon at the top to toggle the redesigned Settings Dropdown container.</p>
+            <p class="body-placeholder-sub">The dropdown is constrained to 60-70% height with single-open accordions, quick-scroll category chips, and accessible flyout modals.</p>
+            
+            <!-- THE REDESIGNED SETTINGS DROPDOWN -->
+            <div class="settings-dropdown" id="settingsDropdown" aria-hidden="true" role="region" aria-label="Settings Dropdown">
+              
+              <!-- Sticky Dropdown Header -->
+              <div class="dropdown-header">
+                <div class="header-main">
+                  <h2 class="dropdown-title">Settings</h2>
+                  <button class="close-dropdown-btn" id="closeDropdown" aria-label="Close settings dropdown">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                
+                <!-- Category Chips (Sticky Filter Navigation) -->
+                <div class="category-chips-container" role="tablist" aria-label="Settings Categories">
+                  <button class="category-chip active" id="chip-theme" role="tab" aria-selected="true" aria-controls="sec-theme" tabindex="0">Aesthetics</button>
+                  <button class="category-chip" id="chip-playback" role="tab" aria-selected="false" aria-controls="sec-playback" tabindex="-1">Playback</button>
+                  <button class="category-chip" id="chip-subtitles" role="tab" aria-selected="false" aria-controls="sec-subtitles" tabindex="-1">Subtitles</button>
+                  <button class="category-chip" id="chip-downloads" role="tab" aria-selected="false" aria-controls="sec-downloads" tabindex="-1">Downloads</button>
+                  <button class="category-chip" id="chip-backup" role="tab" aria-selected="false" aria-controls="sec-backup" tabindex="-1">Storage</button>
+                </div>
+              </div>
+
+              <!-- Scrollable Dropdown Content Area -->
+              <div class="dropdown-scroll-body" id="dropdownScrollBody">
+                <div class="accordion-group" role="presentation">
+
+                  <!-- 1. Aesthetics & Theme -->
+                  <div class="accordion-item open" id="sec-theme">
+                    <button class="accordion-header" id="acc-header-theme" aria-expanded="true" aria-controls="acc-panel-theme">
+                      <div class="accordion-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-icon"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.03461 19.176 5.12263 19.264 5.17646 19.3804C5.23029 19.4968 5.23467 19.6384 5.24344 19.9215C5.25308 20.2327 5.23616 20.6124 5.3789 20.9169C5.52165 21.2214 5.82362 21.4398 6.13606 21.579C6.44849 21.7181 6.82025 21.7997 7.12648 21.848C7.40938 21.8927 7.55083 21.915 7.66986 21.9625C7.7889 22.0101 7.87328 22.0911 8.04204 22.2533C8.22556 22.4296 8.31732 22.5178 8.44199 22.5695C8.56667 22.6212 8.7059 22.6288 8.98436 22.6441C9.53037 22.6741 10.0543 22.5 10.5 22.5" stroke-linecap="round"></path><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"></circle><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"></circle><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1.5" fill="currentColor"></circle></svg>
+                        <span>Aesthetics & Theme</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="accordion-panel" id="acc-panel-theme" role="region" aria-labelledby="acc-header-theme">
+                      <div class="accordion-content-inner">
+                        
+                        <!-- Compact Rows -->
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Accent Theme</span>
+                            <span class="setting-desc">Personalize accent brand colors</span>
+                          </div>
+                          <div class="settings-theme-selector">
+                            <button class="theme-color-chip active" data-color="purple" style="--chip-color: #a855f7;" title="Purple" aria-label="Purple accent"></button>
+                            <button class="theme-color-chip" data-color="red" style="--chip-color: #e50914;" title="Red" aria-label="Red accent"></button>
+                            <button class="theme-color-chip" data-color="blue" style="--chip-color: #0084ff;" title="Blue" aria-label="Blue accent"></button>
+                            <button class="theme-color-chip" data-color="green" style="--chip-color: #00c853;" title="Green" aria-label="Green accent"></button>
+                            <button class="theme-color-chip" data-color="gold" style="--chip-color: #e5a900;" title="Gold" aria-label="Gold accent"></button>
+                          </div>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">OLED Pure Black</span>
+                            <span class="setting-desc">Optimize for high-contrast mobile screen</span>
+                          </div>
+                          <label class="premium-switch">
+                            <input type="checkbox" id="prefOled" checked>
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Content Language</span>
+                            <span class="setting-desc">Filter lists by preference</span>
+                          </div>
+                          <select class="premium-select" id="prefLanguage">
+                            <option value="all">All Languages</option>
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="ko">Korean</option>
+                            <option value="ja">Japanese</option>
+                          </select>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 2. Playback Settings -->
+                  <div class="accordion-item" id="sec-playback">
+                    <button class="accordion-header" id="acc-header-playback" aria-expanded="false" aria-controls="acc-panel-playback">
+                      <div class="accordion-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-icon"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                        <span>Playback Settings</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="accordion-panel" id="acc-panel-playback" role="region" aria-labelledby="acc-header-playback">
+                      <div class="accordion-content-inner">
+                        
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Autoplay Next</span>
+                            <span class="setting-desc">Play next episode automatically</span>
+                          </div>
+                          <label class="premium-switch">
+                            <input type="checkbox" id="prefAutoplay" checked>
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Stream Quality</span>
+                            <span class="setting-desc">Preferred resolution quality</span>
+                          </div>
+                          <select class="premium-select" id="prefQuality">
+                            <option value="auto">Auto</option>
+                            <option value="1080p">1080p HD</option>
+                            <option value="720p">720p</option>
+                            <option value="480p">480p</option>
+                          </select>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Seek Interval</span>
+                            <span class="setting-desc">Double-tap jump duration</span>
+                          </div>
+                          <select class="premium-select" id="prefSeek">
+                            <option value="5">5 Seconds</option>
+                            <option value="10" selected>10 Seconds</option>
+                            <option value="15">15 Seconds</option>
+                            <option value="30">30 Seconds</option>
+                          </select>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Auto-Skip Recaps</span>
+                            <span class="setting-desc">Skip recaps & intros automatically</span>
+                          </div>
+                          <label class="premium-switch">
+                            <input type="checkbox" id="prefSkip">
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3. Subtitle Customizer -->
+                  <div class="accordion-item" id="sec-subtitles">
+                    <button class="accordion-header" id="acc-header-subtitles" aria-expanded="false" aria-controls="acc-panel-subtitles">
+                      <div class="accordion-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="13" y2="16"></line></svg>
+                        <span>Subtitle Customizer</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="accordion-panel" id="acc-panel-subtitles" role="region" aria-labelledby="acc-header-subtitles">
+                      <div class="accordion-content-inner">
+                        
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Quick Size</span>
+                            <span class="setting-desc">Current: <span id="lblSubSize">100%</span></span>
+                          </div>
+                          <select class="premium-select" id="prefSubSizeQuick">
+                            <option value="75%">Small (75%)</option>
+                            <option value="100%" selected>Medium (100%)</option>
+                            <option value="125%">Large (125%)</option>
+                            <option value="150%">X-Large (150%)</option>
+                          </select>
+                        </div>
+
+                        <!-- Open Detailed Subtitle Editor Modal Button -->
+                        <div class="editor-trigger-container">
+                          <button class="premium-editor-btn" id="btnOpenSubtitleEditor" aria-haspopup="dialog" aria-controls="subtitleEditorModal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            <span>Open Subtitle Customizer Editor</span>
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 4. Download Manager -->
+                  <div class="accordion-item" id="sec-downloads">
+                    <button class="accordion-header" id="acc-header-downloads" aria-expanded="false" aria-controls="acc-panel-downloads">
+                      <div class="accordion-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Download Manager</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="accordion-panel" id="acc-panel-downloads" role="region" aria-labelledby="acc-header-downloads">
+                      <div class="accordion-content-inner">
+                        
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Wi-Fi Only</span>
+                            <span class="setting-desc">Save cellular data</span>
+                          </div>
+                          <label class="premium-switch">
+                            <input type="checkbox" id="prefWifiOnly" checked>
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+
+                        <!-- Open Download Manager Modal Button -->
+                        <div class="editor-trigger-container">
+                          <button class="premium-editor-btn" id="btnOpenDownloadManager" aria-haspopup="dialog" aria-controls="downloadManagerModal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                            <span>Open Download & Storage Manager</span>
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 5. Storage & Backup -->
+                  <div class="accordion-item" id="sec-backup">
+                    <button class="accordion-header" id="acc-header-backup" aria-expanded="false" aria-controls="acc-panel-backup">
+                      <div class="accordion-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-icon"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>
+                        <span>Storage & Backup</span>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="accordion-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="accordion-panel" id="acc-panel-backup" role="region" aria-labelledby="acc-header-backup">
+                      <div class="accordion-content-inner">
+                        
+                        <div class="compact-setting-row inline-btns">
+                          <button class="sub-btn" id="btnExportJSON">📥 Export JSON</button>
+                          <button class="sub-btn" id="btnImportJSON">📤 Import JSON</button>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Clear Watch History</span>
+                            <span class="setting-desc">Erase all saved records</span>
+                          </div>
+                          <button class="danger-btn" id="btnPurgeHistory">Delete</button>
+                        </div>
+
+                        <div class="compact-setting-row">
+                          <div class="setting-label">
+                            <span class="setting-title">Local Cache Size</span>
+                            <span class="setting-desc" id="lblCacheSize">4.96 MB</span>
+                          </div>
+                          <button class="sub-btn-sm" id="btnPurgeCache">Purge</button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+              
+              <!-- Sticky Toast Notification Area -->
+              <div class="dropdown-saved-toast" id="dropdownToast" aria-live="polite">Preferences saved & applied!</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS & FLYOUTS FOR COMPLEX EDITORS -->
+
+  <!-- Modal 1: Subtitle Customizer Flyout -->
+  <div class="premium-modal-overlay" id="subtitleEditorModal" role="dialog" aria-modal="true" aria-labelledby="subModalTitle" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="subModalTitle" class="modal-title">Subtitle Customizer</h3>
+        <button class="close-modal-btn" aria-label="Close subtitle customizer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Live Visual Preview Area -->
+        <div class="live-subtitle-preview-container">
+          <span class="preview-label">LIVE PREVIEW</span>
+          <div class="video-preview-window">
+            <span id="liveSubtitleText" class="subtitle-text">Subtitle Preview Text</span>
+          </div>
+        </div>
+
+        <div class="compact-setting-row">
+          <div class="setting-label">
+            <span class="setting-title">Font Size</span>
+          </div>
+          <select class="premium-select" id="prefSubSize">
+            <option value="75%">Small (75%)</option>
+            <option value="100%" selected>Medium (100%)</option>
+            <option value="125%">Large (125%)</option>
+            <option value="150%">X-Large (150%)</option>
+          </select>
+        </div>
+
+        <div class="compact-setting-row">
+          <div class="setting-label">
+            <span class="setting-title">Font Color</span>
+          </div>
+          <select class="premium-select" id="prefSubColor">
+            <option value="#ffffff" selected>White</option>
+            <option value="#ffff00">Canary Yellow</option>
+            <option value="#00ffff">Cyan</option>
+            <option value="#a855f7">Purple</option>
+          </select>
+        </div>
+
+        <div class="compact-setting-row">
+          <div class="setting-label">
+            <span class="setting-title">Background Opacity</span>
+          </div>
+          <select class="premium-select" id="prefSubOpacity">
+            <option value="0">Transparent</option>
+            <option value="0.25">Light (25%)</option>
+            <option value="0.5" selected>Medium (50%)</option>
+            <option value="0.75">High (75%)</option>
+            <option value="1">Opaque (100%)</option>
+          </select>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="modal-action-btn primary" id="btnSaveSubtitles">Save Changes</button>
+        <button class="modal-action-btn secondary close-modal-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Download & Storage Manager Flyout (LAZY LOADED) -->
+  <div class="premium-modal-overlay" id="downloadManagerModal" role="dialog" aria-modal="true" aria-labelledby="dlModalTitle" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="dlModalTitle" class="modal-title">Download & Storage</h3>
+        <button class="close-modal-btn" aria-label="Close download and storage manager">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="compact-setting-row">
+          <div class="setting-label">
+            <span class="setting-title">Download Quality</span>
+            <span class="setting-desc">Preferred download preset</span>
+          </div>
+          <select class="premium-select" id="prefDlQuality">
+            <option value="480p" selected>Standard (480p)</option>
+            <option value="720p">High (720p)</option>
+            <option value="1080p">Very High (1080p)</option>
+          </select>
+        </div>
+
+        <!-- Heavy List 1: Storage Allocation Graph (LAZY LOADED ON LAUNCH) -->
+        <div class="heavy-list-section">
+          <span class="section-badge">LAZY LOADED GRAPH</span>
+          <span class="heavy-list-title">Storage Estimation</span>
+          
+          <div class="lazy-load-placeholder" id="storageGraphPlaceholder">
+            <div class="spinner-sm"></div>
+            <span>Loading storage metrics...</span>
+          </div>
+
+          <div class="storage-graph-wrapper lazy-loaded-content hidden" id="storageGraphContainer">
+            <div class="storage-bar">
+              <span class="bar-segment app" style="width: 25%;"></span>
+              <span class="bar-segment other" style="width: 45%;"></span>
+              <span class="bar-segment free" style="width: 30%;"></span>
+            </div>
+            <div class="storage-legend">
+              <span class="legend-item"><span class="dot app"></span> PlayerIQ (2.5 GB)</span>
+              <span class="legend-item"><span class="dot other"></span> Other Apps (4.5 GB)</span>
+              <span class="legend-item"><span class="dot free"></span> Free Space (3.0 GB)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Heavy List 2: Offline Titles (LAZY LOADED ON LAUNCH) -->
+        <div class="heavy-list-section">
+          <span class="section-badge">LAZY LOADED LIST</span>
+          <span class="heavy-list-title">Offline Saved Titles</span>
+
+          <div class="lazy-load-placeholder" id="offlineTitlesPlaceholder">
+            <div class="spinner-sm"></div>
+            <span>Scanning cached video segments...</span>
+          </div>
+
+          <ul class="offline-titles-list lazy-loaded-content hidden" id="offlineTitlesContainer" aria-label="Downloaded offline videos">
+            <!-- Populated via Javascript -->
+          </ul>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="modal-action-btn primary close-modal-btn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
