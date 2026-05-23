@@ -69,12 +69,17 @@ export const DownloadManager = {
     saveDownloadsData(data);
     dispatchStatusChange(id, 'DOWNLOADING');
 
-    // Use a fast, small MP4 sample (~10MB) so progress is visible immediately
-    // In production, replace this with the actual resolved .mp4 stream URL
-    const mp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4';
+    // Public MP4 test URLs (tried in order until one works)
+    // In production, replace with actual resolved .mp4 stream URL from the API
+    const testUrls = [
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',       // ~10MB Google Storage
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',      // ~11MB Google Storage
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', // ~24MB
+      'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',          // fallback ~158MB
+    ];
 
     try {
-      await this._streamDownload(id, mp4Url, fileName);
+      await this._streamDownloadWithFallback(id, testUrls, fileName);
     } catch (e) {
       console.error('[DownloadManager] Download failed:', e.message || e);
       alert(`Download failed: ${e.message || 'Network error. Check your connection.'}`);
@@ -85,6 +90,30 @@ export const DownloadManager = {
         dispatchStatusChange(id, 'ERROR');
       }
     }
+  },
+
+  // Try multiple URLs in order, use the first that responds with 200
+  async _streamDownloadWithFallback(id, urls, fileName) {
+    let lastError = null;
+    for (const url of urls) {
+      try {
+        console.log(`[DownloadManager] Trying: ${url}`);
+        // Quick HEAD check to see if URL is accessible
+        const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        if (!head.ok) {
+          console.warn(`[DownloadManager] ${url} returned ${head.status}, trying next...`);
+          lastError = new Error(`HTTP ${head.status}`);
+          continue;
+        }
+        // URL works — stream it
+        await this._streamDownload(id, url, fileName);
+        return;
+      } catch (e) {
+        console.warn(`[DownloadManager] ${url} failed: ${e.message}`);
+        lastError = e;
+      }
+    }
+    throw lastError || new Error('All download URLs failed.');
   },
 
   // Streaming fetch — reads chunks one by one, updates progress in real time
