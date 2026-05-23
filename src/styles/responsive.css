@@ -4365,29 +4365,45 @@
     display: none !important;
   }
 
-  /* Fullscreen exit / shrink button */
+  /* Fullscreen exit / shrink button in top-right (replaces X button, no border) */
   .mobile-player-container #vp-fs-btn {
     position: absolute !important;
-    bottom: max(12px, env(safe-area-inset-bottom)) !important;
-    right: max(12px, env(safe-area-inset-right)) !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    left: auto !important;
     z-index: 110 !important;
     pointer-events: auto !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: transparent !important;
+    border: none !important;
     color: rgba(255, 255, 255, 0.85) !important;
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 8px !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
     cursor: pointer !important;
+    box-shadow: none !important;
   }
 
+  /* Fullscreen button icon size (matches cast button) */
   .mobile-player-container #vp-fs-btn svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 22px !important;
+    height: 22px !important;
     stroke-width: 2.2 !important;
+  }
+
+  /* Hide top close X button since fullscreen button replaces it */
+  .mobile-player-container #vp-top-close-btn {
+    display: none !important;
+  }
+
+  /* Hide duplicate big play button, skip back, and skip forward buttons from center */
+  .mobile-player-container #vp-big-play,
+  .mobile-player-container #vp-skip-back,
+  .mobile-player-container #vp-skip-forward {
+    display: none !important;
   }
 
   /* 8. Netflix bottom options row */
