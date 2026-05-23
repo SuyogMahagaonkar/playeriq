@@ -300,6 +300,89 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   });
 
   const controls = document.getElementById('vp-controls');
+  if (controls && !document.getElementById('vp-top-bar')) {
+    // 1. Top Bar
+    const topBar = document.createElement('div');
+    topBar.className = 'vp-top-bar';
+    topBar.id = 'vp-top-bar';
+    topBar.innerHTML = `
+      <button class="vp-btn" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+      </button>
+      <div class="vp-top-title" id="vp-top-title">Title</div>
+      <button class="vp-btn" id="vp-top-close-btn" title="Close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    `;
+    controls.insertBefore(topBar, controls.firstChild);
+
+    // 2. Brightness Slider Group
+    const brightSlider = document.createElement('div');
+    brightSlider.className = 'vp-brightness-slider-group';
+    brightSlider.id = 'vp-brightness-slider-group';
+    brightSlider.innerHTML = `
+      <svg class="vp-brightness-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <div class="vp-brightness-slider-track">
+        <input type="range" class="vp-brightness-slider-input" id="vp-brightness-slider" min="10" max="100" value="80" aria-label="Brightness slider">
+        <div class="vp-brightness-slider-fill" id="vp-brightness-slider-fill" style="height: 80%;"></div>
+      </div>
+    `;
+    controls.appendChild(brightSlider);
+
+    // Wire up listeners
+    const bSlider = document.getElementById('vp-brightness-slider');
+    const bSliderFill = document.getElementById('vp-brightness-slider-fill');
+    const topCastBtn = document.getElementById('vp-top-cast-btn');
+    const topCloseBtn = document.getElementById('vp-top-close-btn');
+
+    let currentBrightness = parseFloat(localStorage.getItem('piq_brightness') || '1.0');
+    if (bSlider && bSliderFill) {
+      const initialPct = Math.round(currentBrightness * 100);
+      bSlider.value = initialPct;
+      bSliderFill.style.height = initialPct + '%';
+
+      bSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value) / 100;
+        const bounded = Math.max(0.1, Math.min(1.0, val));
+        document.documentElement.style.filter = bounded < 1.0 ? `brightness(${bounded.toFixed(2)})` : '';
+        localStorage.setItem('piq_brightness', bounded.toFixed(2));
+      });
+    }
+
+    if (topCastBtn) {
+      topCastBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mainCastBtn = document.getElementById('vp-cast-btn');
+        if (mainCastBtn) mainCastBtn.click();
+      });
+    }
+
+    if (topCloseBtn) {
+      topCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.history.back();
+      });
+    }
+
+    // Sync vertical brightness slider automatically on filter mutation
+    const observer = new MutationObserver(() => {
+      const filter = document.documentElement.style.filter || '';
+      const match = filter.match(/brightness\(([^)]+)\)/);
+      if (match && bSlider && bSliderFill) {
+        const val = parseFloat(match[1]);
+        const pct = Math.round(val * 100);
+        bSlider.value = pct;
+        bSliderFill.style.height = pct + '%';
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+  }
   const loader = document.getElementById('vp-loader');
   const bigPlay = document.getElementById('vp-big-play');
   const playBtn = document.getElementById('vp-play-btn');
@@ -982,6 +1065,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
 
   // ---- MediaSession API (lock screen + notification controls) ----
   function initMediaSession(title, artist, posterUrl, onPrev, onNext) {
+    const topTitle = document.getElementById('vp-top-title');
+    if (topTitle) {
+      topTitle.textContent = artist ? `${title} · ${artist}` : title;
+    }
     if (!('mediaSession' in navigator)) return;
     try {
       const artwork = posterUrl ? [{ src: posterUrl, sizes: '512x512', type: 'image/jpeg' }] : [];
