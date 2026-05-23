@@ -87,7 +87,8 @@ export const DownloadManager = {
         }
       }
     } catch (e) {
-      console.error('[DownloadManager] Native Download Failed:', e);
+      console.error('[DownloadManager] Native Download Failed:', e, JSON.stringify(e));
+      alert(`Download failed: ${e.message || JSON.stringify(e)}`);
       const current = getDownloadsData();
       if (current[id]) {
         current[id].status = 'ERROR';
