@@ -1727,6 +1727,121 @@
     color: var(--text-muted);
   }
 
+  /* Height constrained scrollable settings container */
+  .mobile-settings-scroll-container {
+    max-height: 55vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Hide standard Firefox scrollbars */
+    padding-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-settings-scroll-container::-webkit-scrollbar {
+    display: none; /* Hide Chrome/Safari scrollbar */
+  }
+
+  /* Category Filter Chips Container & Chip Styles */
+  .category-chips-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .category-chips-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-chip {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .category-chip.active {
+    background: var(--gradient-purple);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3);
+  }
+
+  /* Premium Editor triggers inside accordions */
+  .mobile-editor-btn {
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-editor-btn:active {
+    background: var(--gradient-purple);
+    color: #fff;
+    transform: scale(0.98);
+  }
+
+  /* Slide-up Overlay Modals on Mobile View */
+  .mobile-settings-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeInModal 0.25s ease;
+  }
+
+  .mobile-settings-modal-overlay.open {
+    display: flex !important;
+  }
+
+  .mobile-settings-modal-card {
+    width: 100%;
+    background: #10121e;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    max-height: 85%;
+    transform: translateY(100%);
+    animation: slideUpModal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUpModal {
+    to { transform: translateY(0); }
+  }
+
   /* Accordion styles */
   .mobile-settings-accordion {
     background: rgba(255, 255, 255, 0.03);
