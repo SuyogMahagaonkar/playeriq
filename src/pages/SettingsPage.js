@@ -49,23 +49,27 @@ export async function renderSettingsPage({ container }) {
   if (isMobile) {
     container.innerHTML = `
       <div class="mobile-settings-page">
-        <div class="mobile-profile-hero">
+        <!-- Profile Card (Sony LIV Premium Aesthetic) -->
+        <div class="mobile-profile-hero-card">
           <div class="mobile-profile-avatar-container">
-            <div class="mobile-profile-avatar">
-              ${user.photoURL
-                ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
-                : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+            <div class="mobile-profile-avatar-wrapper">
+              <div class="mobile-profile-avatar">
+                ${user.photoURL
+                  ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
+                  : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+              </div>
             </div>
+            <span class="premium-badge-gold">PRO MEMBER</span>
           </div>
           
-          <div class="settings-profile-name-container" id="profile-name-text-container" style="display:flex;align-items:center;gap:8px">
+          <div class="settings-profile-name-container" id="profile-name-text-container" style="display:flex;align-items:center;gap:8px;margin-top:12px">
             <h2 class="mobile-profile-name" id="profile-name-text">${user.displayName ?? 'User'}</h2>
-            <button class="mobile-edit-name-btn" id="edit-name-btn" title="Edit Name" style="background:transparent;border:none;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;padding:4px">
-              <i data-lucide="edit-2"></i>
+            <button class="mobile-edit-name-btn" id="edit-name-btn" title="Edit Name" style="background:transparent;border:none;cursor:pointer;color:var(--accent);display:flex;align-items:center;padding:4px">
+              <i data-lucide="edit-2" style="width:14px;height:14px"></i>
             </button>
           </div>
           
-          <div class="settings-profile-name-edit" id="profile-name-edit-container" style="display:none;align-items:center;gap:8px;margin-bottom:8px;width:100%;max-width:280px">
+          <div class="settings-profile-name-edit" id="profile-name-edit-container" style="display:none;align-items:center;gap:8px;margin-top:8px;width:100%;max-width:280px">
             <input type="text" id="profile-name-input" class="mobile-name-input" value="${user.displayName ?? 'User'}" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:white;font-size:14px;outline:none;flex:1" />
             <button class="mobile-save-name-btn" id="save-name-btn" style="background:var(--gradient-purple);border:none;color:white;font-weight:700;font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;box-shadow:0 4px 10px rgba(168,85,247,0.3)">Save</button>
             <button class="mobile-cancel-name-btn" id="cancel-name-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--text-secondary);font-weight:600;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer">Cancel</button>
@@ -75,305 +79,309 @@ export async function renderSettingsPage({ container }) {
         </div>
 
         <!-- Quick Navigation Cards -->
-        <div class="mobile-settings-group">
-          <a href="#/watchlist" class="mobile-settings-card-item">
-            <div class="mobile-settings-card-left">
-              <i data-lucide="list" class="card-icon accent-color"></i>
-              <span>My Watchlist</span>
-            </div>
-            <i data-lucide="chevron-right" class="chevron-icon"></i>
+        <div class="mobile-settings-quick-nav">
+          <a href="#/watchlist" class="mobile-quick-nav-card">
+            <i data-lucide="list" class="quick-icon"></i>
+            <span>My Watchlist</span>
           </a>
-          
-          <a href="#/history" class="mobile-settings-card-item">
-            <div class="mobile-settings-card-left">
-              <i data-lucide="history" class="card-icon accent-color"></i>
-              <span>Watch History</span>
-            </div>
-            <i data-lucide="chevron-right" class="chevron-icon"></i>
+          <a href="#/history" class="mobile-quick-nav-card">
+            <i data-lucide="history" class="quick-icon"></i>
+            <span>Watch History</span>
           </a>
-          
-          <div class="mobile-settings-card-item" id="mobile-downloads-card">
-            <div class="mobile-settings-card-left">
-              <i data-lucide="download" class="card-icon accent-color"></i>
-              <div style="text-align: left;">
-                <div>Offline Downloads</div>
-                <span class="mobile-settings-card-badge">PWA Cache Active</span>
-              </div>
-            </div>
-            <i data-lucide="info" class="chevron-icon" style="color: var(--text-muted);"></i>
+          <div class="mobile-quick-nav-card" id="mobile-downloads-card">
+            <i data-lucide="download" class="quick-icon"></i>
+            <span>Offline Downloads</span>
           </div>
-        </div>        <!-- Settings Accordion Stack -->
-        <div class="mobile-settings-group" style="width:100%;">
-          
-          <!-- Sticky Category Filter Chips -->
-          <div class="category-chips-container" role="tablist" aria-label="Settings Categories">
-            <button class="category-chip active" data-target="theme-accordion" role="tab" aria-selected="true" aria-controls="theme-accordion">Aesthetics</button>
-            <button class="category-chip" data-target="playback-accordion" role="tab" aria-selected="false" aria-controls="playback-accordion">Playback</button>
-            <button class="category-chip" data-target="subtitles-accordion" role="tab" aria-selected="false" aria-controls="subtitles-accordion">Subtitles</button>
-            ${showSafeSearchToggle ? `<button class="category-chip" data-target="parental-accordion" role="tab" aria-selected="false" aria-controls="parental-accordion">Parental</button>` : ''}
-            <button class="category-chip" data-target="downloads-accordion" role="tab" aria-selected="false" aria-controls="downloads-accordion">Downloads</button>
-            <button class="category-chip" data-target="backup-accordion" role="tab" aria-selected="false" aria-controls="backup-accordion">Storage</button>
-          </div>
+        </div>
 
-          <!-- Accordion Stack Container (Natural Mobile Scroll) -->
-          <div class="mobile-settings-scroll-container">
+        <!-- Premium List Sections -->
+        <div class="mobile-settings-sections">
+          
+          <!-- Section 1: Aesthetics & Layout -->
+          <div class="mobile-settings-section-card">
+            <h3 class="section-card-title">Aesthetics & Personalization</h3>
             
-            <!-- Accordion: Aesthetics & Themes -->
-            <div class="mobile-settings-accordion open" id="theme-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="true" aria-controls="panel-theme">
-                <div class="header-left">
-                  <i data-lucide="palette"></i>
-                  <span>Aesthetics & Theme</span>
+            <!-- Row: Accent Theme -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="palette"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Accent Color</div>
+                  <div class="row-desc">Personalize app branding</div>
                 </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-theme" style="max-height:800px;">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Accent Theme</div>
-                      <div class="settings-row-desc">Personalize accent brand colors</div>
-                    </div>
-                    <div class="settings-theme-selector" style="display:flex;gap:16px;margin-top:8px">
-                      <button class="theme-badge ${prefs.themeColor === 'purple' ? 'active' : ''}" data-color="purple" style="background:#a855f7;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Purple"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'red' || !prefs.themeColor ? 'active' : ''}" data-color="red" style="background:#e50914;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Red"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'blue' ? 'active' : ''}" data-color="blue" style="background:#0084ff;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Blue"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'green' ? 'active' : ''}" data-color="green" style="background:#00c853;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Green"></button>
-                      <button class="theme-badge ${prefs.themeColor === 'gold' ? 'active' : ''}" data-color="gold" style="background:#e5a900;width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Gold"></button>
-                    </div>
-                  </div>
-                  
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">OLED Pure Black Mode</div>
-                      <div class="settings-row-desc">Optimize for high-contrast viewing on mobile screens</div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-oled" ${prefs.themeDark ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Content Language</div>
-                      <div class="settings-row-desc">Filter lists by language preference</div>
-                    </div>
-                    <select class="settings-select" id="pref-language">
-                      <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
-                      <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
-                      <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
-                      <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
-                      <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
-                    </select>
-                  </div>
+              </div>
+              <div class="row-right">
+                <div class="settings-theme-selector" style="display:flex;gap:10px">
+                  <button class="theme-badge ${prefs.themeColor === 'purple' ? 'active' : ''}" data-color="purple" style="background:#a855f7;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Purple"></button>
+                  <button class="theme-badge ${prefs.themeColor === 'red' || !prefs.themeColor ? 'active' : ''}" data-color="red" style="background:#e50914;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Red"></button>
+                  <button class="theme-badge ${prefs.themeColor === 'blue' ? 'active' : ''}" data-color="blue" style="background:#0084ff;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Blue"></button>
+                  <button class="theme-badge ${prefs.themeColor === 'green' ? 'active' : ''}" data-color="green" style="background:#00c853;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Green"></button>
+                  <button class="theme-badge ${prefs.themeColor === 'gold' ? 'active' : ''}" data-color="gold" style="background:#e5a900;width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;" title="Gold"></button>
                 </div>
               </div>
             </div>
 
-            <!-- Accordion: Playback -->
-            <div class="mobile-settings-accordion" id="playback-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="false" aria-controls="panel-playback">
-                <div class="header-left">
-                  <i data-lucide="play-circle"></i>
-                  <span>Playback Settings</span>
+            <!-- Row: OLED Pure Black -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="moon"></i></div>
+                <div class="row-text">
+                  <div class="row-title">OLED Pure Black</div>
+                  <div class="row-desc">Optimize for high-contrast dark theme</div>
                 </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-playback">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Autoplay Next Episode</div>
-                      <div class="settings-row-desc">Automatically play the next episode</div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Stream Quality</div>
-                      <div class="settings-row-desc">Preferred resolution quality</div>
-                    </div>
-                    <select class="settings-select" id="pref-quality">
-                      <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
-                      <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
-                      <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
-                      <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
-                    </select>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Seek Interval</div>
-                      <div class="settings-row-desc">Double-tap jump duration</div>
-                    </div>
-                    <select class="settings-select" id="pref-seek-interval">
-                      <option value="5" ${prefs.seekInterval === 5 ? 'selected' : ''}>5 Seconds</option>
-                      <option value="10" ${prefs.seekInterval === 10 || !prefs.seekInterval ? 'selected' : ''}>10 Seconds</option>
-                      <option value="15" ${prefs.seekInterval === 15 ? 'selected' : ''}>15 Seconds</option>
-                      <option value="30" ${prefs.seekInterval === 30 ? 'selected' : ''}>30 Seconds</option>
-                    </select>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Auto-Skip Recaps & Intros</div>
-                      <div class="settings-row-desc">Skip recaps and credits automatically</div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-skip-recaps" ${prefs.skipRecaps ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
-                  </div>
-                </div>
+              </div>
+              <div class="row-right">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="pref-oled" ${prefs.themeDark ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
               </div>
             </div>
 
-            <!-- Accordion: Subtitles -->
-            <div class="mobile-settings-accordion" id="subtitles-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="false" aria-controls="panel-subtitles">
-                <div class="header-left">
-                  <i data-lucide="message-square"></i>
-                  <span>Subtitle Customizer</span>
+            <!-- Row: Content Language -->
+            <div class="mobile-settings-row select-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="globe"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Content Language</div>
+                  <div class="row-desc">Filter lists by language preference</div>
                 </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-subtitles">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row" style="flex-direction:column; align-items:flex-start; text-align:left; gap:8px;">
-                    <div class="settings-row-title">Subtitle Display Settings</div>
-                    <div class="settings-row-desc" style="margin-bottom:6px;">Personalize caption layout, sizing options, colors and backdrop opacity</div>
-                    <button class="settings-action-btn" id="btn-open-subtitle-modal" type="button" style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.15);color:#c084fc;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;width:100%;">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                      <span>Open Subtitle Customizer</span>
-                    </button>
-                  </div>
-                </div>
+              </div>
+              <div class="row-right">
+                <span class="current-value-text" id="val-pref-language">
+                  ${prefs.language === 'en' ? 'English' : 
+                    prefs.language === 'hi' ? 'Hindi' : 
+                    prefs.language === 'ko' ? 'Korean' : 
+                    prefs.language === 'ja' ? 'Japanese' : 'All Languages'}
+                </span>
+                <i data-lucide="chevron-right" class="row-chevron"></i>
+                <select class="settings-select-overlay" id="pref-language">
+                  <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
+                  <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
+                  <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
+                  <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
+                  <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
+                </select>
               </div>
             </div>
 
-            <!-- Accordion: Parental Controls -->
+          </div>
+
+          <!-- Section 2: Playback Settings -->
+          <div class="mobile-settings-section-card">
+            <h3 class="section-card-title">Playback Preferences</h3>
+
+            <!-- Row: Autoplay -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="play-circle"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Autoplay next episode</div>
+                  <div class="row-desc">Play next episode automatically</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Row: Stream Quality -->
+            <div class="mobile-settings-row select-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="sliders"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Stream Quality</div>
+                  <div class="row-desc">Preferred resolution quality</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <span class="current-value-text" id="val-pref-quality">
+                  ${prefs.quality === '1080p' ? '1080p HD' : 
+                    prefs.quality === '720p' ? '720p' : 
+                    prefs.quality === '480p' ? '480p' : 'Auto'}
+                </span>
+                <i data-lucide="chevron-right" class="row-chevron"></i>
+                <select class="settings-select-overlay" id="pref-quality">
+                  <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
+                  <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
+                  <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
+                  <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row: Seek Interval -->
+            <div class="mobile-settings-row select-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="rotate-cw"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Seek Interval</div>
+                  <div class="row-desc">Double tap jump seek duration</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <span class="current-value-text" id="val-pref-seek-interval">
+                  ${prefs.seekInterval ? `${prefs.seekInterval} Seconds` : '10 Seconds'}
+                </span>
+                <i data-lucide="chevron-right" class="row-chevron"></i>
+                <select class="settings-select-overlay" id="pref-seek-interval">
+                  <option value="5" ${prefs.seekInterval === 5 ? 'selected' : ''}>5 Seconds</option>
+                  <option value="10" ${prefs.seekInterval === 10 || !prefs.seekInterval ? 'selected' : ''}>10 Seconds</option>
+                  <option value="15" ${prefs.seekInterval === 15 ? 'selected' : ''}>15 Seconds</option>
+                  <option value="30" ${prefs.seekInterval === 30 ? 'selected' : ''}>30 Seconds</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row: Auto-Skip Recaps -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="fast-forward"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Auto-Skip Recaps & Intros</div>
+                  <div class="row-desc">Skip intros and credits automatically</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="pref-skip-recaps" ${prefs.skipRecaps ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Row: Subtitle Customizer trigger -->
+            <div class="mobile-settings-row clickable-row" id="btn-open-subtitle-modal">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="message-square"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Subtitle Customizer</div>
+                  <div class="row-desc">Tailor subtitle appearance overlay</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <span class="current-value-text" style="color:var(--accent)">Customize</span>
+                <i data-lucide="chevron-right" class="row-chevron"></i>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 3: Downloads & Storage -->
+          <div class="mobile-settings-section-card">
+            <h3 class="section-card-title">Downloads & Offline Storage</h3>
+
+            <!-- Row: Wi-Fi Only downloads -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="wifi"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Wi-Fi Only</div>
+                  <div class="row-desc">Only download segments when on Wi-Fi</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="pref-download-wifi" ${dlSettings.wifiOnly ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Row: Download Manager trigger -->
+            <div class="mobile-settings-row clickable-row" id="btn-open-download-modal">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="folder"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Download Manager</div>
+                  <div class="row-desc">View offline files, space gauge, and quality</div>
+                </div>
+              </div>
+              <div class="row-right">
+                <span class="current-value-text" style="color: var(--accent);">Manage</span>
+                <i data-lucide="chevron-right" class="row-chevron"></i>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 4: Security, Backups & Storage -->
+          <div class="mobile-settings-section-card">
+            <h3 class="section-card-title">Security & Storage Backups</h3>
+
+            <!-- Row: SafeSearch (Parental) -->
             ${showSafeSearchToggle ? `
-            <div class="mobile-settings-accordion" id="parental-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="false" aria-controls="panel-parental">
-                <div class="header-left">
-                  <i data-lucide="shield"></i>
-                  <span>Parental Controls</span>
-                </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-parental">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Safe Search</div>
-                      <div class="settings-row-desc">Hide adult/18+ content
-                        <div id="parental-pin-actions" style="margin-top: 6px;"></div>
-                      </div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="shield"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Safe Search</div>
+                  <div class="row-desc">Hide adult/18+ content from library
+                    <div id="parental-pin-actions" style="margin-top: 6px;"></div>
                   </div>
                 </div>
+              </div>
+              <div class="row-right">
+                <label class="settings-toggle">
+                  <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
+                  <span class="settings-toggle-track"></span>
+                </label>
               </div>
             </div>
             ` : ''}
 
-            <!-- Accordion: Download Manager -->
-            <div class="mobile-settings-accordion download-manager-accordion" id="downloads-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="false" aria-controls="panel-downloads">
-                <div class="header-left">
-                  <i data-lucide="download"></i>
-                  <span>Download Manager</span>
+            <!-- Row: Backup Library -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="database"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Backup JSON</div>
+                  <div class="row-desc">Save / Restore preferences</div>
                 </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-downloads">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Wi-Fi Only</div>
-                      <div class="settings-row-desc">Only download segments when connected to Wi-Fi</div>
-                    </div>
-                    <label class="settings-toggle">
-                      <input type="checkbox" id="pref-download-wifi" ${dlSettings.wifiOnly ? 'checked' : ''} />
-                      <span class="settings-toggle-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="settings-row" style="flex-direction:column; align-items:flex-start; text-align:left; gap:8px;">
-                    <div class="settings-row-title">Storage & Cache Files</div>
-                    <div class="settings-row-desc" style="margin-bottom:6px;">View offline files gauge metrics and purge download database items</div>
-                    <button class="settings-action-btn" id="btn-open-download-modal" type="button" style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.15);color:#c084fc;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;width:100%;">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-                      <span>Open Download Manager</span>
-                    </button>
-                  </div>
-                </div>
+              </div>
+              <div class="row-right" style="display:flex;gap:8px">
+                <button class="settings-action-btn-sm" id="btn-export-library">Export</button>
+                <label class="settings-action-btn-sm" style="display:flex;align-items:center;justify-content:center;cursor:pointer">
+                  Import
+                  <input type="file" id="import-library-file" accept=".json" style="display:none" />
+                </label>
               </div>
             </div>
 
-            <!-- Accordion: Storage & Data -->
-            <div class="mobile-settings-accordion" id="backup-accordion">
-              <button class="mobile-settings-accordion-header" aria-expanded="false" aria-controls="panel-backup">
-                <div class="header-left">
-                  <i data-lucide="database"></i>
-                  <span>Storage & Backup</span>
+            <!-- Row: Purge Cache -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle"><i data-lucide="trash-2"></i></div>
+                <div class="row-text">
+                  <div class="row-title">Purge Cache</div>
+                  <div class="row-desc">Erase static page web footprint</div>
                 </div>
-                <i data-lucide="chevron-down" class="accordion-chevron"></i>
-              </button>
-              <div class="mobile-settings-accordion-content" id="panel-backup">
-                <div class="accordion-inner-panel">
-                  <div class="settings-row" style="display:flex; gap:10px; width:100%; box-sizing:border-box;">
-                    <button class="settings-action-btn" id="btn-export-library" style="background:var(--accent-soft);color:var(--accent);border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;flex:1;font-size:12px;">
-                      Export JSON
-                    </button>
-                    <label class="settings-action-btn" style="background:rgba(255,255,255,0.05);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;flex:1;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;">
-                      Import JSON
-                      <input type="file" id="import-library-file" accept=".json" style="display:none" />
-                    </label>
-                  </div>
+              </div>
+              <div class="row-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <div id="cache-size-gauge" style="font-weight:700;color:var(--accent);font-size:12px">estimating...</div>
+                <button class="settings-danger-btn-sm" id="btn-purge-cache">Purge</button>
+              </div>
+            </div>
 
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Purge Cache</div>
-                      <div class="settings-row-desc">Clear static cached footprint space</div>
-                    </div>
-                    <div style="text-align:right">
-                      <div id="cache-size-gauge" style="font-weight:700;color:var(--accent);font-size:13px;margin-bottom:4px">estimating...</div>
-                      <button class="settings-danger-btn" id="btn-purge-cache" style="border:none;padding:6px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;">
-                        Purge
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="settings-row">
-                    <div class="settings-row-label">
-                      <div class="settings-row-title">Reset Watch History</div>
-                      <div class="settings-row-desc">Permanently erase entire history</div>
-                    </div>
-                    <button class="settings-danger-btn" id="settings-clear-history" style="border:none;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
-                      Clear History
-                    </button>
-                  </div>
+            <!-- Row: Clear History -->
+            <div class="mobile-settings-row">
+              <div class="row-left">
+                <div class="row-icon-circle" style="background:rgba(239,68,68,0.08);color:#ef4444"><i data-lucide="history"></i></div>
+                <div class="row-text">
+                  <div class="row-title" style="color:#f87171">Reset Watch History</div>
+                  <div class="row-desc">Erase entire watchlist & playback history</div>
                 </div>
+              </div>
+              <div class="row-right">
+                <button class="settings-danger-btn-sm" id="settings-clear-history">Reset</button>
               </div>
             </div>
 
           </div>
-        </div>
 
-        <!-- Sign Out Button -->
-        <div class="mobile-settings-group" style="margin-bottom: 40px; margin-top: 10px;">
-          <button class="mobile-settings-signout-btn" id="settings-signout">
-            <span>Sign Out Account</span>
-          </button>
         </div>
 
         <!-- MOBILE MODALS & FLYOUTS (FULLY COMPATIBLE WITH PREF IDs) -->
@@ -1416,62 +1424,39 @@ export async function renderSettingsPage({ container }) {
   }
 
   if (isMobile) {
-    // 1. Accordion trigger clicks (single-open + chip syncing)
-    container.querySelectorAll('.mobile-settings-accordion-header').forEach(header => {
-      header.addEventListener('click', () => {
-        const accordion = header.parentElement;
-        const isOpen = accordion.classList.contains('open');
-        container.querySelectorAll('.mobile-settings-accordion').forEach(acc => {
-          acc.classList.remove('open');
-          acc.querySelector('.mobile-settings-accordion-header')?.setAttribute('aria-expanded', 'false');
-        });
-        if (!isOpen) {
-          accordion.classList.add('open');
-          header.setAttribute('aria-expanded', 'true');
-          
-          // Sync active Category Chip
-          const chipTarget = accordion.id;
-          container.querySelectorAll('.category-chip').forEach(chip => {
-            if (chip.dataset.target === chipTarget) {
-              chip.classList.add('active');
-              chip.setAttribute('aria-selected', 'true');
-              chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            } else {
-              chip.classList.remove('active');
-              chip.setAttribute('aria-selected', 'false');
-            }
-          });
+    // 1. Dynamic Overlay Select Label Syncer
+    const syncSelectLabels = () => {
+      const lang = container.querySelector('#pref-language');
+      const valLang = container.querySelector('#val-pref-language');
+      if (lang && valLang) {
+        valLang.textContent = lang.options[lang.selectedIndex]?.text || '';
+      }
+      
+      const qual = container.querySelector('#pref-quality');
+      const valQual = container.querySelector('#val-pref-quality');
+      if (qual && valQual) {
+        valQual.textContent = qual.options[qual.selectedIndex]?.text || '';
+      }
 
-          // Smooth scroll open panel
-          setTimeout(() => {
-            accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 150);
-        }
+      const seek = container.querySelector('#pref-seek-interval');
+      const valSeek = container.querySelector('#val-pref-seek-interval');
+      if (seek && valSeek) {
+        valSeek.textContent = seek.options[seek.selectedIndex]?.text || '';
+      }
+    };
+
+    // Trigger sync initially
+    syncSelectLabels();
+
+    // Listen to changes to auto-update visible labels and trigger auto-save
+    container.querySelectorAll('.settings-select-overlay').forEach(select => {
+      select.addEventListener('change', () => {
+        syncSelectLabels();
+        save();
       });
     });
 
-    // 2. Sticky Category Filter Chips click triggers
-    container.querySelectorAll('.category-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        container.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        const targetId = chip.dataset.target;
-        const accordion = container.querySelector(`#${targetId}`);
-        if (accordion) {
-          container.querySelectorAll('.mobile-settings-accordion').forEach(acc => {
-            acc.classList.remove('open');
-            acc.querySelector('.mobile-settings-accordion-header')?.setAttribute('aria-expanded', 'false');
-          });
-          accordion.classList.add('open');
-          accordion.querySelector('.mobile-settings-accordion-header')?.setAttribute('aria-expanded', 'true');
-          setTimeout(() => {
-            accordion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 100);
-        }
-      });
-    });
-
-    // 3. Compact Modal triggers
+    // 2. Compact Modal triggers
     container.querySelector('#btn-open-subtitle-modal')?.addEventListener('click', () => {
       const modal = container.querySelector('#mobile-subtitle-modal');
       if (modal) {
@@ -1488,7 +1473,7 @@ export async function renderSettingsPage({ container }) {
       }
     });
 
-    // 4. Close Modal button triggers
+    // 3. Close Modal button triggers
     container.querySelectorAll('.close-mobile-modal-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const modalId = btn.dataset.modal;
