@@ -4164,7 +4164,7 @@
     position: absolute !important;
     left: max(20px, env(safe-area-inset-left)) !important;
     right: calc(max(20px, env(safe-area-inset-right)) + 80px) !important; /* spacing for time text on right */
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 52px) !important;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 96px) !important; /* above bottom options row + gap */
     height: 6px !important;
     width: auto !important;
     margin-bottom: 0 !important;
@@ -4198,7 +4198,7 @@
   .mobile-player-container .vp-time {
     position: absolute !important;
     right: max(20px, env(safe-area-inset-right)) !important;
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 46px) !important;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 90px) !important;
     font-size: 12px !important;
     font-weight: 600 !important;
     color: rgba(255, 255, 255, 0.9) !important;
@@ -4208,45 +4208,26 @@
     z-index: 100 !important;
   }
 
-  /* 7. Bottom Navigation Options Bar (Speed, Lock, Subtitles) */
+  /* 7. Bottom Navigation bar: now only hosts fullscreen button — speed/quality moved to options row */
   .mobile-player-container .vp-bottom-bar {
     position: absolute !important;
     bottom: max(12px, env(safe-area-inset-bottom)) !important;
-    left: max(20px, env(safe-area-inset-left)) !important;
-    right: max(20px, env(safe-area-inset-right)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    left: auto !important;
     height: 44px !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: space-around !important;
+    justify-content: flex-end !important;
     width: auto !important;
     background: transparent !important;
     gap: 0 !important;
     pointer-events: auto !important;
   }
 
-  /* Style Select dropdowns to look like sleek buttons */
+  /* Hide old select dropdowns from the bottom bar (now in options row) */
   .mobile-player-container .vp-bottom-bar .vp-select {
-    background: transparent !important;
-    color: rgba(255, 255, 255, 0.75) !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.8px !important;
-    border: none !important;
-    padding: 6px 12px !important;
-    cursor: pointer !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    text-align: center !important;
-    outline: none !important;
-    border-radius: 4px !important;
-    min-width: 80px !important;
-  }
-
-  .mobile-player-container .vp-bottom-bar .vp-select:active {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #ffffff !important;
+    display: none !important;
   }
 
   /* Left-aligned controls (hide bottom seek/played buttons) */
@@ -4254,36 +4235,24 @@
     display: none !important;
   }
 
-  /* Right-aligned bottom layout (horizontal layout) */
+  /* Right-aligned controls: only fullscreen button remains in vp-bottom-bar */
   .mobile-player-container .vp-right-controls {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: space-around !important;
+    justify-content: flex-end !important;
     width: 100% !important;
-    gap: 12px !important;
+    gap: 8px !important;
   }
 
-  /* Lock controls button - bottom bar positioning */
+  /* Hide pip from mobile (not useful) */
+  .mobile-player-container #vp-pip-btn {
+    display: none !important;
+  }
+
+  /* Lock controls button - now inside options row, hide old absolute-positioned one */
   .mobile-player-container .vp-lock-btn {
-    position: static !important;
-    transform: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: transparent !important;
-    border: none !important;
-    color: rgba(255, 255, 255, 0.75) !important;
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-  }
-
-  .mobile-player-container .vp-lock-btn svg {
-    width: 20px !important;
-    height: 20px !important;
-    stroke-width: 2.2 !important;
+    display: none !important;
   }
 
   /* Fullscreen exit / shrink button */
@@ -4291,22 +4260,94 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: transparent !important;
-    border: none !important;
-    color: rgba(255, 255, 255, 0.75) !important;
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 4px !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 8px !important;
     cursor: pointer !important;
   }
 
   .mobile-player-container #vp-fs-btn svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
     stroke-width: 2.2 !important;
   }
 
-  /* 8. Locked overlay styling */
+  /* 8. Netflix bottom options row */
+  .mobile-player-container .vp-mobile-options-row {
+    position: absolute !important;
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 48px) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: calc(max(8px, env(safe-area-inset-right)) + 48px) !important; /* leave space for fs button */
+    height: 56px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    background: transparent !important;
+    pointer-events: auto !important;
+    z-index: 105 !important;
+  }
+
+  /* Each option column: icon on top, text label below */
+  .mobile-player-container .vp-mobile-opt {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    cursor: pointer !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    position: relative !important;
+    min-width: 56px !important;
+    padding: 6px 4px !important;
+    border-radius: 8px !important;
+    transition: background 0.15s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  .mobile-player-container .vp-mobile-opt:active {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
+
+  .mobile-player-container .vp-mobile-opt svg {
+    width: 20px !important;
+    height: 20px !important;
+    stroke-width: 1.8 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mobile-player-container .vp-opt-text {
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.3px !important;
+    opacity: 0.85 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    font-family: var(--font-display, 'Inter', sans-serif) !important;
+  }
+
+  /* Transparent select overlay on top of Speed / Quality option columns */
+  .mobile-player-container .vp-opt-select-overlay {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    z-index: 10 !important;
+    cursor: pointer !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border: none !important;
+    background: transparent !important;
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+  }
+
+  /* 9. Locked overlay styling */
   .mobile-player-container .vp-locked-overlay {
     background: radial-gradient(circle at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%) !important;
     z-index: 10000 !important;
@@ -4318,6 +4359,5 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
   }
 }
-
 
 

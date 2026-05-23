@@ -309,7 +309,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       <button class="vp-btn" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
       </button>
-      <div class="vp-top-title" id="vp-top-title">Title</div>
+      <div class="vp-top-title" id="vp-top-title">Now Playing</div>
       <button class="vp-btn" id="vp-top-close-btn" title="Close" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
@@ -335,11 +335,62 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     `;
     controls.appendChild(brightSlider);
 
+    // 3. Netflix-style bottom options row
+    const optionsRow = document.createElement('div');
+    optionsRow.className = 'vp-mobile-options-row';
+    optionsRow.id = 'vp-mobile-options-row';
+    optionsRow.innerHTML = `
+      <!-- Speed option: transparent select sits on top -->
+      <div class="vp-mobile-opt" id="vp-opt-speed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a10 10 0 1 1-6.88 17.24"/><path d="M12 6v6l4 2"/>
+        </svg>
+        <span class="vp-opt-text" id="vp-opt-speed-label">Speed (1x)</span>
+      </div>
+      <!-- Lock option -->
+      <div class="vp-mobile-opt" id="vp-opt-lock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span class="vp-opt-text">Lock</span>
+      </div>
+      <!-- Episodes option (hidden by default, shown for TV) -->
+      <div class="vp-mobile-opt vp-opt-tv-only" id="vp-opt-episodes" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <span class="vp-opt-text">Episodes</span>
+      </div>
+      <!-- Audio & Quality option: transparent select sits on top -->
+      <div class="vp-mobile-opt" id="vp-opt-quality">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="vp-opt-text">Quality</span>
+      </div>
+      <!-- Next Episode option (hidden by default, shown for TV) -->
+      <div class="vp-mobile-opt vp-opt-tv-only" id="vp-opt-next" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+        </svg>
+        <span class="vp-opt-text">Next Episode</span>
+      </div>
+    `;
+    controls.appendChild(optionsRow);
+
     // Wire up listeners
     const bSlider = document.getElementById('vp-brightness-slider');
     const bSliderFill = document.getElementById('vp-brightness-slider-fill');
     const topCastBtn = document.getElementById('vp-top-cast-btn');
     const topCloseBtn = document.getElementById('vp-top-close-btn');
+    const optSpeed = document.getElementById('vp-opt-speed');
+    const optSpeedLabel = document.getElementById('vp-opt-speed-label');
+    const optLock = document.getElementById('vp-opt-lock');
+    const optEpisodes = document.getElementById('vp-opt-episodes');
+    const optQuality = document.getElementById('vp-opt-quality');
+    const optNext = document.getElementById('vp-opt-next');
 
     let currentBrightness = parseFloat(localStorage.getItem('piq_brightness') || '1.0');
     if (bSlider && bSliderFill) {
@@ -370,6 +421,54 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       });
     }
 
+    // Lock option: forwards tap to real lock button
+    if (optLock) {
+      optLock.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const realLockBtn = document.getElementById('vp-lock-btn');
+        if (realLockBtn) realLockBtn.click();
+      });
+    }
+
+    // Speed option: overlay the real vp-speed select transparently on top
+    if (optSpeed) {
+      const realSpeed = document.getElementById('vp-speed');
+      if (realSpeed) {
+        realSpeed.classList.add('vp-opt-select-overlay');
+        realSpeed.setAttribute('aria-label', 'Playback Speed');
+        optSpeed.appendChild(realSpeed);
+        // Update label on change
+        realSpeed.addEventListener('change', () => {
+          const val = parseFloat(realSpeed.value);
+          if (optSpeedLabel) optSpeedLabel.textContent = `Speed (${val}x)`;
+        });
+      }
+    }
+
+    // Quality option: overlay the real vp-quality select transparently on top
+    if (optQuality) {
+      const realQuality = document.getElementById('vp-quality');
+      if (realQuality) {
+        realQuality.classList.add('vp-opt-select-overlay');
+        realQuality.setAttribute('aria-label', 'Video Quality');
+        optQuality.appendChild(realQuality);
+      }
+    }
+
+    // Episodes option: exits fullscreen and scrolls to mobile episodes section
+    if (optEpisodes) {
+      optEpisodes.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        setTimeout(() => {
+          const epSection = document.querySelector('.mobile-player-episodes-section') ||
+                            document.querySelector('.mobile-episodes-list') ||
+                            document.querySelector('#mobile-episodes-list');
+          if (epSection) epSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+      });
+    }
+
     // Sync vertical brightness slider automatically on filter mutation
     const observer = new MutationObserver(() => {
       const filter = document.documentElement.style.filter || '';
@@ -382,6 +481,18 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+    // Expose method for PlayerPage to activate TV-only options and set onNext callback
+    container._activateTVOptions = function(onNext) {
+      if (optEpisodes) optEpisodes.style.display = '';
+      if (optNext) {
+        optNext.style.display = '';
+        optNext.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (typeof onNext === 'function') onNext();
+        });
+      }
+    };
   }
   const loader = document.getElementById('vp-loader');
   const bigPlay = document.getElementById('vp-big-play');
@@ -776,7 +887,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       showPlayerHUD(`<svg style="width:14px;height:14px;color:var(--accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Skipped Intro & Recap`);
     }
 
-    timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+    // On mobile, show remaining time. On desktop, show current/total.
+    if (window.innerWidth <= 768 || ('ontouchstart' in window)) {
+      const remaining = dur - cur;
+      timeDisplay.textContent = dur > 0 ? `-${formatTime(remaining)}` : '0:00';
+    } else {
+      timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+    }
     if (!isDragging && dur > 0) {
       const pct = (cur / dur) * 100;
       progressPlayed.style.width = pct + '%';
@@ -1068,6 +1185,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     const topTitle = document.getElementById('vp-top-title');
     if (topTitle) {
       topTitle.textContent = artist ? `${title} · ${artist}` : title;
+    }
+    // Activate TV-only bottom bar options if onNext is provided
+    if (onNext && typeof container._activateTVOptions === 'function') {
+      container._activateTVOptions(onNext);
     }
     if (!('mediaSession' in navigator)) return;
     try {
