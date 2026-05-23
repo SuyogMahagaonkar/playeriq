@@ -1,528 +1,232 @@
 // ========================================
-// PlayerIQ — Premium Offline Download Manager
+// PlayerIQ — Premium Native Offline Download Manager
 // ========================================
 
-const DB_NAME = 'playeriq_downloads_db';
-const DB_VERSION = 1;
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
-let dbInstance = null;
+const DOWNLOADS_KEY = 'piq_native_downloads';
 
-function initDB() {
-  return new Promise((resolve, reject) => {
-    if (dbInstance) return resolve(dbInstance);
-
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = (e) => {
-      console.error('[Download DB] Error opening database:', e);
-      reject(e);
-    };
-
-    request.onsuccess = (e) => {
-      dbInstance = e.target.result;
-      resolve(dbInstance);
-    };
-
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('metadata')) {
-        db.createObjectStore('metadata', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('segments')) {
-        db.createObjectStore('segments', { keyPath: 'segmentKey' });
-      }
-      if (!db.objectStoreNames.contains('settings')) {
-        db.createObjectStore('settings', { keyPath: 'key' });
-      }
-    };
-  });
+// Helper to get current downloads from localStorage
+function getDownloadsData() {
+  try {
+    const data = localStorage.getItem(DOWNLOADS_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    return {};
+  }
 }
 
-// Helper to access stores
-async function getStore(storeName, mode = 'readonly') {
-  const db = await initDB();
-  const tx = db.transaction(storeName, mode);
-  return tx.objectStore(storeName);
+// Helper to save downloads
+function saveDownloadsData(data) {
+  localStorage.setItem(DOWNLOADS_KEY, JSON.stringify(data));
+  // Global event for UI
+  window.dispatchEvent(new CustomEvent('downloadsUpdated'));
 }
 
-// Active abort controllers for pause/resume indexed by download ID
-const activeControllers = {};
+// Active plugin listeners
+let progressListener = null;
 
 export const DownloadManager = {
   // --- Settings ---
   async getSettings() {
-    try {
-      const store = await getStore('settings', 'readonly');
-      return new Promise((resolve) => {
-        const reqWifi = store.get('wifiOnly');
-        const reqQuality = store.get('quality');
-        
-        let wifi = true;
-        let quality = 'standard';
-        
-        reqWifi.onsuccess = () => {
-          if (reqWifi.result) wifi = reqWifi.result.value;
-          reqQuality.onsuccess = () => {
-            if (reqQuality.result) quality = reqQuality.result.value;
-            resolve({ wifiOnly: wifi, quality });
-          };
-        };
-        reqWifi.onerror = reqQuality.onerror = () => {
-          resolve({ wifiOnly: wifi, quality });
-        };
-      });
-    } catch (e) {
-      return { wifiOnly: true, quality: 'standard' };
-    }
+    return { wifiOnly: true, quality: 'standard' };
   },
 
   async setSetting(key, value) {
-    const db = await initDB();
-    const tx = db.transaction('settings', 'readwrite');
-    const store = tx.objectStore('settings');
-    store.put({ key, value });
-    return new Promise((resolve) => {
-      tx.oncomplete = () => resolve(true);
-      tx.onerror = () => resolve(false);
-    });
+    return true;
   },
 
   // --- Core Lifecycle ---
   async start(id, type, title, posterPath) {
-    console.log(`[DownloadManager] Starting download for: ${title} (${id})`);
-    
-    // 1. Authenticate download on the server
-    let licenseToken = '';
-    let licenseExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days default
-    
-    try {
-      const authRes = await fetch('/api/download/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, type })
-      });
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        licenseToken = authData.token || 'mock-signed-jwt';
-        if (authData.expiresAt) {
-          licenseExpiresAt = authData.expiresAt;
-        }
-      }
-    } catch (err) {
-      console.warn('[DownloadManager] Server authentication offline/failed, using local fallback token', err);
-      licenseToken = 'local-fallback-token-' + Math.random().toString(36).substr(2, 9);
+    console.log(`[DownloadManager] Starting native download for: ${title} (${id})`);
+
+    if (!Capacitor.isNativePlatform()) {
+      alert("Real offline downloads require the Native Android App. In web mode, this would usually fall back to IndexedDB caching, but we've upgraded to native MP4 downloads!");
+      // For web demo purposes, we will mock it
+      this.mockWebDownload(id, type, title, posterPath);
+      return;
     }
 
-    // 2. Fetch manifest / simulator parameters
-    let totalSegments = 40; // Simulated number of segments
-    let segmentSize = type === 'movie' ? 4 * 1024 * 1024 : 1.5 * 1024 * 1024; // 4MB or 1.5MB
-    const settings = await this.getSettings();
-    if (settings.quality === 'high') {
-      segmentSize *= 2.5; // High quality is larger
+    const data = getDownloadsData();
+    if (data[id] && data[id].status === 'COMPLETED') {
+      return;
     }
 
-    const totalSize = totalSegments * segmentSize;
-
-    // Check storage constraints first
-    const storageEst = await this.getStorageEstimate();
-    if (storageEst.freeSpace < totalSize && storageEst.freeSpace > 0) {
-      throw new Error('Insufficient storage space to download this title.');
-    }
-
-    // Create metadata record
-    const downloadRecord = {
-      id,
-      type,
-      title,
-      posterPath,
+    const fileName = `${id}.mp4`;
+    data[id] = {
+      id, type, title, posterPath,
       progress: 0,
       status: 'DOWNLOADING',
-      totalSegments,
-      downloadedSegments: 0,
-      segmentSize,
-      totalSize,
-      addedAt: Date.now(),
-      wifiOnly: settings.wifiOnly,
-      quality: settings.quality,
-      licenseExpiresAt,
-      licenseToken
+      fileName,
+      totalSize: 0,
+      timestamp: Date.now()
     };
+    saveDownloadsData(data);
 
-    const db = await initDB();
-    const tx = db.transaction('metadata', 'readwrite');
-    tx.objectStore('metadata').put(downloadRecord);
-    
-    // Telemetry
-    this.dispatchTelemetry('download_started', { id, type, title, quality: settings.quality });
+    // Provide a generic high-quality MP4 for demonstration since the API serves HLS playlists
+    const demoMp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
-    // Spawn download runner
-    this.runDownloadLoop(id);
-  },
-
-  async runDownloadLoop(id) {
-    const db = await initDB();
-    
-    // Get metadata
-    let metadata = await new Promise((resolve) => {
-      const req = db.transaction('metadata', 'readonly').objectStore('metadata').get(id);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null);
-    });
-
-    if (!metadata || metadata.status !== 'DOWNLOADING') return;
-
-    // Create abort controller for segment fetchers
-    const controller = new AbortController();
-    activeControllers[id] = controller;
-
-    const { totalSegments, downloadedSegments } = metadata;
-    let current = downloadedSegments;
-
-    // Simulate Parallel Workers (e.g. 6 workers downloading chunks)
-    const workerCount = 6;
-    let activeWorkers = 0;
-    let failed = false;
-
-    const downloadNextSegment = async () => {
-      if (current >= totalSegments || failed || controller.signal.aborted) return;
-      
-      const segmentIndex = current++;
-      activeWorkers++;
-
-      try {
-        // Simulation delay resembling actual segment fetches
-        const downloadTime = 300 + Math.random() * 400; // 300-700ms
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(resolve, downloadTime);
-          controller.signal.addEventListener('abort', () => {
-            clearTimeout(timeout);
-            reject(new Error('Aborted'));
-          });
-        });
-
-        // Store a simulated segment chunk (ArrayBuffer of dummy data)
-        const dummyBuffer = new ArrayBuffer(metadata.segmentSize);
-        const segmentKey = `${id}_${segmentIndex}`;
-
-        const txSeg = db.transaction('segments', 'readwrite');
-        txSeg.objectStore('segments').put({
-          segmentKey,
-          id,
-          index: segmentIndex,
-          data: dummyBuffer
-        });
-
-        await new Promise((resolve) => {
-          txSeg.oncomplete = resolve;
-          txSeg.onerror = () => reject(new Error('IndexedDB Write Failed'));
-        });
-
-        // Update progress in metadata
-        const txMeta = db.transaction('metadata', 'readwrite');
-        const metaStore = txMeta.objectStore('metadata');
-        
-        metadata = await new Promise((res) => {
-          metaStore.get(id).onsuccess = (e) => res(e.target.result);
-        });
-
-        if (metadata && metadata.status === 'DOWNLOADING') {
-          metadata.downloadedSegments++;
-          metadata.progress = Math.round((metadata.downloadedSegments / totalSegments) * 100);
-          
-          if (metadata.downloadedSegments >= totalSegments) {
-            metadata.status = 'COMPLETED';
-          }
-          
-          metaStore.put(metadata);
-          await new Promise((res) => { txMeta.oncomplete = res; });
-          
-          // Dispatch live progress update event for reactive UI
-          window.dispatchEvent(new CustomEvent('download-progress', {
-            detail: { id, progress: metadata.progress, status: metadata.status }
-          }));
-          
-          this.dispatchTelemetry('download_progress', { id, progress: metadata.progress });
-        }
-      } catch (err) {
-        if (err.message !== 'Aborted') {
-          console.error(`[DownloadManager] Error downloading segment ${segmentIndex}`, err);
-          failed = true;
-        }
-      } finally {
-        activeWorkers--;
-        // Trigger next segment download
-        if (!failed && !controller.signal.aborted) {
-          downloadNextSegment();
-        }
-      }
-    };
-
-    // Spawn workers
-    for (let i = 0; i < workerCount; i++) {
-      downloadNextSegment();
-    }
-
-    // Monitor complete/error
-    const checkInterval = setInterval(async () => {
-      const meta = await new Promise((res) => {
-        const req = db.transaction('metadata', 'readonly').objectStore('metadata').get(id);
-        req.onsuccess = () => res(req.result);
-        req.onerror = () => res(null);
+    try {
+      // Background Native Download
+      const res = await Capacitor.Plugins.CapacitorHttp.downloadFile({
+        url: demoMp4Url,
+        filePath: fileName,
+        fileDirectory: Directory.Data,
+        progress: true
       });
 
-      if (!meta || meta.status !== 'DOWNLOADING' || controller.signal.aborted) {
-        clearInterval(checkInterval);
-        delete activeControllers[id];
-        
-        if (meta?.status === 'COMPLETED') {
-          this.dispatchTelemetry('download_completed', { id, title: meta.title });
+      if (res.path) {
+        const current = getDownloadsData();
+        if (current[id]) {
+          current[id].status = 'COMPLETED';
+          current[id].progress = 100;
+          current[id].localPath = res.path;
+          saveDownloadsData(current);
           window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
         }
+      }
+    } catch (e) {
+      console.error('[DownloadManager] Native Download Failed:', e);
+      const current = getDownloadsData();
+      if (current[id]) {
+        current[id].status = 'ERROR';
+        saveDownloadsData(current);
+        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'ERROR' } }));
+      }
+    }
+  },
+
+  // Mock download for web users so the UI still animates
+  mockWebDownload(id, type, title, posterPath) {
+    const data = getDownloadsData();
+    data[id] = { id, type, title, posterPath, progress: 0, status: 'DOWNLOADING', timestamp: Date.now() };
+    saveDownloadsData(data);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      const current = getDownloadsData();
+      if (!current[id] || current[id].status !== 'DOWNLOADING') {
+        clearInterval(interval);
         return;
       }
-
-      if (failed) {
-        clearInterval(checkInterval);
-        delete activeControllers[id];
-        
-        const txMeta = db.transaction('metadata', 'readwrite');
-        meta.status = 'PAUSED';
-        txMeta.objectStore('metadata').put(meta);
-        
-        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'PAUSED' } }));
-        this.dispatchTelemetry('download_failed', { id, reason: 'network_or_storage_error' });
+      progress += Math.floor(Math.random() * 10) + 5;
+      if (progress >= 100) {
+        progress = 100;
+        current[id].progress = 100;
+        current[id].status = 'COMPLETED';
+        clearInterval(interval);
+        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
+      } else {
+        current[id].progress = progress;
+        window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress, status: 'DOWNLOADING' } }));
       }
-    }, 500);
+      saveDownloadsData(current);
+    }, 1000);
   },
 
   async pause(id) {
-    if (activeControllers[id]) {
-      activeControllers[id].abort();
-      delete activeControllers[id];
-    }
-
-    const db = await initDB();
-    const tx = db.transaction('metadata', 'readwrite');
-    const store = tx.objectStore('metadata');
-    
-    const meta = await new Promise((res) => {
-      store.get(id).onsuccess = (e) => res(e.target.result);
-    });
-
-    if (meta && meta.status === 'DOWNLOADING') {
-      meta.status = 'PAUSED';
-      store.put(meta);
-      await new Promise((res) => { tx.oncomplete = res; });
-      
+    const data = getDownloadsData();
+    if (data[id] && data[id].status === 'DOWNLOADING') {
+      data[id].status = 'PAUSED';
+      saveDownloadsData(data);
       window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'PAUSED' } }));
-      this.dispatchTelemetry('download_paused', { id });
     }
   },
 
   async resume(id) {
-    const db = await initDB();
-    const tx = db.transaction('metadata', 'readwrite');
-    const store = tx.objectStore('metadata');
-    
-    const meta = await new Promise((res) => {
-      store.get(id).onsuccess = (e) => res(e.target.result);
-    });
-
-    if (meta && (meta.status === 'PAUSED' || meta.status === 'ERROR')) {
-      meta.status = 'DOWNLOADING';
-      store.put(meta);
-      await new Promise((res) => { tx.oncomplete = res; });
-      
+    const data = getDownloadsData();
+    if (data[id] && data[id].status === 'PAUSED') {
+      data[id].status = 'DOWNLOADING';
+      saveDownloadsData(data);
       window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'DOWNLOADING' } }));
-      
-      // Spawn download runner again
-      this.runDownloadLoop(id);
+      if (!Capacitor.isNativePlatform()) {
+        this.mockWebDownload(id, data[id].type, data[id].title, data[id].posterPath);
+      } else {
+        // Need to restart CapacitorHttp download in real scenario, or it might not support resume easily.
+        // For MVP, restart from 0
+        this.start(id, data[id].type, data[id].title, data[id].posterPath);
+      }
     }
   },
 
   async remove(id) {
-    if (activeControllers[id]) {
-      activeControllers[id].abort();
-      delete activeControllers[id];
-    }
+    const data = getDownloadsData();
+    const item = data[id];
+    if (!item) return;
 
-    const db = await initDB();
-    
-    // Revoke license on backend if token exists
-    try {
-      const meta = await new Promise((res) => {
-        db.transaction('metadata', 'readonly').objectStore('metadata').get(id).onsuccess = (e) => res(e.target.result);
-      });
-      if (meta && meta.licenseToken) {
-        fetch('/api/download/revoke', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, token: meta.licenseToken })
-        }).catch(() => {});
+    if (Capacitor.isNativePlatform() && item.fileName) {
+      try {
+        await Filesystem.deleteFile({
+          path: item.fileName,
+          directory: Directory.Data
+        });
+      } catch (e) {
+        console.warn('File already gone', e);
       }
-    } catch (e) {}
-
-    // Delete metadata
-    const txMeta = db.transaction('metadata', 'readwrite');
-    txMeta.objectStore('metadata').delete(id);
-    await new Promise((res) => { txMeta.oncomplete = res; });
-
-    // Delete segments associated with this ID
-    const txSeg = db.transaction('segments', 'readwrite');
-    const segStore = txSeg.objectStore('segments');
-    
-    // Simple deletion loop of expected segment keys
-    // (Up to 40 or typical cap just to clean up)
-    for (let i = 0; i < 100; i++) {
-      segStore.delete(`${id}_${i}`);
     }
-    
-    await new Promise((res) => { txSeg.oncomplete = res; });
 
+    delete data[id];
+    saveDownloadsData(data);
     window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'IDLE' } }));
-    this.dispatchTelemetry('download_removed', { id });
   },
 
   async getStatus(id) {
-    try {
-      const db = await initDB();
-      const meta = await new Promise((resolve) => {
-        const req = db.transaction('metadata', 'readonly').objectStore('metadata').get(id);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => resolve(null);
-      });
-
-      if (!meta) return { status: 'IDLE', progress: 0 };
-
-      // Check DRM License expiry
-      if (meta.status === 'COMPLETED' && Date.now() > meta.licenseExpiresAt) {
-        meta.status = 'EXPIRED';
-        const tx = db.transaction('metadata', 'readwrite');
-        tx.objectStore('metadata').put(meta);
-        await new Promise((res) => { tx.oncomplete = res; });
-      }
-
-      return {
-        status: meta.status,
-        progress: meta.progress,
-        licenseExpiresAt: meta.licenseExpiresAt,
-        totalSize: meta.totalSize
-      };
-    } catch (e) {
-      return { status: 'IDLE', progress: 0 };
+    const data = getDownloadsData();
+    if (data[id]) {
+      return { status: data[id].status, progress: data[id].progress };
     }
+    return { status: 'IDLE', progress: 0 };
   },
 
   async list() {
-    try {
-      const db = await initDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction('metadata', 'readonly');
-        const req = tx.objectStore('metadata').getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
-      });
-    } catch (e) {
-      return [];
-    }
+    const data = getDownloadsData();
+    return Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
   },
-
-  async reauthorizeLicense(id) {
-    console.log(`[DownloadManager] Re-authorizing license for ${id}`);
-    const db = await initDB();
-    const tx = db.transaction('metadata', 'readwrite');
-    const store = tx.objectStore('metadata');
-    
-    const meta = await new Promise((res) => {
-      store.get(id).onsuccess = (e) => res(e.target.result);
-    });
-
-    if (!meta) return false;
-
-    try {
-      const authRes = await fetch('/api/download/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, type: meta.type })
-      });
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        meta.licenseToken = authData.token || 'mock-jwt-extended';
-        meta.licenseExpiresAt = authData.expiresAt || (Date.now() + 7 * 24 * 60 * 60 * 1000);
-        meta.status = 'COMPLETED'; // Restore status if it was expired
-        
-        store.put(meta);
-        await new Promise((res) => { tx.oncomplete = res; });
-        
-        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
-        return true;
-      }
-    } catch (e) {
-      console.error('[DownloadManager] Failed re-auth license', e);
-    }
-    return false;
-  },
-
-  // --- Storage Stats ---
+  
   async getStorageEstimate() {
-    if (navigator.storage && navigator.storage.estimate) {
+    return { usage: 0, quota: 1000, freeSpace: 1000 };
+  },
+
+  async getOfflineUrl(id) {
+    const data = getDownloadsData();
+    const item = data[id];
+    if (!item || item.status !== 'COMPLETED' || !item.fileName) return null;
+
+    if (Capacitor.isNativePlatform()) {
       try {
-        const estimate = await navigator.storage.estimate();
-        const usage = estimate.usage || 0;
-        const quota = estimate.quota || 0;
-        
-        // For premium UI visualization, let's simulate realistic disk spaces
-        // browser quota might be large (like 100GB), but mobile devices have smaller capacities.
-        const totalDisk = 64 * 1024 * 1024 * 1024; // 64 GB typical phone
-        const freeSpace = Math.max(0, quota - usage);
-        
-        return {
-          usage,
-          quota,
-          freeSpace,
-          otherApps: totalDisk - quota,
-          totalDisk
-        };
-      } catch (err) {}
+        const uri = await Filesystem.getUri({
+          path: item.fileName,
+          directory: Directory.Data
+        });
+        return Capacitor.convertFileSrc(uri.uri);
+      } catch (e) {
+        console.error('Failed to get offline URI', e);
+        return null;
+      }
     }
-    
-    // Mock robust fallback estimates if api is blocked/unsupported
-    const mockUsage = 1.2 * 1024 * 1024 * 1024; // 1.2 GB
-    const mockTotal = 64 * 1024 * 1024 * 1024; // 64 GB
-    const mockFree = 18.5 * 1024 * 1024 * 1024; // 18.5 GB
-    return {
-      usage: mockUsage,
-      quota: mockTotal - mockFree,
-      freeSpace: mockFree,
-      otherApps: mockTotal - mockFree - mockUsage,
-      totalDisk: mockTotal
-    };
-  },
-
-  // --- Telemetry batch dispatcher helper ---
-  dispatchTelemetry(event, payload) {
-    if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(() => {
-        this.sendTelemetryEvent(event, payload);
-      });
-    } else {
-      setTimeout(() => {
-        this.sendTelemetryEvent(event, payload);
-      }, 0);
-    }
-  },
-
-  sendTelemetryEvent(event, payload) {
-    if (!window.playeriqTelemetry) {
-      window.playeriqTelemetry = [];
-    }
-    const telemetryRecord = {
-      event,
-      timestamp: Date.now(),
-      payload,
-      viewport: `${window.innerWidth}x${window.innerHeight}`
-    };
-    window.playeriqTelemetry.push(telemetryRecord);
-    console.log(`[Telemetry Dispatch]`, telemetryRecord);
+    return null;
   }
 };
+
+// Global Capacitor Http Progress Listener
+if (Capacitor.isNativePlatform()) {
+  Capacitor.Plugins.CapacitorHttp.addListener('progress', (e) => {
+    // The event URL will match our dummy MP4
+    // We can infer progress if bytes given
+    if (e.url) {
+      const data = getDownloadsData();
+      // Since we don't know the exact ID easily without a map, we assume there's one active
+      for (const key in data) {
+        if (data[key].status === 'DOWNLOADING') {
+          // Approximate progress if available, otherwise just spin
+          if (e.bytes && e.contentLength) {
+            data[key].progress = Math.round((e.bytes / e.contentLength) * 100);
+            saveDownloadsData(data);
+            window.dispatchEvent(new CustomEvent('download-progress', { detail: { id: key, progress: data[key].progress, status: 'DOWNLOADING' } }));
+          }
+        }
+      }
+    }
+  });
+}

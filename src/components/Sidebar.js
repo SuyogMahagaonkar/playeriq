@@ -69,7 +69,8 @@ export function refreshSidebarNav() {
   const user = getUser();
   
   let libraryItems = [
-    { label: 'Search', icon: 'search', path: '/search' }
+    { label: 'Search', icon: 'search', path: '/search' },
+    { label: 'Downloads', icon: 'download', path: '/downloads' }
   ];
   
   if (user) {

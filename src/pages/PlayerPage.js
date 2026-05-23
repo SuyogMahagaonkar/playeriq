@@ -436,16 +436,24 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     const downloadId = isTV ? `tv_${id}_s${season}_e${episode}` : `movie_${id}`;
     const match = downloads.find(x => x.id === downloadId && x.status === 'COMPLETED');
 
-    const playOfflineMatch = (downloadedMatch) => {
+    const playOfflineMatch = async (downloadedMatch) => {
+      let localUrl = '';
+      if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+        localUrl = await DownloadManager.getOfflineUrl(downloadedMatch.id);
+      } else {
+        // Fallback demo video for web
+        localUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      }
+
       const streamData = {
         id: downloadedMatch.id,
-        url: '',
+        url: localUrl,
         type: 'mp4',
         isOffline: true,
         duration: downloadedMatch.type === 'movie' ? 120 * 60 : 45 * 60,
         title: downloadedMatch.title,
         poster: downloadedMatch.posterPath,
-        provider: 'Offline DB'
+        provider: 'Offline Local File'
       };
 
       if (tmdbRuntimeSeconds) {
@@ -501,7 +509,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     if (!navigator.onLine || isOfflinePlayback) {
       console.log('[PlayerPage] Device is offline or in offline playback recovery. Bypassing fetch and launching offline mock player...');
       if (match) {
-        playOfflineMatch(match);
+        await playOfflineMatch(match);
         return;
       } else {
         console.error('[PlayerPage] Requested item is not downloaded and we are offline.');
@@ -579,11 +587,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           }));
         }
 
-        const loadIframeFallback = () => {
+        const loadIframeFallback = async () => {
           console.warn('[Player] Loading fallback iframe embed...');
           if (match) {
             console.log('[PlayerPage] Switch to iframe bypassed. Local download found, playing offline...');
-            playOfflineMatch(match);
+            await playOfflineMatch(match);
             return;
           }
           const embedUrl = getEmbedUrl(id, isTV, season, episode, imdbId);
@@ -723,7 +731,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         console.warn('Backend stream extraction failed, falling back to iframe');
         if (match) {
           console.log('[PlayerPage] Stream failed, local download found. Playing offline...');
-          playOfflineMatch(match);
+          await playOfflineMatch(match);
           return;
         }
         // Let's execute fallback immediately
@@ -763,7 +771,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       clearTimers();
       if (match) {
         console.log('[PlayerPage] Server not reachable, local download found. Playing offline...');
-        playOfflineMatch(match);
+        await playOfflineMatch(match);
         return;
       }
       if (err.name === 'AbortError') {

@@ -27,6 +27,7 @@ import { Capacitor } from '@capacitor/core';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 // Lock orientation to portrait globally on APK startup
 if (Capacitor && Capacitor.isNativePlatform()) {
@@ -77,6 +78,23 @@ if (Capacitor && Capacitor.isNativePlatform()) {
       App.exitApp();
     }
   });
+
+  // 3. Push Notifications Initialization
+  PushNotifications.requestPermissions().then(result => {
+    if (result.receive === 'granted') {
+      PushNotifications.register();
+    }
+  });
+  PushNotifications.addListener('registration', (token) => {
+    console.log('Push registration success, token: ' + token.value);
+  });
+  PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    console.log('Push received: ', notification);
+  });
+  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+    console.log('Push action performed: ', notification);
+    // Future: Handle deep links here based on notification data
+  });
 }
 
 import { addRoute, initRouter } from './services/router.js';
@@ -98,6 +116,7 @@ import { renderWatchlistPage } from './pages/WatchlistPage.js';
 import { renderSettingsPage } from './pages/SettingsPage.js';
 import { render18PlusPage } from './pages/18PlusPage.js';
 import { renderCategoryPage } from './pages/CategoryPage.js';
+import { renderDownloadsPage } from './pages/DownloadsPage.js';
 
 // ---- Connectivity Monitoring ----
 function setupConnectivityMonitoring() {
@@ -351,6 +370,11 @@ function initApp() {
   addRoute('/category', async (ctx) => {
     updateSidebarActive();
     return await renderCategoryPage(ctx);
+  });
+
+  addRoute('/downloads', async (ctx) => {
+    updateSidebarActive();
+    return await renderDownloadsPage(ctx);
   });
 
   // Start routing
