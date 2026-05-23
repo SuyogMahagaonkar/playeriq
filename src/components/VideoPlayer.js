@@ -1023,6 +1023,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
 
   let lastProgressReport = 0;
   function updateTime() {
+    if (seekLocked) return;
     // For transcoded streams: real position = video.currentTime + seekOffset
     const offset = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
     const cur = video.currentTime + offset;
