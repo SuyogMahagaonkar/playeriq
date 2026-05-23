@@ -2326,13 +2326,7 @@ async function renderMobileLayout({
           </div>
         </div>
 
-        <div class="mobile-player-resume-card" id="mobile-resume-card" style="display: none;">
-          <div class="mobile-player-resume-info">
-            <div class="mobile-player-resume-title">Resume playback</div>
-            <div class="mobile-player-resume-time" id="mobile-resume-time">Saved progress: 0:00</div>
-          </div>
-          <button class="mobile-player-resume-btn" id="mobile-resume-btn" aria-label="Resume Playback">Resume</button>
-        </div>
+
 
         <div class="mobile-player-actions">
           <button class="mobile-player-action-item" id="action-play" aria-label="Play">
@@ -2879,24 +2873,6 @@ async function renderMobileLayout({
     return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}` : `${m}:${sec.toString().padStart(2, '0')}`;
   }
 
-  const savedStartTime = await getSavedPlaybackTime(id, isTV, currentSeason, currentEpisode);
-  const resumeCard = document.getElementById('mobile-resume-card');
-  const resumeTimeText = document.getElementById('mobile-resume-time');
-  const resumeBtn = document.getElementById('mobile-resume-btn');
-
-  let startPlayTime = 0;
-  if (savedStartTime > 10) {
-    startPlayTime = savedStartTime;
-    if (resumeCard && resumeTimeText && resumeBtn) {
-      resumeTimeText.textContent = `Saved progress: ${formatTime(savedStartTime)}`;
-      resumeCard.style.display = 'flex';
-      
-      resumeBtn.onclick = () => {
-        resumeCard.style.display = 'none';
-        startPlayback(startPlayTime);
-      };
-    }
-  }
 
   const activeVideo = window.activeVideoElement;
   let reusedVideo = false;
