@@ -6,6 +6,7 @@ import { NODE_PROXY } from '../services/api.js';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { NavigationBar } from '@capgo/capacitor-navigation-bar';
 import Hls from 'hls.js';
 
 /**
@@ -692,6 +693,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     if (Capacitor && Capacitor.isNativePlatform()) {
       try {
         StatusBar.hide().catch(() => {});
+        NavigationBar.hide().catch(() => {});
       } catch(e) {}
     }
 
@@ -1429,6 +1431,50 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   player.addEventListener('mouseleave', hideControls);
   // Mobile: reset the 5s timer on any touch anywhere in the player
   player.addEventListener('touchstart',  showControls, { passive: true });
+  
+  // Mobile: Pinch-to-zoom (Cinematic Toggle like YouTube)
+  let initialPinchDistance = null;
+  player.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      initialPinchDistance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    } else {
+      initialPinchDistance = null;
+    }
+  }, { passive: true });
+
+  player.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && initialPinchDistance !== null) {
+      const currentDistance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      
+      const pinchThreshold = 50; // pixels of distance change to trigger zoom
+      const cinematicBtn = document.getElementById('vp-cinematic-btn');
+      
+      if (currentDistance > initialPinchDistance + pinchThreshold) {
+        // Zooming OUT (fingers apart) -> Fill screen
+        if (!player.classList.contains('cinematic-mode')) {
+          player.classList.add('cinematic-mode');
+          if (cinematicBtn) cinematicBtn.classList.add('active');
+          localStorage.setItem('piq_cinematic', '1');
+        }
+        initialPinchDistance = null; // stop further triggering
+      } else if (currentDistance < initialPinchDistance - pinchThreshold) {
+        // Zooming IN (fingers together) -> Fit screen
+        if (player.classList.contains('cinematic-mode')) {
+          player.classList.remove('cinematic-mode');
+          if (cinematicBtn) cinematicBtn.classList.remove('active');
+          localStorage.setItem('piq_cinematic', '0');
+        }
+        initialPinchDistance = null;
+      }
+    }
+  }, { passive: true });
+
   // Also start the timer as soon as playback begins
   video.addEventListener('play', () => {
     clearTimeout(controlsTimeout);
@@ -1630,7 +1676,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         document.exitFullscreen?.().catch(() => {});
       }
       if (Capacitor && Capacitor.isNativePlatform()) {
-        try { StatusBar.show().catch(() => {}); } catch(e) {}
+        try { 
+          StatusBar.show().catch(() => {}); 
+          NavigationBar.show().catch(() => {});
+        } catch(e) {}
       }
       subStyle.remove();
       if (!preserveVideo) {
