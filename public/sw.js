@@ -1,4 +1,4 @@
-const CACHE_NAME = 'playeriq-v15';
+const CACHE_NAME = 'playeriq-v16';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

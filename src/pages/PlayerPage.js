@@ -453,7 +453,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         duration: downloadedMatch.type === 'movie' ? 120 * 60 : 45 * 60,
         title: downloadedMatch.title,
         poster: downloadedMatch.posterPath,
-        provider: 'Offline Local File'
+        provider: 'Offline Local File',
+        isTV: isTV
       };
 
       if (tmdbRuntimeSeconds) {
@@ -564,6 +565,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
       if (res.ok) {
         const streamData = await res.json();
+        streamData.isTV = isTV;
 
         // Inject TMDB runtime as duration fallback if MovieBox didn't provide one
         if (!streamData.duration && tmdbRuntimeSeconds) {
@@ -1512,7 +1514,7 @@ export async function renderPlayerPage({ params, container }) {
       // Replay button
       overlay.querySelector('.rec-replay-btn').addEventListener('click', () => {
         overlay.remove();
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded);
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
       });
     }
 
@@ -2894,6 +2896,7 @@ async function renderMobileLayout({
       if (miniPlayer) miniPlayer.remove();
 
       const streamData = activeVideo._streamData || { url: activeVideo.src, type: type === 'hls' ? 'hls' : 'mp4' };
+      streamData.isTV = isTV;
 
       activePlayer = createVideoPlayer(
         wrapper,
@@ -2965,8 +2968,13 @@ async function renderMobileLayout({
   }
 
   function nextEpisode() {
-    if (currentEpisode < totalEpisodes) {
-      goToEpisode(currentSeason, currentEpisode + 1);
+    if (isTV) {
+      if (currentEpisode < totalEpisodes) {
+        goToEpisode(currentSeason, currentEpisode + 1);
+      }
+    } else if (similar && similar.length > 0) {
+      const nextId = similar[0].id;
+      window.location.hash = `/watch/movie/${nextId}`;
     }
   }
 

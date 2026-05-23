@@ -339,6 +339,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     controls.appendChild(brightSlider);
 
     // 3. Netflix-style bottom options row
+    const isTvShow = streamData.isTV === true || streamData.isTV === 'true';
     const optionsRow = document.createElement('div');
     optionsRow.className = 'vp-mobile-options-row';
     optionsRow.id = 'vp-mobile-options-row';
@@ -358,13 +359,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         </svg>
         <span class="vp-opt-text">Lock</span>
       </div>
-      <!-- Episodes option (hidden by default, shown for TV) -->
-      <div class="vp-mobile-opt vp-opt-tv-only" id="vp-opt-episodes" style="display:none">
+      <!-- Episodes / Related option (always visible for movies, dynamic for TV) -->
+      <div class="vp-mobile-opt" id="vp-opt-episodes" style="${isTvShow ? 'display:none' : ''}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
           <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
         </svg>
-        <span class="vp-opt-text">Episodes</span>
+        <span class="vp-opt-text" id="vp-opt-episodes-label">${isTvShow ? 'Episodes' : 'Related'}</span>
       </div>
       <!-- Audio & Quality option: transparent select sits on top -->
       <div class="vp-mobile-opt" id="vp-opt-quality">
@@ -373,12 +374,12 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         </svg>
         <span class="vp-opt-text">Quality</span>
       </div>
-      <!-- Next Episode option (hidden by default, shown for TV) -->
-      <div class="vp-mobile-opt vp-opt-tv-only" id="vp-opt-next" style="display:none">
+      <!-- Next Episode / Watch Next option (hidden by default, shown dynamically) -->
+      <div class="vp-mobile-opt" id="vp-opt-next" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
         </svg>
-        <span class="vp-opt-text">Next Episode</span>
+        <span class="vp-opt-text" id="vp-opt-next-label">${isTvShow ? 'Next Episode' : 'Watch Next'}</span>
       </div>
     `;
     controls.appendChild(optionsRow);
@@ -392,8 +393,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     const optSpeedLabel = document.getElementById('vp-opt-speed-label');
     const optLock = document.getElementById('vp-opt-lock');
     const optEpisodes = document.getElementById('vp-opt-episodes');
+    const optEpisodesLabel = document.getElementById('vp-opt-episodes-label');
     const optQuality = document.getElementById('vp-opt-quality');
     const optNext = document.getElementById('vp-opt-next');
+    const optNextLabel = document.getElementById('vp-opt-next-label');
 
     let currentBrightness = parseFloat(localStorage.getItem('piq_brightness') || '1.0');
     if (bSlider && bSliderFill) {
@@ -458,15 +461,15 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     }
 
-    // Episodes option: exits fullscreen and scrolls to mobile episodes section
+    // Episodes / Related option: exits fullscreen and scrolls to mobile section
     if (optEpisodes) {
       optEpisodes.addEventListener('click', (e) => {
         e.stopPropagation();
         if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
         setTimeout(() => {
-          const epSection = document.querySelector('.mobile-player-episodes-section') ||
-                            document.querySelector('.mobile-episodes-list') ||
-                            document.querySelector('#mobile-episodes-list');
+          const epSection = isTvShow
+            ? (document.querySelector('.mobile-player-episodes-section') || document.querySelector('.mobile-episodes-list') || document.querySelector('#mobile-episodes-list'))
+            : (document.querySelector('.mobile-player-section') || document.querySelector('.mobile-player-episodes-section'));
           if (epSection) epSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 200);
       });

@@ -3980,6 +3980,7 @@
     align-items: stretch !important;
     opacity: 0 !important;
     visibility: hidden !important;
+    pointer-events: none !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
@@ -4263,9 +4264,7 @@
     box-shadow: 0 0 0 8px rgba(168, 85, 247, 0.25), 0 0 0 0 rgba(168, 85, 247, 0) !important;
   }
 
-  .mobile-player-container .vp-progress-wrap::before {
-    display: none !important;
-  }
+  /* Progress track background */
 
   .mobile-player-container .vp-progress-wrap::before {
     height: 4px !important;
@@ -4340,8 +4339,8 @@
     display: none !important;
   }
 
-  /* Left-aligned controls (hide bottom seek/played buttons) */
-  .mobile-player-container .vp-left-controls {
+  /* Hide old desktop volume control group inside left-controls on mobile */
+  .mobile-player-container .vp-volume-group {
     display: none !important;
   }
 
