@@ -212,19 +212,47 @@ export function renderDownloadsPage(ctx) {
   // ---- Full list render ----
   async function renderList() {
     const items = await DownloadManager.list();
+    const offline = !isOnline();
 
     if (items.length === 0) {
-      listArea.innerHTML = `
-        <div class="downloads-empty">
-          <div class="downloads-empty-icon">📥</div>
-          <h2>No Downloads Yet</h2>
-          <p>Save movies &amp; shows to watch offline anytime, even without internet.</p>
-          <a href="#/" class="downloads-empty-cta">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-            Browse Content
-          </a>
-        </div>
-      `;
+      if (offline) {
+        // Offline + no downloads → special offline hero
+        listArea.innerHTML = `
+          <div class="downloads-empty">
+            <div class="downloads-empty-icon" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.15);">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <circle cx="12" cy="20" r="1" fill="#f87171"/>
+              </svg>
+            </div>
+            <h2 style="color:#f87171;">You're Offline</h2>
+            <p>No downloaded videos yet. Connect to internet to browse &amp; download content.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+              <a href="#/" class="downloads-empty-cta" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;box-shadow:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Home
+              </a>
+            </div>
+          </div>
+        `;
+      } else {
+        listArea.innerHTML = `
+          <div class="downloads-empty">
+            <div class="downloads-empty-icon">📥</div>
+            <h2>No Downloads Yet</h2>
+            <p>Save movies &amp; shows to watch offline anytime, even without internet.</p>
+            <a href="#/" class="downloads-empty-cta">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+              Browse Content
+            </a>
+          </div>
+        `;
+      }
       return;
     }
 

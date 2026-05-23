@@ -121,99 +121,134 @@ import { renderCategoryPage } from './pages/CategoryPage.js';
 import { renderDownloadsPage } from './pages/DownloadsPage.js';
 
 // ---- Connectivity Monitoring (YouTube-style active probing) ----
-function _getOrCreateBanner() {
-  let banner = document.getElementById('piq-offline-banner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'piq-offline-banner';
-    banner.className = 'piq-offline-banner';
-    banner.innerHTML = `
-      <span class="banner-icon">📴</span>
-      <span class="banner-text">You're offline — only downloaded videos work</span>
-      <a class="banner-action" href="#/downloads">My Downloads</a>
+
+// Create/get the floating offline card (anchored above bottom nav)
+function _getOrCreateOfflineCard() {
+  let card = document.getElementById('piq-offline-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'piq-offline-card';
+    card.className = 'piq-offline-card';
+    card.innerHTML = `
+      <div class="piq-offline-card-inner">
+        <!-- Wifi-off icon -->
+        <div class="piq-offline-icon-wrap">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+            <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <circle cx="12" cy="20" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+
+        <!-- Text -->
+        <div class="piq-offline-text-wrap">
+          <div class="piq-offline-title">You're offline</div>
+          <div class="piq-offline-sub">Watch your downloaded videos</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="piq-offline-actions">
+          <a class="piq-offline-dl-btn" href="#/downloads" id="piq-offline-dl-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Downloads
+          </a>
+          <button class="piq-offline-dismiss" id="piq-offline-dismiss" aria-label="Dismiss">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     `;
-    document.body.appendChild(banner);
+    document.body.appendChild(card);
+
+    // Wire dismiss button
+    const dismissBtn = card.querySelector('#piq-offline-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        card.classList.remove('visible');
+      });
+    }
   }
-  return banner;
+  return card;
 }
 
-function _showOfflineBanner() {
-  const banner = _getOrCreateBanner();
-  // Give browser a frame to mount the element before animating
+function _showOfflineCard() {
+  document.body.classList.add('piq-is-offline');
+  const card = _getOrCreateOfflineCard();
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => banner.classList.add('visible'));
+    requestAnimationFrame(() => card.classList.add('visible'));
   });
-  // Push page content down so banner doesn't overlap
-  document.documentElement.style.setProperty('--offline-banner-h', `${banner.offsetHeight || 42}px`);
 }
 
-function _hideOfflineBanner() {
-  const banner = document.getElementById('piq-offline-banner');
-  if (banner) {
-    banner.classList.remove('visible');
+function _hideOfflineCard() {
+  document.body.classList.remove('piq-is-offline');
+  const card = document.getElementById('piq-offline-card');
+  if (card) {
+    card.classList.remove('visible');
+    // Remove from DOM after animation
     setTimeout(() => {
-      if (isOnline() && banner.parentNode) banner.remove();
-    }, 400);
+      if (isOnline() && card.parentNode) card.remove();
+    }, 500);
   }
-  document.documentElement.style.removeProperty('--offline-banner-h');
 }
 
-function _showSnackbar(message, type, actionLabel, actionCb) {
-  // Remove any existing snackbars
-  document.querySelectorAll('.piq-connectivity-snackbar').forEach(s => s.remove());
-
+function _showReconnectSnackbar() {
+  document.querySelectorAll('.piq-reconnect-snackbar').forEach(s => s.remove());
   const snack = document.createElement('div');
-  snack.className = `piq-connectivity-snackbar ${type}`;
+  snack.className = 'piq-reconnect-snackbar';
   snack.innerHTML = `
-    <span class="snackbar-icon">${type === 'online' ? '📶' : '📴'}</span>
-    <span class="snackbar-msg">${message}</span>
-    ${actionLabel ? `<button class="snackbar-action" id="snack-action">${actionLabel}</button>` : ''}
+    <span class="snackbar-icon">📶</span>
+    <span>Back online!</span>
+    <button class="snackbar-reload-btn" id="snack-reload">Reload</button>
   `;
   document.body.appendChild(snack);
 
-  // Wire action button
-  if (actionLabel && actionCb) {
-    const btn = snack.querySelector('#snack-action');
-    if (btn) btn.addEventListener('click', () => { actionCb(); snack.remove(); });
+  const reloadBtn = snack.querySelector('#snack-reload');
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      snack.remove();
+      const hash = window.location.hash || '#/';
+      window.location.hash = '#/__reload__';
+      setTimeout(() => { window.location.hash = hash; }, 50);
+    });
   }
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => snack.classList.add('show'));
   });
 
-  const hideMs = actionLabel ? 6000 : 3000;
   setTimeout(() => {
     snack.classList.remove('show');
     setTimeout(() => snack.remove(), 400);
-  }, hideMs);
+  }, 6000);
 }
 
 function setupConnectivityMonitoring() {
-  // Initialize the probe-based service
+  // Initialize the active-probe service
   initConnectivity();
 
-  // Show initial offline state without toast (silent on boot if offline)
+  // Silent initial state on boot
   if (!isOnline()) {
-    setTimeout(_showOfflineBanner, 600);
+    setTimeout(_showOfflineCard, 700);
   }
 
-  // React to connectivity changes from the service
+  // React to connectivity changes
   onConnectivityChange(({ online, wasOffline }) => {
     if (!online) {
-      _showOfflineBanner();
-      _showSnackbar('You are offline', 'offline', 'Downloads', () => {
-        window.location.hash = '#/downloads';
-      });
+      _showOfflineCard();
     } else {
-      _hideOfflineBanner();
-      if (wasOffline) {
-        _showSnackbar('Back online!', 'online', 'Reload', () => {
-          // Soft-reload current page by re-triggering the route
-          const hash = window.location.hash || '#/';
-          window.location.hash = '#/__reload__';
-          setTimeout(() => { window.location.hash = hash; }, 50);
-        });
-      }
+      _hideOfflineCard();
+      if (wasOffline) _showReconnectSnackbar();
     }
   });
 }
@@ -249,6 +284,7 @@ function initApp() {
   // Create Mobile Bottom Navigation (Disney+ Hotstar style)
   const bottomNav = document.createElement('nav');
   bottomNav.className = 'mobile-bottom-nav';
+  bottomNav.setAttribute('id', 'mobile-bottom-nav');
   bottomNav.innerHTML = `
     <a href="#/" class="bottom-nav-item" data-path="/">
       <span class="bottom-nav-icon"><i data-lucide="home"></i></span>
@@ -260,11 +296,16 @@ function initApp() {
     </a>
     <a href="#/tv" class="bottom-nav-item" data-path="/tv">
       <span class="bottom-nav-icon"><i data-lucide="tv"></i></span>
-      <span class="bottom-nav-text">TV Shows</span>
+      <span class="bottom-nav-text">TV</span>
     </a>
     <a href="#/search" class="bottom-nav-item" data-path="/search">
       <span class="bottom-nav-icon"><i data-lucide="search"></i></span>
       <span class="bottom-nav-text">Search</span>
+    </a>
+    <a href="#/downloads" class="bottom-nav-item bottom-nav-downloads" data-path="/downloads">
+      <span class="bottom-nav-icon"><i data-lucide="download"></i></span>
+      <span class="bottom-nav-text">Downloads</span>
+      <span class="offline-badge"></span>
     </a>
     <a href="#/settings" class="bottom-nav-item" data-path="/settings">
       <span class="bottom-nav-icon"><i data-lucide="user"></i></span>
