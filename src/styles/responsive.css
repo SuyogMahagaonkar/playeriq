@@ -4273,7 +4273,7 @@
 
   .mobile-player-container .vp-progress-played {
     height: 4px !important;
-    background: #e50914 !important; /* Netflix Red! */
+    background: var(--accent, #A855F7) !important;
   }
 
   .mobile-player-container .vp-progress-buffer {
@@ -4283,7 +4283,7 @@
 
   .mobile-player-container .vp-progress-played::after {
     transform: translateY(-50%) scale(1) !important; /* Always visible on mobile */
-    background: #e50914 !important; /* Solid red knob */
+    background: var(--accent, #A855F7) !important; /* Solid accent knob */
     width: 14px !important;
     height: 14px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
@@ -4630,9 +4630,8 @@
     transition: border-color 0.2s ease, background-color 0.2s ease !important;
     flex-shrink: 0 !important;
   }
-
   .mobile-player-container .vp-dialog-radio.checked {
-    border-color: #E50914 !important; /* Netflix Red */
+    border-color: var(--accent, #A855F7) !important;
   }
 
   /* Inner dot for radio button */
@@ -4640,7 +4639,7 @@
     width: 10px !important;
     height: 10px !important;
     border-radius: 50% !important;
-    background-color: #E50914 !important;
+    background-color: var(--accent, #A855F7) !important;
     transform: scale(0) !important;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   }
@@ -4660,7 +4659,7 @@
   .mobile-player-container .vp-dialog-cancel-btn {
     background: transparent !important;
     border: none !important;
-    color: #E50914 !important;
+    color: var(--accent, #A855F7) !important;
     font-family: var(--font-display, 'Inter', sans-serif) !important;
     font-size: 13px !important;
     font-weight: 700 !important;
@@ -4675,7 +4674,7 @@
   }
 
   .mobile-player-container .vp-dialog-cancel-btn:active {
-    background-color: rgba(229, 9, 20, 0.1) !important;
+    background-color: rgba(168, 85, 247, 0.1) !important;
   }
 }
 
