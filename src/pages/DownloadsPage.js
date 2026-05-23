@@ -33,8 +33,36 @@ export function renderDownloadsPage(ctx) {
   const renderList = async () => {
     const items = await DownloadManager.list();
 
+    // -- Storage Estimate UI --
+    let storageHtml = '';
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const usage = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        const freeSpace = Math.max(0, quota - usage);
+        
+        const formatGB = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        const percentUsed = Math.min(100, Math.max(0, (usage / quota) * 100));
+        
+        storageHtml = `
+          <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface); border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+              <span><strong style="color:var(--text-primary);">${formatGB(usage)}</strong> Used</span>
+              <span><strong style="color:var(--text-primary);">${formatGB(freeSpace)}</strong> Free</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; display: flex;">
+              <div style="width: ${percentUsed}%; background: var(--primary); height: 100%;"></div>
+            </div>
+          </div>
+        `;
+      }
+    } catch (e) {
+      console.warn("Storage estimate not available", e);
+    }
+
     if (items.length === 0) {
-      listContainer.innerHTML = `
+      listContainer.innerHTML = storageHtml + `
         <div style="text-align:center; padding: 4rem 1rem; color:var(--text-secondary);">
           <div style="font-size:4rem; margin-bottom:1rem;">📥</div>
           <h2>Never be without a show</h2>
@@ -45,7 +73,9 @@ export function renderDownloadsPage(ctx) {
       return;
     }
 
-    listContainer.innerHTML = '';
+    listContainer.innerHTML = storageHtml;
+    
+    const itemsWrapper = document.createElement('div');
     items.forEach(item => {
       const card = document.createElement('div');
       card.className = 'download-item-card';
@@ -119,8 +149,10 @@ export function renderDownloadsPage(ctx) {
         });
       }
 
-      listContainer.appendChild(card);
+      itemsWrapper.appendChild(card);
     });
+    
+    listContainer.appendChild(itemsWrapper);
   };
 
   renderList();

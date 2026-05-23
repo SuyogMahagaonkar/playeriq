@@ -185,7 +185,24 @@ export const DownloadManager = {
   },
   
   async getStorageEstimate() {
-    return { usage: 0, quota: 1000, freeSpace: 1000 };
+    if (navigator.storage && navigator.storage.estimate) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const usage = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        return {
+          usage,
+          quota,
+          freeSpace: Math.max(0, quota - usage)
+        };
+      } catch (err) {
+        console.warn('Storage estimate failed', err);
+      }
+    }
+    // Fallback if not available
+    const fallbackQuota = 64 * 1024 * 1024 * 1024; // 64 GB
+    const fallbackUsage = 10 * 1024 * 1024 * 1024; // 10 GB
+    return { usage: fallbackUsage, quota: fallbackQuota, freeSpace: fallbackQuota - fallbackUsage };
   },
 
   async getOfflineUrl(id) {
