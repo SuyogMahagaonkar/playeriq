@@ -94,255 +94,267 @@ export async function renderSettingsPage({ container }) {
           </div>
         </div>
 
-        <!-- Premium List Sections -->
+        <!-- Premium List Sections (collapsible single-open accordion stack) -->
         <div class="mobile-settings-sections">
           
           <!-- Section 1: General Settings -->
-          <div class="mobile-settings-section-card">
-            <h3 class="section-card-title">General Settings</h3>
-
-            <!-- Row: Content Language -->
-            <div class="mobile-settings-row select-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="globe"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Content Language</div>
-                  <div class="row-desc">Filter lists by language preference</div>
+          <div class="mobile-settings-section-card accordion-card active">
+            <div class="section-card-header">
+              <h3 class="section-card-title">General Settings</h3>
+              <i data-lucide="chevron-down" class="accordion-chevron"></i>
+            </div>
+            <div class="section-card-body">
+              <!-- Row: Content Language -->
+              <div class="mobile-settings-row select-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="globe"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Content Language</div>
+                    <div class="row-desc">Filter lists by language preference</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <span class="current-value-text" id="val-pref-language">
+                    ${prefs.language === 'en' ? 'English' : 
+                      prefs.language === 'hi' ? 'Hindi' : 
+                      prefs.language === 'ko' ? 'Korean' : 
+                      prefs.language === 'ja' ? 'Japanese' : 'All Languages'}
+                  </span>
+                  <i data-lucide="chevron-right" class="row-chevron"></i>
+                  <select class="settings-select-overlay" id="pref-language">
+                    <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
+                    <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
+                    <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
+                    <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
+                    <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
+                  </select>
                 </div>
               </div>
-              <div class="row-right">
-                <span class="current-value-text" id="val-pref-language">
-                  ${prefs.language === 'en' ? 'English' : 
-                    prefs.language === 'hi' ? 'Hindi' : 
-                    prefs.language === 'ko' ? 'Korean' : 
-                    prefs.language === 'ja' ? 'Japanese' : 'All Languages'}
-                </span>
-                <i data-lucide="chevron-right" class="row-chevron"></i>
-                <select class="settings-select-overlay" id="pref-language">
-                  <option value="all" ${prefs.language === 'all' ? 'selected' : ''}>All Languages</option>
-                  <option value="en"  ${prefs.language === 'en'  ? 'selected' : ''}>English</option>
-                  <option value="hi"  ${prefs.language === 'hi'  ? 'selected' : ''}>Hindi</option>
-                  <option value="ko"  ${prefs.language === 'ko'  ? 'selected' : ''}>Korean</option>
-                  <option value="ja"  ${prefs.language === 'ja'  ? 'selected' : ''}>Japanese</option>
-                </select>
-              </div>
             </div>
-
           </div>
 
           <!-- Section 2: Playback Settings -->
-          <div class="mobile-settings-section-card">
-            <h3 class="section-card-title">Playback Preferences</h3>
-
-            <!-- Row: Autoplay -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="play-circle"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Autoplay next episode</div>
-                  <div class="row-desc">Play next episode automatically</div>
+          <div class="mobile-settings-section-card accordion-card">
+            <div class="section-card-header">
+              <h3 class="section-card-title">Playback Preferences</h3>
+              <i data-lucide="chevron-down" class="accordion-chevron"></i>
+            </div>
+            <div class="section-card-body">
+              <!-- Row: Autoplay -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="play-circle"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Autoplay next episode</div>
+                    <div class="row-desc">Play next episode automatically</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
                 </div>
               </div>
-              <div class="row-right">
-                <label class="settings-toggle">
-                  <input type="checkbox" id="pref-autoplay" ${prefs.autoplay ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
-              </div>
-            </div>
 
-            <!-- Row: Stream Quality -->
-            <div class="mobile-settings-row select-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="sliders"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Stream Quality</div>
-                  <div class="row-desc">Preferred resolution quality</div>
+              <!-- Row: Stream Quality -->
+              <div class="mobile-settings-row select-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="sliders"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Stream Quality</div>
+                    <div class="row-desc">Preferred resolution quality</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <span class="current-value-text" id="val-pref-quality">
+                    ${prefs.quality === '1080p' ? '1080p HD' : 
+                      prefs.quality === '720p' ? '720p' : 
+                      prefs.quality === '480p' ? '480p' : 'Auto'}
+                  </span>
+                  <i data-lucide="chevron-right" class="row-chevron"></i>
+                  <select class="settings-select-overlay" id="pref-quality">
+                    <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
+                    <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
+                    <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
+                    <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
+                  </select>
                 </div>
               </div>
-              <div class="row-right">
-                <span class="current-value-text" id="val-pref-quality">
-                  ${prefs.quality === '1080p' ? '1080p HD' : 
-                    prefs.quality === '720p' ? '720p' : 
-                    prefs.quality === '480p' ? '480p' : 'Auto'}
-                </span>
-                <i data-lucide="chevron-right" class="row-chevron"></i>
-                <select class="settings-select-overlay" id="pref-quality">
-                  <option value="auto" ${prefs.quality === 'auto' ? 'selected' : ''}>Auto</option>
-                  <option value="1080p" ${prefs.quality === '1080p' ? 'selected' : ''}>1080p HD</option>
-                  <option value="720p"  ${prefs.quality === '720p'  ? 'selected' : ''}>720p</option>
-                  <option value="480p"  ${prefs.quality === '480p'  ? 'selected' : ''}>480p</option>
-                </select>
-              </div>
-            </div>
 
-            <!-- Row: Seek Interval -->
-            <div class="mobile-settings-row select-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="rotate-cw"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Seek Interval</div>
-                  <div class="row-desc">Double tap jump seek duration</div>
+              <!-- Row: Seek Interval -->
+              <div class="mobile-settings-row select-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="rotate-cw"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Seek Interval</div>
+                    <div class="row-desc">Double tap jump seek duration</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <span class="current-value-text" id="val-pref-seek-interval">
+                    ${prefs.seekInterval ? `${prefs.seekInterval} Seconds` : '10 Seconds'}
+                  </span>
+                  <i data-lucide="chevron-right" class="row-chevron"></i>
+                  <select class="settings-select-overlay" id="pref-seek-interval">
+                    <option value="5" ${prefs.seekInterval === 5 ? 'selected' : ''}>5 Seconds</option>
+                    <option value="10" ${prefs.seekInterval === 10 || !prefs.seekInterval ? 'selected' : ''}>10 Seconds</option>
+                    <option value="15" ${prefs.seekInterval === 15 ? 'selected' : ''}>15 Seconds</option>
+                    <option value="30" ${prefs.seekInterval === 30 ? 'selected' : ''}>30 Seconds</option>
+                  </select>
                 </div>
               </div>
-              <div class="row-right">
-                <span class="current-value-text" id="val-pref-seek-interval">
-                  ${prefs.seekInterval ? `${prefs.seekInterval} Seconds` : '10 Seconds'}
-                </span>
-                <i data-lucide="chevron-right" class="row-chevron"></i>
-                <select class="settings-select-overlay" id="pref-seek-interval">
-                  <option value="5" ${prefs.seekInterval === 5 ? 'selected' : ''}>5 Seconds</option>
-                  <option value="10" ${prefs.seekInterval === 10 || !prefs.seekInterval ? 'selected' : ''}>10 Seconds</option>
-                  <option value="15" ${prefs.seekInterval === 15 ? 'selected' : ''}>15 Seconds</option>
-                  <option value="30" ${prefs.seekInterval === 30 ? 'selected' : ''}>30 Seconds</option>
-                </select>
-              </div>
-            </div>
 
-            <!-- Row: Auto-Skip Recaps -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="fast-forward"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Auto-Skip Recaps & Intros</div>
-                  <div class="row-desc">Skip intros and credits automatically</div>
+              <!-- Row: Auto-Skip Recaps -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="fast-forward"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Auto-Skip Recaps & Intros</div>
+                    <div class="row-desc">Skip intros and credits automatically</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-skip-recaps" ${prefs.skipRecaps ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
                 </div>
               </div>
-              <div class="row-right">
-                <label class="settings-toggle">
-                  <input type="checkbox" id="pref-skip-recaps" ${prefs.skipRecaps ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
-              </div>
-            </div>
 
-            <!-- Row: Subtitle Customizer trigger -->
-            <div class="mobile-settings-row clickable-row" id="btn-open-subtitle-modal">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="message-square"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Subtitle Customizer</div>
-                  <div class="row-desc">Tailor subtitle appearance overlay</div>
+              <!-- Row: Subtitle Customizer trigger -->
+              <div class="mobile-settings-row clickable-row" id="btn-open-subtitle-modal">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="message-square"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Subtitle Customizer</div>
+                    <div class="row-desc">Tailor subtitle appearance overlay</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <span class="current-value-text" style="color:var(--accent)">Customize</span>
+                  <i data-lucide="chevron-right" class="row-chevron"></i>
                 </div>
               </div>
-              <div class="row-right">
-                <span class="current-value-text" style="color:var(--accent)">Customize</span>
-                <i data-lucide="chevron-right" class="row-chevron"></i>
-              </div>
             </div>
-
           </div>
 
           <!-- Section 3: Downloads & Storage -->
-          <div class="mobile-settings-section-card">
-            <h3 class="section-card-title">Downloads & Offline Storage</h3>
-
-            <!-- Row: Wi-Fi Only downloads -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="wifi"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Wi-Fi Only</div>
-                  <div class="row-desc">Only download segments when on Wi-Fi</div>
+          <div class="mobile-settings-section-card accordion-card">
+            <div class="section-card-header">
+              <h3 class="section-card-title">Downloads & Offline Storage</h3>
+              <i data-lucide="chevron-down" class="accordion-chevron"></i>
+            </div>
+            <div class="section-card-body">
+              <!-- Row: Wi-Fi Only downloads -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="wifi"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Wi-Fi Only</div>
+                    <div class="row-desc">Only download segments when on Wi-Fi</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-download-wifi" ${dlSettings.wifiOnly ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
                 </div>
               </div>
-              <div class="row-right">
-                <label class="settings-toggle">
-                  <input type="checkbox" id="pref-download-wifi" ${dlSettings.wifiOnly ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
-              </div>
-            </div>
 
-            <!-- Row: Download Manager trigger -->
-            <div class="mobile-settings-row clickable-row" id="btn-open-download-modal">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="folder"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Download Manager</div>
-                  <div class="row-desc">View offline files, space gauge, and quality</div>
+              <!-- Row: Download Manager trigger -->
+              <div class="mobile-settings-row clickable-row" id="btn-open-download-modal">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="folder"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Download Manager</div>
+                    <div class="row-desc">View offline files, space gauge, and quality</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <span class="current-value-text" style="color: var(--accent);">Manage</span>
+                  <i data-lucide="chevron-right" class="row-chevron"></i>
                 </div>
               </div>
-              <div class="row-right">
-                <span class="current-value-text" style="color: var(--accent);">Manage</span>
-                <i data-lucide="chevron-right" class="row-chevron"></i>
-              </div>
             </div>
-
           </div>
 
           <!-- Section 4: Security, Backups & Storage -->
-          <div class="mobile-settings-section-card">
-            <h3 class="section-card-title">Security & Storage Backups</h3>
-
-            <!-- Row: SafeSearch (Parental) -->
-            ${showSafeSearchToggle ? `
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="shield"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Safe Search</div>
-                  <div class="row-desc">Hide adult/18+ content from library
-                    <div id="parental-pin-actions" style="margin-top: 6px;"></div>
+          <div class="mobile-settings-section-card accordion-card">
+            <div class="section-card-header">
+              <h3 class="section-card-title">Security & Storage Backups</h3>
+              <i data-lucide="chevron-down" class="accordion-chevron"></i>
+            </div>
+            <div class="section-card-body">
+              <!-- Row: SafeSearch (Parental) -->
+              ${showSafeSearchToggle ? `
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="shield"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Safe Search</div>
+                    <div class="row-desc">Hide adult/18+ content from library
+                      <div id="parental-pin-actions" style="margin-top: 6px;"></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="row-right">
-                <label class="settings-toggle">
-                  <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
-                  <span class="settings-toggle-track"></span>
-                </label>
-              </div>
-            </div>
-            ` : ''}
-
-            <!-- Row: Backup Library -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="database"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Backup JSON</div>
-                  <div class="row-desc">Save / Restore preferences</div>
+                <div class="row-right">
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="pref-safesearch" ${prefs.safeSearch ? 'checked' : ''} />
+                    <span class="settings-toggle-track"></span>
+                  </label>
                 </div>
               </div>
-              <div class="row-right" style="display:flex;gap:8px">
-                <button class="settings-action-btn-sm" id="btn-export-library">Export</button>
-                <label class="settings-action-btn-sm" style="display:flex;align-items:center;justify-content:center;cursor:pointer">
-                  Import
-                  <input type="file" id="import-library-file" accept=".json" style="display:none" />
-                </label>
-              </div>
-            </div>
+              ` : ''}
 
-            <!-- Row: Purge Cache -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle"><i data-lucide="trash-2"></i></div>
-                <div class="row-text">
-                  <div class="row-title">Purge Cache</div>
-                  <div class="row-desc">Erase static page web footprint</div>
+              <!-- Row: Backup Library -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="database"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Backup JSON</div>
+                    <div class="row-desc">Save / Restore preferences</div>
+                  </div>
+                </div>
+                <div class="row-right" style="display:flex;gap:8px">
+                  <button class="settings-action-btn-sm" id="btn-export-library">Export</button>
+                  <label class="settings-action-btn-sm" style="display:flex;align-items:center;justify-content:center;cursor:pointer">
+                    Import
+                    <input type="file" id="import-library-file" accept=".json" style="display:none" />
+                  </label>
                 </div>
               </div>
-              <div class="row-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-                <div id="cache-size-gauge" style="font-weight:700;color:var(--accent);font-size:12px">estimating...</div>
-                <button class="settings-danger-btn-sm" id="btn-purge-cache">Purge</button>
-              </div>
-            </div>
 
-            <!-- Row: Clear History -->
-            <div class="mobile-settings-row">
-              <div class="row-left">
-                <div class="row-icon-circle" style="background:rgba(239,68,68,0.08);color:#ef4444"><i data-lucide="history"></i></div>
-                <div class="row-text">
-                  <div class="row-title" style="color:#f87171">Reset Watch History</div>
-                  <div class="row-desc">Erase entire watchlist & playback history</div>
+              <!-- Row: Purge Cache -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle"><i data-lucide="trash-2"></i></div>
+                  <div class="row-text">
+                    <div class="row-title">Purge Cache</div>
+                    <div class="row-desc">Erase static page web footprint</div>
+                  </div>
+                </div>
+                <div class="row-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <div id="cache-size-gauge" style="font-weight:700;color:var(--accent);font-size:12px">estimating...</div>
+                  <button class="settings-danger-btn-sm" id="btn-purge-cache">Purge</button>
                 </div>
               </div>
-              <div class="row-right">
-                <button class="settings-danger-btn-sm" id="settings-clear-history">Reset</button>
+
+              <!-- Row: Clear History -->
+              <div class="mobile-settings-row">
+                <div class="row-left">
+                  <div class="row-icon-circle" style="background:rgba(239,68,68,0.08);color:#ef4444"><i data-lucide="history"></i></div>
+                  <div class="row-text">
+                    <div class="row-title" style="color:#f87171">Reset Watch History</div>
+                    <div class="row-desc">Erase entire watchlist & playback history</div>
+                  </div>
+                </div>
+                <div class="row-right">
+                  <button class="settings-danger-btn-sm" id="settings-clear-history">Reset</button>
+                </div>
               </div>
             </div>
-
           </div>
 
         </div>
@@ -1357,6 +1369,24 @@ export async function renderSettingsPage({ container }) {
   }
 
   if (isMobile) {
+    // 0. Single-Open Accordion Stack listener
+    container.querySelectorAll('.section-card-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const currentCard = header.closest('.mobile-settings-section-card');
+        const isOpen = currentCard.classList.contains('active');
+
+        // Close all cards
+        container.querySelectorAll('.mobile-settings-section-card').forEach(c => {
+          c.classList.remove('active');
+        });
+
+        // Toggle clicked card
+        if (!isOpen) {
+          currentCard.classList.add('active');
+        }
+      });
+    });
+
     // 1. Dynamic Overlay Select Label Syncer
     const syncSelectLabels = () => {
       const lang = container.querySelector('#pref-language');
