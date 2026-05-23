@@ -1790,11 +1790,11 @@
   .section-card-title {
     font-family: var(--font-body);
     font-size: 11px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4); /* Softer secondary color */
+    font-weight: 500;
+    color: var(--text-secondary); /* Same color as My Watchlist card span */
     padding: 16px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    text-transform: none; /* Sentence / Title Case matching */
+    letter-spacing: normal;
     margin: 0;
     flex: 1;
   }
