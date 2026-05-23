@@ -59,7 +59,6 @@ export async function renderSettingsPage({ container }) {
                   : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
               </div>
             </div>
-            <span class="premium-badge-gold">PRO MEMBER</span>
           </div>
           
           <div class="settings-profile-name-container" id="profile-name-text-container" style="display:flex;align-items:center;gap:8px;margin-top:12px">
@@ -76,6 +75,7 @@ export async function renderSettingsPage({ container }) {
           </div>
           
           <div class="mobile-profile-email" style="font-size:12px;color:var(--text-muted);margin-top:2px">${user.email ?? ''}</div>
+          <span class="premium-badge-gold">PRO MEMBER</span>
         </div>
 
         <!-- Quick Navigation Cards -->
