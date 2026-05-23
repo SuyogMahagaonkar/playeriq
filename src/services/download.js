@@ -68,11 +68,11 @@ export const DownloadManager = {
     const demoMp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
     try {
-      // Background Native Download
-      const res = await Capacitor.Plugins.CapacitorHttp.downloadFile({
+      // Background Native Download using Filesystem
+      const res = await Filesystem.downloadFile({
         url: demoMp4Url,
-        filePath: fileName,
-        fileDirectory: Directory.Data,
+        path: fileName,
+        directory: Directory.Data,
         progress: true
       });
 
@@ -227,9 +227,9 @@ export const DownloadManager = {
   }
 };
 
-// Global Capacitor Http Progress Listener
+// Global Filesystem Download Progress Listener
 if (Capacitor.isNativePlatform()) {
-  Capacitor.Plugins.CapacitorHttp.addListener('progress', (e) => {
+  Filesystem.addListener('progress', (e) => {
     // The event URL will match our dummy MP4
     // We can infer progress if bytes given
     if (e.url) {
