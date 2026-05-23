@@ -177,9 +177,6 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         </div>
       </div>
 
-      <!-- Provider badge -->
-      <div class="vp-provider" id="vp-provider">${streamData.provider || 'Custom'}</div>
-
       <!-- ===== MOBILE-ONLY OVERLAYS ===== -->
       <!-- Offline banner -->
       <div id="vp-offline-banner" class="vp-offline-banner hidden" role="status" aria-live="polite">
