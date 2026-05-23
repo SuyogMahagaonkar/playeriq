@@ -23,6 +23,16 @@ import './styles/mobile-player.css';
 
 
 // Core
+import { Capacitor } from '@capacitor/core';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
+
+// Lock orientation to portrait globally on APK startup
+if (Capacitor && Capacitor.isNativePlatform()) {
+  try {
+    ScreenOrientation.lock({ type: 'portrait' }).catch(() => {});
+  } catch(e) {}
+}
+
 import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';

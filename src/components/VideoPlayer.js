@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { NavigationBar } from '@capgo/capacitor-navigation-bar';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
 import Hls from 'hls.js';
 
 /**
@@ -263,6 +264,11 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       existingVideo.id = 'vp-video';
       existingVideo.className = 'vp-video';
     }
+  }
+
+  // NATIVE CAPACITOR APP: Allow rotation while video player is open
+  if (Capacitor && Capacitor.isNativePlatform()) {
+    try { ScreenOrientation.unlock().catch(() => {}); } catch(e) {}
   }
 
   // ---- Elements ----
@@ -1679,6 +1685,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         try { 
           StatusBar.show().catch(() => {}); 
           NavigationBar.show().catch(() => {});
+          ScreenOrientation.lock({ type: 'portrait' }).catch(() => {});
         } catch(e) {}
       }
       subStyle.remove();
