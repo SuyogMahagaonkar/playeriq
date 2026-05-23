@@ -3,176 +3,193 @@ import { Capacitor } from '@capacitor/core';
 import { updateSidebarActive } from '../components/Sidebar.js';
 
 export function renderDownloadsPage(ctx) {
-  const container = document.getElementById('app');
+  const container = document.getElementById('app') || document.getElementById('page-content') || document.body;
   container.innerHTML = '';
   window.scrollTo(0, 0);
-  updateSidebarActive();
+  updateSidebarActive?.();
 
   if (!Capacitor.isNativePlatform()) {
     container.innerHTML = `
-      <div class="page-container" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center;">
-        <h1 style="font-size:2rem; margin-bottom:1rem; color:var(--text-primary);">Downloads Unvailable</h1>
-        <p style="color:var(--text-secondary); max-width:400px;">Offline downloads are only available in the native Android App for secure sandboxed playback.</p>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:2rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">📲</div>
+        <h2 style="color:var(--text-primary);margin-bottom:0.5rem;">Android App Required</h2>
+        <p style="color:var(--text-secondary);max-width:360px;">Offline downloads are only available in the native Android APK for secure sandboxed playback.</p>
       </div>
     `;
     return;
   }
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'page-container downloads-page animate-fade-in';
-  
-  const header = document.createElement('h1');
-  header.className = 'page-title';
-  header.textContent = 'Smart Downloads';
-  wrapper.appendChild(header);
+  wrapper.style.cssText = 'padding: 1rem; max-width: 700px; margin: 0 auto;';
 
-  const listContainer = document.createElement('div');
-  listContainer.className = 'downloads-list';
-  wrapper.appendChild(listContainer);
+  // Header
+  wrapper.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding-top:0.5rem;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <h1 style="margin:0;font-size:1.4rem;color:var(--text-primary);font-weight:700;">My Downloads</h1>
+    </div>
+    <div id="storage-bar-wrapper" style="margin-bottom:1.5rem;padding:1rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;display:none;"></div>
+    <div id="downloads-list-area"></div>
+  `;
+  container.appendChild(wrapper);
 
-  const renderList = async () => {
+  const storageWrapper = wrapper.querySelector('#storage-bar-wrapper');
+  const listArea = wrapper.querySelector('#downloads-list-area');
+
+  // ---- Storage bar (rendered once, no re-render on progress) ----
+  async function renderStorageBar() {
+    try {
+      const est = await DownloadManager.getStorageEstimate();
+      const fmt = (b) => (b / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+      const usedPct = Math.min(100, Math.round((est.usage / est.totalDisk) * 100));
+      storageWrapper.style.display = 'block';
+      storageWrapper.innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.82rem;color:var(--text-secondary);">
+          <span><strong style="color:var(--text-primary);">${fmt(est.usage)}</strong> PlayerIQ</span>
+          <span><strong style="color:var(--text-primary);">${fmt(est.freeSpace)}</strong> Free</span>
+        </div>
+        <div style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+          <div style="width:${usedPct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--primary));border-radius:3px;"></div>
+        </div>
+      `;
+    } catch (e) {}
+  }
+  renderStorageBar();
+
+  // ---- Full list render (called initially and on item add/remove/complete) ----
+  async function renderList() {
     const items = await DownloadManager.list();
 
-    // -- Storage Estimate UI --
-    let storageHtml = '';
-    try {
-      if (navigator.storage && navigator.storage.estimate) {
-        const estimate = await navigator.storage.estimate();
-        const usage = estimate.usage || 0;
-        const quota = estimate.quota || 0;
-        const freeSpace = Math.max(0, quota - usage);
-        
-        const formatGB = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-        const percentUsed = Math.min(100, Math.max(0, (usage / quota) * 100));
-        
-        storageHtml = `
-          <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--surface); border-radius: 12px; border: 1px solid var(--border-color);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
-              <span><strong style="color:var(--text-primary);">${formatGB(usage)}</strong> Used</span>
-              <span><strong style="color:var(--text-primary);">${formatGB(freeSpace)}</strong> Free</span>
-            </div>
-            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; display: flex;">
-              <div style="width: ${percentUsed}%; background: var(--primary); height: 100%;"></div>
-            </div>
-          </div>
-        `;
-      }
-    } catch (e) {
-      console.warn("Storage estimate not available", e);
-    }
-
     if (items.length === 0) {
-      listContainer.innerHTML = storageHtml + `
-        <div style="text-align:center; padding: 4rem 1rem; color:var(--text-secondary);">
-          <div style="font-size:4rem; margin-bottom:1rem;">📥</div>
-          <h2>Never be without a show</h2>
-          <p style="margin-top:0.5rem;">Movies and TV shows you download appear here.</p>
-          <a href="#/" class="btn-primary" style="margin-top:1.5rem; display:inline-block; padding:0.75rem 1.5rem; border-radius:0.5rem; text-decoration:none; color:black; background:white; font-weight:bold;">Find Something to Download</a>
+      listArea.innerHTML = `
+        <div style="text-align:center;padding:5rem 1rem;color:var(--text-secondary);">
+          <div style="font-size:4rem;margin-bottom:1rem;">📥</div>
+          <h2 style="color:var(--text-primary);margin-bottom:0.5rem;">No Downloads Yet</h2>
+          <p style="margin-bottom:1.5rem;">Find a movie or show and tap the Download button.</p>
+          <a href="#/" style="display:inline-block;padding:0.7rem 1.5rem;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;">Browse Content</a>
         </div>
       `;
       return;
     }
 
-    listContainer.innerHTML = storageHtml;
-    
-    const itemsWrapper = document.createElement('div');
-    items.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'download-item-card';
-      card.style.cssText = `
-        display: flex;
-        align-items: center;
-        background: var(--surface);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 16px;
-        cursor: pointer;
-        transition: transform 0.2s;
-      `;
-      
+    listArea.innerHTML = items.map(item => {
       const isComplete = item.status === 'COMPLETED';
-      const isFailed = item.status === 'ERROR';
-      
-      card.innerHTML = `
-        <img src="${item.posterPath || 'https://via.placeholder.com/150'}" style="width: 120px; height: 80px; object-fit: cover; border-radius: 8px; margin-right: 16px;" alt="${item.title}">
-        <div style="flex: 1; min-width: 0;">
-          <h3 style="margin:0 0 6px 0; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-primary);">${item.title}</h3>
-          ${isComplete ? `
-            <div style="font-size:0.8rem; color:var(--text-secondary);">✓ Completed | Local File</div>
-          ` : isFailed ? `
-            <div style="font-size:0.8rem; color:#ef4444;">Failed to download</div>
-          ` : `
-            <div style="font-size:0.8rem; color:var(--accent);">Downloading... ${item.progress}%</div>
-            <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 6px;">
-              <div style="width: ${item.progress}%; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s;"></div>
-            </div>
-          `}
-        </div>
-        <div class="download-actions" style="display:flex; align-items:center; margin-left: 12px;">
-          ${isComplete ? `
-            <button class="btn-play" style="background:var(--accent); color:var(--text-primary); border:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-right:8px;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      const isError = item.status === 'ERROR';
+      const isPaused = item.status === 'PAUSED';
+      const isDownloading = item.status === 'DOWNLOADING';
+      const pct = item.progress || 0;
+      const sizeMB = item.totalSize ? (item.totalSize / (1024 * 1024)).toFixed(0) + ' MB' : '';
+
+      return `
+        <div class="dl-card" data-id="${item.id}" style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;margin-bottom:14px;cursor:${isComplete?'pointer':'default'};transition:background 0.2s;">
+          <img src="${item.posterPath || ''}" onerror="this.style.display='none'" style="width:80px;height:112px;object-fit:cover;border-radius:8px;flex-shrink:0;background:rgba(255,255,255,0.06);" alt="">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">${item.title}</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;">${item.type === 'movie' ? 'Movie' : 'TV Episode'}${sizeMB ? ' · ' + sizeMB : ''}</div>
+
+            ${isDownloading ? `
+              <div class="dl-pct-label" style="font-size:0.78rem;color:var(--accent);font-weight:600;margin-bottom:5px;">Downloading… <span class="pct-num" id="pct-${item.id}">${pct}%</span></div>
+              <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">
+                <div class="dl-bar" id="bar-${item.id}" style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--primary));border-radius:2px;transition:width 0.4s ease;"></div>
+              </div>
+            ` : isComplete ? `
+              <div style="font-size:0.78rem;color:#22c55e;font-weight:600;">✓ Downloaded · Ready to Watch</div>
+            ` : isPaused ? `
+              <div style="font-size:0.78rem;color:#f59e0b;font-weight:600;">⏸ Paused · ${pct}%</div>
+            ` : `
+              <div style="font-size:0.78rem;color:#ef4444;font-weight:600;">✕ Failed — Tap delete to retry</div>
+            `}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
+            ${isComplete ? `<button class="btn-play-dl" data-id="${item.id}" style="background:var(--accent);border:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+            </button>` : ''}
+            <button class="btn-del-dl" data-id="${item.id}" data-title="${item.title}" style="background:transparent;border:none;padding:8px;cursor:pointer;color:rgba(255,255,255,0.4);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
             </button>
-          ` : ''}
-          <button class="btn-delete" style="background:transparent; color:var(--text-secondary); border:none; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-          </button>
+          </div>
         </div>
       `;
+    }).join('');
 
-      // Play click
-      const playBtn = card.querySelector('.btn-play');
-      if (playBtn) {
-        playBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          window.location.hash = `/watch/${item.type}/${item.id.replace(item.type + '_', '')}?offline=true`;
-        });
-      }
-      
-      // Card click
-      card.addEventListener('click', () => {
-         if (isComplete) {
-           window.location.hash = `/watch/${item.type}/${item.id.replace(item.type + '_', '')}?offline=true`;
-         }
+    // Wire play buttons
+    listArea.querySelectorAll('.btn-play-dl').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const item = items.find(x => x.id === id);
+        if (!item) return;
+        if (id.startsWith('movie_')) {
+          window.location.hash = `#/movie/${id.replace('movie_', '')}`;
+        } else if (id.startsWith('tv_')) {
+          const match = id.match(/^tv_(.+)_s(\d+)_e(\d+)$/);
+          if (match) window.location.hash = `#/tv/${match[1]}`;
+        }
       });
-
-      // Delete click
-      const delBtn = card.querySelector('.btn-delete');
-      if (delBtn) {
-        delBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (confirm('Delete this download?')) {
-            await DownloadManager.remove(item.id);
-            renderList();
-          }
-        });
-      }
-
-      itemsWrapper.appendChild(card);
     });
-    
-    listContainer.appendChild(itemsWrapper);
-  };
+
+    // Wire card clicks
+    listArea.querySelectorAll('.dl-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = card.dataset.id;
+        const item = items.find(x => x.id === id);
+        if (!item || item.status !== 'COMPLETED') return;
+        if (id.startsWith('movie_')) {
+          window.location.hash = `#/movie/${id.replace('movie_', '')}`;
+        } else if (id.startsWith('tv_')) {
+          const match = id.match(/^tv_(.+)_s(\d+)_e(\d+)$/);
+          if (match) window.location.hash = `#/tv/${match[1]}`;
+        }
+      });
+    });
+
+    // Wire delete buttons
+    listArea.querySelectorAll('.btn-del-dl').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const title = btn.dataset.title || 'this item';
+        if (confirm(`Remove "${title}" from downloads?`)) {
+          await DownloadManager.remove(id);
+          renderList();
+          renderStorageBar();
+        }
+      });
+    });
+  }
 
   renderList();
 
-  // Listen for progress updates
-  const handleUpdate = () => renderList();
-  window.addEventListener('downloadsUpdated', handleUpdate);
-  window.addEventListener('download-status-change', handleUpdate);
-  window.addEventListener('download-progress', handleUpdate);
+  // ---- FAST in-place progress update (no full re-render!) ----
+  const handleProgress = (e) => {
+    const { id, progress } = e.detail || {};
+    if (!id) return;
 
-  // Cleanup
-  const observer = new MutationObserver((mutations, obs) => {
+    // Update only the bar and label for this specific item
+    const bar = document.getElementById(`bar-${id}`);
+    const pctNum = document.getElementById(`pct-${id}`);
+    if (bar) bar.style.width = `${progress}%`;
+    if (pctNum) pctNum.textContent = `${progress}%`;
+  };
+
+  // ---- Full re-render only on status changes (complete / error / new item) ----
+  const handleStatusChange = () => {
+    renderList();
+    renderStorageBar();
+  };
+
+  window.addEventListener('download-progress', handleProgress);
+  window.addEventListener('download-status-change', handleStatusChange);
+  window.addEventListener('downloadsUpdated', handleStatusChange);
+
+  // Cleanup listeners when page is navigated away
+  const observer = new MutationObserver(() => {
     if (!document.contains(wrapper)) {
-      window.removeEventListener('downloadsUpdated', handleUpdate);
-      window.removeEventListener('download-status-change', handleUpdate);
-      window.removeEventListener('download-progress', handleUpdate);
-      obs.disconnect();
+      window.removeEventListener('download-progress', handleProgress);
+      window.removeEventListener('download-status-change', handleStatusChange);
+      window.removeEventListener('downloadsUpdated', handleStatusChange);
+      observer.disconnect();
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
-
-  container.appendChild(wrapper);
 }

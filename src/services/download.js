@@ -1,26 +1,12 @@
 // ========================================
 // PlayerIQ — Native Offline Download Manager (Capacitor v8)
-// Uses @capacitor/file-transfer for native Android/iOS downloads
+// Uses streaming fetch with real chunk-by-chunk progress tracking
 // ========================================
 
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const DOWNLOADS_KEY = 'piq_native_downloads';
-
-// Lazily import FileTransfer only on native to avoid web errors
-let _FileTransfer = null;
-async function getFileTransfer() {
-  if (_FileTransfer) return _FileTransfer;
-  try {
-    const mod = await import('@capacitor/file-transfer');
-    _FileTransfer = mod.FileTransfer;
-    return _FileTransfer;
-  } catch (e) {
-    console.warn('[DownloadManager] @capacitor/file-transfer not available:', e);
-    return null;
-  }
-}
 
 function getDownloadsData() {
   try {
@@ -36,27 +22,38 @@ function saveDownloadsData(data) {
   window.dispatchEvent(new CustomEvent('downloadsUpdated'));
 }
 
+function dispatchProgress(id, progress, status = 'DOWNLOADING') {
+  window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress, status } }));
+}
+
+function dispatchStatusChange(id, status) {
+  window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status } }));
+}
+
 export const DownloadManager = {
+
   async getSettings() {
-    return { wifiOnly: true, quality: 'standard' };
+    return { wifiOnly: false, quality: 'standard' };
   },
 
   async setSetting(key, value) {
     return true;
   },
 
+  // -------------------------------------------------------
+  // Core download using streaming fetch → real-time progress
+  // -------------------------------------------------------
   async start(id, type, title, posterPath) {
-    console.log(`[DownloadManager] Starting download: ${title} (${id})`);
+    console.log(`[DownloadManager] Starting: ${title} (${id})`);
 
     if (!Capacitor.isNativePlatform()) {
-      // Web: use mock animation
       this.mockWebDownload(id, type, title, posterPath);
       return;
     }
 
     const data = getDownloadsData();
     if (data[id] && data[id].status === 'COMPLETED') {
-      alert(`"${title}" is already downloaded!`);
+      alert(`"${title}" is already downloaded and ready to watch!`);
       return;
     }
 
@@ -70,117 +67,95 @@ export const DownloadManager = {
       timestamp: Date.now()
     };
     saveDownloadsData(data);
-    window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'DOWNLOADING' } }));
+    dispatchStatusChange(id, 'DOWNLOADING');
 
-    // Sample MP4 URL (replace with actual media URL when integrating with the real API)
-    const mp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    // Use a fast, small MP4 sample (~10MB) so progress is visible immediately
+    // In production, replace this with the actual resolved .mp4 stream URL
+    const mp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4';
 
     try {
-      // Try @capacitor/file-transfer first (official Capacitor v8 API)
-      const FileTransfer = await getFileTransfer();
-
-      if (FileTransfer) {
-        console.log('[DownloadManager] Using FileTransfer plugin...');
-
-        // Add progress listener
-        const progressHandle = await FileTransfer.addListener('progress', (progress) => {
-          if (progress.url !== mp4Url) return;
-          const pct = progress.contentLength > 0
-            ? Math.round((progress.bytes / progress.contentLength) * 100)
-            : 0;
-          const cur = getDownloadsData();
-          if (cur[id] && cur[id].status === 'DOWNLOADING') {
-            cur[id].progress = pct;
-            cur[id].totalSize = progress.contentLength;
-            saveDownloadsData(cur);
-            window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress: pct, status: 'DOWNLOADING' } }));
-          }
-        });
-
-        const res = await FileTransfer.downloadFile({
-          url: mp4Url,
-          path: fileName,
-          directory: Directory.Data,
-          progress: true
-        });
-
-        progressHandle.remove();
-
-        const current = getDownloadsData();
-        if (current[id]) {
-          current[id].status = 'COMPLETED';
-          current[id].progress = 100;
-          current[id].localPath = res.path;
-          saveDownloadsData(current);
-          window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
-        }
-        return;
-      }
-
-      // Fallback: fetch as blob → base64 → Filesystem.writeFile
-      console.log('[DownloadManager] FileTransfer unavailable, using fetch fallback...');
-      await this._fetchAndWriteFallback(id, mp4Url, fileName);
-
+      await this._streamDownload(id, mp4Url, fileName);
     } catch (e) {
       console.error('[DownloadManager] Download failed:', e.message || e);
-      alert(`Download failed: ${e.message || 'Unknown error. Please try again.'}`);
-      const current = getDownloadsData();
-      if (current[id]) {
-        current[id].status = 'ERROR';
-        saveDownloadsData(current);
-        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'ERROR' } }));
+      alert(`Download failed: ${e.message || 'Network error. Check your connection.'}`);
+      const cur = getDownloadsData();
+      if (cur[id]) {
+        cur[id].status = 'ERROR';
+        saveDownloadsData(cur);
+        dispatchStatusChange(id, 'ERROR');
       }
     }
   },
 
-  // Fallback: fetch binary → base64 → write file
-  async _fetchAndWriteFallback(id, url, fileName) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  // Streaming fetch — reads chunks one by one, updates progress in real time
+  async _streamDownload(id, url, fileName) {
+    console.log(`[DownloadManager] Fetching: ${url}`);
 
-    const reader = response.body.getReader();
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Server error: HTTP ${response.status}`);
+
     const contentLength = Number(response.headers.get('content-length')) || 0;
+    const reader = response.body.getReader();
+
     let receivedBytes = 0;
     const chunks = [];
+    let lastReportedPct = 0;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+
       chunks.push(value);
       receivedBytes += value.length;
-      const pct = contentLength > 0 ? Math.round((receivedBytes / contentLength) * 100) : 0;
-      const cur = getDownloadsData();
-      if (cur[id]) {
+
+      // Calculate real progress percentage
+      const pct = contentLength > 0
+        ? Math.min(99, Math.round((receivedBytes / contentLength) * 100))
+        : Math.min(99, Math.round((receivedBytes / (10 * 1024 * 1024)) * 100));
+
+      // Only fire event if it changed (reduces unnecessary renders)
+      if (pct !== lastReportedPct) {
+        lastReportedPct = pct;
+        const cur = getDownloadsData();
+        if (!cur[id] || cur[id].status !== 'DOWNLOADING') break; // cancelled
         cur[id].progress = pct;
+        cur[id].totalSize = contentLength || receivedBytes;
         saveDownloadsData(cur);
-        window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress: pct, status: 'DOWNLOADING' } }));
+        dispatchProgress(id, pct);
       }
     }
 
-    // Convert to base64
-    const blob = new Blob(chunks);
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    // Combine all chunks into one Uint8Array
+    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+    const allBytes = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      allBytes.set(chunk, offset);
+      offset += chunk.length;
+    }
 
-    const writeResult = await Filesystem.writeFile({
+    // Convert to base64 and write to native filesystem
+    const base64 = _uint8ArrayToBase64(allBytes);
+
+    await Filesystem.writeFile({
       path: fileName,
       data: base64,
       directory: Directory.Data,
       recursive: true
     });
 
-    const current = getDownloadsData();
-    if (current[id]) {
-      current[id].status = 'COMPLETED';
-      current[id].progress = 100;
-      current[id].localPath = writeResult.uri;
-      saveDownloadsData(current);
-      window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
+    // Mark complete
+    const cur = getDownloadsData();
+    if (cur[id]) {
+      cur[id].status = 'COMPLETED';
+      cur[id].progress = 100;
+      cur[id].totalSize = totalLength;
+      saveDownloadsData(cur);
+      dispatchProgress(id, 100, 'COMPLETED');
+      dispatchStatusChange(id, 'COMPLETED');
     }
+
+    console.log(`[DownloadManager] Saved ${fileName} (${(totalLength / 1024 / 1024).toFixed(1)} MB)`);
   },
 
   // Web mock for browser testing
@@ -191,24 +166,20 @@ export const DownloadManager = {
 
     let progress = 0;
     const interval = setInterval(() => {
-      const current = getDownloadsData();
-      if (!current[id] || current[id].status !== 'DOWNLOADING') {
-        clearInterval(interval);
-        return;
-      }
-      progress += Math.floor(Math.random() * 8) + 4;
+      const cur = getDownloadsData();
+      if (!cur[id] || cur[id].status !== 'DOWNLOADING') { clearInterval(interval); return; }
+      progress += Math.floor(Math.random() * 6) + 3;
       if (progress >= 100) {
-        progress = 100;
-        current[id].progress = 100;
-        current[id].status = 'COMPLETED';
+        cur[id].progress = 100;
+        cur[id].status = 'COMPLETED';
         clearInterval(interval);
-        window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
+        dispatchStatusChange(id, 'COMPLETED');
       } else {
-        current[id].progress = progress;
-        window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress, status: 'DOWNLOADING' } }));
+        cur[id].progress = progress;
+        dispatchProgress(id, progress);
       }
-      saveDownloadsData(current);
-    }, 800);
+      saveDownloadsData(cur);
+    }, 600);
   },
 
   async pause(id) {
@@ -216,17 +187,18 @@ export const DownloadManager = {
     if (data[id] && data[id].status === 'DOWNLOADING') {
       data[id].status = 'PAUSED';
       saveDownloadsData(data);
-      window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'PAUSED' } }));
+      dispatchStatusChange(id, 'PAUSED');
     }
   },
 
   async resume(id) {
     const data = getDownloadsData();
     if (data[id] && data[id].status === 'PAUSED') {
+      const { type, title, posterPath } = data[id];
       data[id].status = 'DOWNLOADING';
       saveDownloadsData(data);
-      window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'DOWNLOADING' } }));
-      this.start(id, data[id].type, data[id].title, data[id].posterPath);
+      dispatchStatusChange(id, 'DOWNLOADING');
+      this.start(id, type, title, posterPath);
     }
   },
 
@@ -237,18 +209,15 @@ export const DownloadManager = {
 
     if (Capacitor.isNativePlatform() && item.fileName) {
       try {
-        await Filesystem.deleteFile({
-          path: item.fileName,
-          directory: Directory.Data
-        });
+        await Filesystem.deleteFile({ path: item.fileName, directory: Directory.Data });
       } catch (e) {
-        console.warn('[DownloadManager] File already gone:', e.message);
+        console.warn('[DownloadManager] File already removed:', e.message);
       }
     }
 
     delete data[id];
     saveDownloadsData(data);
-    window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'IDLE' } }));
+    dispatchStatusChange(id, 'IDLE');
   },
 
   async getStatus(id) {
@@ -266,19 +235,16 @@ export const DownloadManager = {
   async getStorageEstimate() {
     if (navigator.storage && navigator.storage.estimate) {
       try {
-        const estimate = await navigator.storage.estimate();
-        const usage = estimate.usage || 0;
-        const quota = estimate.quota || 0;
+        const est = await navigator.storage.estimate();
+        const usage = est.usage || 0;
+        const quota = est.quota || 0;
         const totalDisk = quota > 0 ? quota : 32 * 1024 * 1024 * 1024;
         const freeSpace = Math.max(0, totalDisk - usage);
-        const otherApps = Math.max(0, totalDisk * 0.4 - usage);
-        return { usage, quota: totalDisk, totalDisk, freeSpace, otherApps };
-      } catch (err) {
-        console.warn('Storage estimate failed', err);
-      }
+        return { usage, quota: totalDisk, totalDisk, freeSpace, otherApps: Math.max(0, totalDisk * 0.35) };
+      } catch (err) {}
     }
-    const totalDisk = 32 * 1024 * 1024 * 1024;
-    return { usage: 2 * 1024 * 1024 * 1024, quota: totalDisk, totalDisk, freeSpace: 28 * 1024 * 1024 * 1024, otherApps: 2 * 1024 * 1024 * 1024 };
+    const total = 32 * 1024 * 1024 * 1024;
+    return { usage: 2e9, quota: total, totalDisk: total, freeSpace: 28e9, otherApps: 2e9 };
   },
 
   async getOfflineUrl(id) {
@@ -288,16 +254,23 @@ export const DownloadManager = {
 
     if (Capacitor.isNativePlatform()) {
       try {
-        const uri = await Filesystem.getUri({
-          path: item.fileName,
-          directory: Directory.Data
-        });
+        const uri = await Filesystem.getUri({ path: item.fileName, directory: Directory.Data });
         return Capacitor.convertFileSrc(uri.uri);
       } catch (e) {
-        console.error('[DownloadManager] Failed to get offline URI:', e);
+        console.error('[DownloadManager] Failed to get URI:', e);
         return null;
       }
     }
     return null;
   }
 };
+
+// Fast base64 encoder for binary data (avoids btoa limitations)
+function _uint8ArrayToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
