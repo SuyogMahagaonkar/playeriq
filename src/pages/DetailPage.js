@@ -33,10 +33,10 @@ function announceToScreenReader(message) {
 
 function checkAndCollapseHeader() {
   if (window.innerWidth <= 767) {
-    const avatar = document.getElementById('navbar-avatar');
+    /* const avatar = document.getElementById('navbar-avatar');
     if (avatar) {
-      avatar.remove();
-    }
+      avatar.remove(); // Re-enabled so user can see profile icon
+    } */
   }
 }
 

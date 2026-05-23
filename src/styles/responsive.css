@@ -1634,10 +1634,10 @@
     transform: scale(0.99);
   }
 
-  /* Hide mobile global avatar profile button */
-  #navbar-avatar, .navbar-profile-btn {
+  /* Hide mobile global avatar profile button (Re-enabled so users can find Downloads/Settings!) */
+  /* #navbar-avatar, .navbar-profile-btn {
     display: none !important;
-  }
+  } */
 
   /* Subtle and smaller hero indicators overlayed at the very bottom */
   .hero-indicators {
@@ -1949,10 +1949,10 @@
    ========================================================================== */
 @media (max-width: 767px) {
   /* --- Goal 1: Collapse Header & Hide Avatar DOM/Space --- */
-  #navbar-avatar, 
+  /* #navbar-avatar, 
   .profile-wrapper {
     display: none !important;
-  }
+  } */
   
   .navbar-right {
     margin-right: 0 !important;

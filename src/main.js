@@ -27,7 +27,7 @@ import { Capacitor } from '@capacitor/core';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
-import { PushNotifications } from '@capacitor/push-notifications';
+// import { PushNotifications } from '@capacitor/push-notifications';
 
 // Lock orientation to portrait globally on APK startup
 if (Capacitor && Capacitor.isNativePlatform()) {
@@ -80,7 +80,7 @@ if (Capacitor && Capacitor.isNativePlatform()) {
   });
 
   // 3. Push Notifications Initialization
-  PushNotifications.requestPermissions().then(result => {
+  /* PushNotifications.requestPermissions().then(result => {
     if (result.receive === 'granted') {
       PushNotifications.register();
     }
@@ -93,8 +93,7 @@ if (Capacitor && Capacitor.isNativePlatform()) {
   });
   PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
     console.log('Push action performed: ', notification);
-    // Future: Handle deep links here based on notification data
-  });
+  }); */
 }
 
 import { addRoute, initRouter } from './services/router.js';
