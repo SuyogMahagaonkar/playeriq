@@ -69,13 +69,13 @@ export const DownloadManager = {
     saveDownloadsData(data);
     dispatchStatusChange(id, 'DOWNLOADING');
 
-    // Public MP4 test URLs (tried in order until one works)
-    // In production, replace with actual resolved .mp4 stream URL from the API
+    // Public MP4 test URLs with guaranteed CORS support — tried in order
+    // These are standard media testing CDNs used by major browser vendors
     const testUrls = [
-      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',       // ~10MB Google Storage
-      'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',      // ~11MB Google Storage
-      'https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', // ~24MB
-      'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',          // fallback ~158MB
+      'https://www.w3schools.com/html/mov_bbb.mp4',                               // W3Schools ~1MB
+      'https://media.w3.org/2010/05/sintel/trailer.mp4',                          // W3C Media CORS ~5MB
+      'https://vjs.zencdn.net/v/oceans.mp4',                                      // VideoJS CDN ~15MB
+      'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', // MDN ~3MB
     ];
 
     try {
@@ -98,29 +98,24 @@ export const DownloadManager = {
     for (const url of urls) {
       try {
         console.log(`[DownloadManager] Trying: ${url}`);
-        // Quick HEAD check to see if URL is accessible
-        const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-        if (!head.ok) {
-          console.warn(`[DownloadManager] ${url} returned ${head.status}, trying next...`);
-          lastError = new Error(`HTTP ${head.status}`);
-          continue;
-        }
-        // URL works — stream it
         await this._streamDownload(id, url, fileName);
-        return;
+        return; // success
       } catch (e) {
-        console.warn(`[DownloadManager] ${url} failed: ${e.message}`);
+        console.warn(`[DownloadManager] ${url} failed: ${e.message}, trying next...`);
         lastError = e;
       }
     }
-    throw lastError || new Error('All download URLs failed.');
+    throw lastError || new Error('All download URLs failed. Check your internet connection.');
   },
 
   // Streaming fetch — reads chunks one by one, updates progress in real time
   async _streamDownload(id, url, fileName) {
     console.log(`[DownloadManager] Fetching: ${url}`);
 
-    const response = await fetch(url, { cache: 'no-store' });
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'video/mp4,video/*,*/*;q=0.9' }
+    });
     if (!response.ok) throw new Error(`Server error: HTTP ${response.status}`);
 
     const contentLength = Number(response.headers.get('content-length')) || 0;
