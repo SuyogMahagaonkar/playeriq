@@ -507,7 +507,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     };
 
     if (!navigator.onLine || isOfflinePlayback) {
-      console.log('[PlayerPage] Device is offline or in offline playback recovery. Bypassing fetch and launching offline mock player...');
+      console.log('[PlayerPage] Offline mode: launching local file player...');
       if (match) {
         await playOfflineMatch(match);
         return;
@@ -960,6 +960,13 @@ export async function renderPlayerPage({ params, container }) {
 
   let data;
   isOfflinePlayback = false;
+
+  // If launched from Downloads page, immediately use offline mode
+  if (sessionStorage.getItem('piq_force_offline') === '1') {
+    sessionStorage.removeItem('piq_force_offline');
+    isOfflinePlayback = true;
+    currentPlayerMode = 'custom';
+  }
 
   try {
     let match = null;
