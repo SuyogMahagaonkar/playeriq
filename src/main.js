@@ -25,12 +25,58 @@ import './styles/mobile-player.css';
 // Core
 import { Capacitor } from '@capacitor/core';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { App } from '@capacitor/app';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 // Lock orientation to portrait globally on APK startup
 if (Capacitor && Capacitor.isNativePlatform()) {
   try {
     ScreenOrientation.lock({ type: 'portrait' }).catch(() => {});
   } catch(e) {}
+
+  // 1. App Backgrounding (Auto-pause video)
+  App.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive) {
+      // App went to background -> pause video if it exists
+      const video = document.getElementById('vp-video');
+      if (video && !video.paused) {
+        video.pause();
+      }
+    }
+  });
+
+  // 2. Hardware Back Button Handling
+  App.addListener('backButton', ({ canGoBack }) => {
+    const sidebar = document.getElementById('piq-sidebar');
+    if (sidebar && sidebar.classList.contains('active')) {
+      // Fast workaround to close sidebar without strict import
+      sidebar.classList.remove('active');
+      const overlay = document.getElementById('piq-sidebar-overlay');
+      if (overlay) overlay.classList.remove('active');
+      document.body.style.overflow = '';
+      return;
+    }
+    
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+
+    const player = document.getElementById('vp-player');
+    if (player && player.classList.contains('cinematic-mode')) {
+      player.classList.remove('cinematic-mode');
+      const btn = document.getElementById('vp-cinematic-btn');
+      if (btn) btn.classList.remove('active');
+      localStorage.setItem('piq_cinematic', '0');
+      return;
+    }
+
+    if (canGoBack) {
+      window.history.back();
+    } else {
+      App.exitApp();
+    }
+  });
 }
 
 import { addRoute, initRouter } from './services/router.js';
@@ -314,6 +360,11 @@ function initApp() {
   setTimeout(() => {
     const splash = document.getElementById('splash-screen');
     if (splash) splash.classList.add('hidden');
+    
+    if (Capacitor && Capacitor.isNativePlatform()) {
+      try { SplashScreen.hide(); } catch(e) {}
+    }
+
     setTimeout(() => {
       splash?.remove();
 

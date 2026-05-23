@@ -8,6 +8,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { NavigationBar } from '@capgo/capacitor-navigation-bar';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import Hls from 'hls.js';
 
 /**
@@ -1292,6 +1293,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       if (now - lastTap < 300) {
         // Double tap!
         lastTapTime[side] = 0;
+        if (Capacitor && Capacitor.isNativePlatform()) {
+          try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
+        }
         if (side === 'left') {
           // Rewind 10s
           const off = (window._playerGetSeekOffset?.() || 0);
@@ -1464,6 +1468,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       if (currentDistance > initialPinchDistance + pinchThreshold) {
         // Zooming OUT (fingers apart) -> Fill screen
         if (!player.classList.contains('cinematic-mode')) {
+          if (Capacitor && Capacitor.isNativePlatform()) {
+            try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
+          }
           player.classList.add('cinematic-mode');
           if (cinematicBtn) cinematicBtn.classList.add('active');
           localStorage.setItem('piq_cinematic', '1');
@@ -1472,6 +1479,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       } else if (currentDistance < initialPinchDistance - pinchThreshold) {
         // Zooming IN (fingers together) -> Fit screen
         if (player.classList.contains('cinematic-mode')) {
+          if (Capacitor && Capacitor.isNativePlatform()) {
+            try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
+          }
           player.classList.remove('cinematic-mode');
           if (cinematicBtn) cinematicBtn.classList.remove('active');
           localStorage.setItem('piq_cinematic', '0');
