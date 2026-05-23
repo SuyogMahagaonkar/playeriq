@@ -664,22 +664,49 @@ export function createVideoPlayer(container, streamData, onProgress = null, onFa
   }
 
   // ---- Controls Logic ----
+  // ---- Remote Logger (for Droplet Debugging) ----
+  function remoteLog(msg, level = 'info') {
+    try {
+      // Send log back to our PM2 backend
+      const proxyUrl = window.NODE_PROXY || '';
+      fetch(`${proxyUrl}/api/client-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg: `[Player] ${msg}`, level }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
   // ---- Mobile auto-fullscreen helper ----
   let hasRequestedFullscreen = false;
   function requestMobileFullscreen() {
+    remoteLog(`requestMobileFullscreen called. isMobile=${isMobile()}, hasReq=${hasRequestedFullscreen}, fsElement=${!!document.fullscreenElement}`);
     if (!isMobile() || hasRequestedFullscreen) return;
+    
     const fsTarget = player; // fullscreen the vp-player element
     if (!document.fullscreenElement) {
+      remoteLog('Attempting to call requestFullscreen on player element...');
       const p = fsTarget.requestFullscreen?.() || 
                 fsTarget.webkitRequestFullscreen?.() || 
                 fsTarget.mozRequestFullScreen?.() || 
                 fsTarget.msRequestFullscreen?.();
+      
       if (p && p.catch) {
-        p.then(() => { hasRequestedFullscreen = true; }).catch(() => {
+        p.then(() => { 
+          hasRequestedFullscreen = true; 
+          remoteLog('requestFullscreen Promise RESOLVED - Success!');
+        }).catch((err) => {
           hasRequestedFullscreen = false; // try again on next tap if denied
+          remoteLog(`requestFullscreen Promise REJECTED: ${err.message || err}`, 'error');
         });
+      } else {
+        remoteLog(`requestFullscreen called but returned no Promise (p=${typeof p}). Possibly sync or missing API.`);
+        // Note: webkitRequestFullscreen is often synchronous on older iOS, so it won't return a promise.
+        hasRequestedFullscreen = true;
       }
     } else {
+      remoteLog('document.fullscreenElement is already active. Skipping.');
       hasRequestedFullscreen = true;
     }
   }

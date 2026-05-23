@@ -45,6 +45,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), cacheSize: cache.size });
 });
 
+// Endpoint for frontend remote logging to PM2
+app.post('/api/client-log', (req, res) => {
+  const { msg, level } = req.body;
+  if (level === 'error') console.error(`[Client Error] ${msg}`);
+  else console.log(`[Client Log] ${msg}`);
+  res.json({ success: true });
+});
+
 // ---- Cache management ----
 app.get('/api/cache/clear', (req, res) => {
   const size = cache.size;
