@@ -35,3 +35,8 @@ export function addRecentSearch(query) {
   recent.unshift(query);
   setState('recentSearches', recent.slice(0, 8));
 }
+
+export function removeRecentSearch(query) {
+  const recent = getState('recentSearches').filter(q => q !== query);
+  setState('recentSearches', recent);
+}

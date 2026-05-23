@@ -4,7 +4,7 @@
 
 import { searchMovieBox } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
-import { addRecentSearch, getState } from '../services/state.js';
+import { addRecentSearch, getState, setState, removeRecentSearch } from '../services/state.js';
 import { createFooter } from '../components/Footer.js';
 import { getWatchHistory } from '../services/auth.js';
 
@@ -279,39 +279,82 @@ export async function renderSearchPage({ query, container }) {
     // Recent Searches Helper
     function renderRecentAndInitial() {
       const recent = getState('recentSearches');
-      content.innerHTML = `
-        ${recent.length ? `
-          <div class="recent-searches-section" style="padding: 16px;">
-            <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;font-weight:600;">Recent Searches</p>
-            <div class="recent-search-list" style="display:flex;flex-direction:column;gap:12px;">
+      if (recent.length > 0) {
+        content.innerHTML = `
+          <div class="recent-searches-section">
+            <div class="recent-searches-header">
+              <span class="recent-searches-title">Recent</span>
+              <button class="recent-clear-all-btn" id="recent-clear-all">Clear All</button>
+            </div>
+            <div class="recent-search-list">
               ${recent.map(r => `
-                <div class="recent-search-item" data-search="${r}" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
-                  <div style="display:flex;align-items:center;gap:12px;">
-                    <i data-lucide="clock" style="width:16px;height:16px;color:var(--text-muted);"></i>
-                    <span style="font-size:14px;color:var(--text-primary);">${r}</span>
+                <div class="recent-search-item" data-search="${r}">
+                  <div class="recent-search-clock">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
                   </div>
-                  <i data-lucide="arrow-up-left" style="width:16px;height:16px;color:var(--text-muted);"></i>
+                  <span class="recent-search-text">${r}</span>
+                  <button class="recent-search-remove-btn" data-remove="${r}" aria-label="Remove ${r}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
                 </div>
               `).join('')}
             </div>
           </div>
-        ` : `
+        `;
+
+        // Tap text/row → search
+        content.querySelectorAll('.recent-search-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            // Don't trigger search if clicking remove button
+            if (e.target.closest('.recent-search-remove-btn')) return;
+            const val = item.dataset.search;
+            input.value = val;
+            triggerSearch(val);
+          });
+        });
+
+        // Per-item remove button
+        content.querySelectorAll('.recent-search-remove-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const term = btn.dataset.remove;
+            removeRecentSearch(term);
+            // Animate removal
+            const row = btn.closest('.recent-search-item');
+            if (row) {
+              row.style.transition = 'opacity 0.2s, transform 0.2s';
+              row.style.opacity = '0';
+              row.style.transform = 'translateX(20px)';
+              setTimeout(() => renderRecentAndInitial(), 220);
+            }
+          });
+        });
+
+        // Clear All
+        const clearAllBtn = content.querySelector('#recent-clear-all');
+        if (clearAllBtn) {
+          clearAllBtn.addEventListener('click', () => {
+            setState('recentSearches', []);
+            renderRecentAndInitial();
+          });
+        }
+
+      } else {
+        content.innerHTML = `
           <div class="empty-state">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <div class="empty-state-title">Search for Movies &amp; TV Shows</div>
             <div class="empty-state-text">Search the entire MovieBox catalog.</div>
           </div>
-        `}
-      `;
+        `;
+      }
 
-      // Click on recent search
-      content.querySelectorAll('.recent-search-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const val = item.dataset.search;
-          input.value = val;
-          triggerSearch(val);
-        });
-      });
       if (window.lucide) window.lucide.createIcons();
     }
 

@@ -1399,10 +1399,16 @@
     color: #fff;
   }
 
-  /* Genre Filter Chips (Horizontal swipeable) */
+  /* Hide downloads button in navbar on mobile — it's in the bottom nav */
+  .navbar-btn-downloads-desktop {
+    display: none !important;
+  }
+
+  /* Genre Filter Chips (Horizontal swipeable) — redesigned */
   .mobile-genre-chips-container {
-    margin-top: -8px;
-    margin-bottom: 8px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    padding: 0 16px;
   }
 
   .mobile-genre-scroll {
@@ -1410,31 +1416,168 @@
     gap: 8px;
     overflow-x: auto;
     scrollbar-width: none;
-    padding: 4px 0;
+    padding: 6px 0 8px;
   }
 
   .mobile-genre-scroll::-webkit-scrollbar {
     display: none;
   }
 
+  /* Genre pill — glassmorphism with emoji color pop */
   .mobile-genre-scroll .genre-pill {
-    background: rgba(255, 255, 255, 0.04) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: var(--text-secondary) !important;
-    padding: 8px 16px !important;
-    font-size: 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    padding: 7px 14px !important;
+    font-size: 12.5px !important;
     font-weight: 600 !important;
-    border-radius: var(--radius-full) !important;
+    border-radius: 100px !important;
     white-space: nowrap !important;
     cursor: pointer !important;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    overflow: hidden !important;
   }
 
-  .mobile-genre-scroll .genre-pill:active {
-    background: rgba(168, 85, 247, 0.2) !important;
-    border-color: var(--accent) !important;
+  /* Shimmer on pill hover */
+  .mobile-genre-scroll .genre-pill::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0) 0%, rgba(168, 85, 247, 0.12) 100%) !important;
+    opacity: 0 !important;
+    transition: opacity 0.2s !important;
+  }
+
+  .mobile-genre-scroll .genre-pill:active::before,
+  .mobile-genre-scroll .genre-pill.active-pill::before {
+    opacity: 1 !important;
+  }
+
+  .mobile-genre-scroll .genre-pill:active,
+  .mobile-genre-scroll .genre-pill.active-pill {
+    background: rgba(168, 85, 247, 0.18) !important;
+    border-color: rgba(168, 85, 247, 0.5) !important;
     color: #fff !important;
-    transform: scale(0.95);
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.3) !important;
+    transform: scale(0.96) !important;
+  }
+
+  /* ---- Recent Searches redesign ---- */
+  .recent-searches-section {
+    padding: 20px 16px 8px !important;
+  }
+
+  .recent-searches-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .recent-searches-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .recent-clear-all-btn {
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(168, 85, 247, 0.8);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .recent-clear-all-btn:active {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.1);
+  }
+
+  .recent-search-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .recent-search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 4px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s;
+    border-radius: 10px;
+    position: relative;
+  }
+
+  .recent-search-item:active {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .recent-search-item:last-child {
+    border-bottom: none;
+  }
+
+  .recent-search-clock {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .recent-search-clock svg {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .recent-search-text {
+    flex: 1;
+    font-size: 14.5px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recent-search-remove-btn {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.25);
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .recent-search-remove-btn:active {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
   }
 
   /* Netflix suggestions overlay */
