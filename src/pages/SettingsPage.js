@@ -106,17 +106,17 @@ export async function renderSettingsPage({ container }) {
         <div class="mobile-settings-group" style="width:100%;">
           
           <!-- Sticky Category Filter Chips -->
-          <div class="category-chips-container" role="tablist" aria-label="Settings Categories" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <button class="category-chip active" data-target="theme-accordion" role="tab" aria-selected="true" aria-controls="theme-accordion" style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Aesthetics</button>
-            <button class="category-chip" data-target="playback-accordion" role="tab" aria-selected="false" aria-controls="playback-accordion" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Playback</button>
-            <button class="category-chip" data-target="subtitles-accordion" role="tab" aria-selected="false" aria-controls="subtitles-accordion" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Subtitles</button>
-            ${showSafeSearchToggle ? `<button class="category-chip" data-target="parental-accordion" role="tab" aria-selected="false" aria-controls="parental-accordion" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Parental</button>` : ''}
-            <button class="category-chip" data-target="downloads-accordion" role="tab" aria-selected="false" aria-controls="downloads-accordion" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Downloads</button>
-            <button class="category-chip" data-target="backup-accordion" role="tab" aria-selected="false" aria-controls="backup-accordion" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;">Storage</button>
+          <div class="category-chips-container" role="tablist" aria-label="Settings Categories">
+            <button class="category-chip active" data-target="theme-accordion" role="tab" aria-selected="true" aria-controls="theme-accordion">Aesthetics</button>
+            <button class="category-chip" data-target="playback-accordion" role="tab" aria-selected="false" aria-controls="playback-accordion">Playback</button>
+            <button class="category-chip" data-target="subtitles-accordion" role="tab" aria-selected="false" aria-controls="subtitles-accordion">Subtitles</button>
+            ${showSafeSearchToggle ? `<button class="category-chip" data-target="parental-accordion" role="tab" aria-selected="false" aria-controls="parental-accordion">Parental</button>` : ''}
+            <button class="category-chip" data-target="downloads-accordion" role="tab" aria-selected="false" aria-controls="downloads-accordion">Downloads</button>
+            <button class="category-chip" data-target="backup-accordion" role="tab" aria-selected="false" aria-controls="backup-accordion">Storage</button>
           </div>
 
-          <!-- Scrollable Accordion Stack Container (Height Constrained) -->
-          <div class="mobile-settings-scroll-container" style="max-height:55vh; overflow-y:auto; scrollbar-width:none; padding-bottom:10px; display:flex; flex-direction:column; gap:10px;">
+          <!-- Accordion Stack Container (Natural Mobile Scroll) -->
+          <div class="mobile-settings-scroll-container">
             
             <!-- Accordion: Aesthetics & Themes -->
             <div class="mobile-settings-accordion open" id="theme-accordion">
@@ -500,7 +500,7 @@ export async function renderSettingsPage({ container }) {
         </div>
 
       </div>
-      ${createFooter()})}
+      ${createFooter()}
     `;
   } else {
     container.innerHTML = `

@@ -1727,28 +1727,30 @@
     color: var(--text-muted);
   }
 
-  /* Height constrained scrollable settings container */
+  /* Redesigned clean, natural scrolling settings container */
   .mobile-settings-scroll-container {
-    max-height: 55vh;
-    overflow-y: auto;
-    scrollbar-width: none; /* Hide standard Firefox scrollbars */
-    padding-bottom: 8px;
+    max-height: none;
+    overflow-y: visible;
+    padding-bottom: 24px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
   .mobile-settings-scroll-container::-webkit-scrollbar {
-    display: none; /* Hide Chrome/Safari scrollbar */
+    display: none;
   }
 
-  /* Category Filter Chips Container & Chip Styles */
+  /* Premium Category Horizontal Scroll Bar */
   .category-chips-container {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 4px;
+    scrollbar-width: none; /* Hide scrollbars */
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    -webkit-overflow-scrolling: touch; /* Butter smooth mobile momentum scroll */
   }
 
   .category-chips-container::-webkit-scrollbar {
@@ -1756,23 +1758,28 @@
   }
 
   .category-chip {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--text-secondary);
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0; /* CRITICAL: Prevents shrunken squishing / overlapping texts */
+    transition: all 0.25s ease;
+  }
+
+  .category-chip:active {
+    transform: scale(0.96);
   }
 
   .category-chip.active {
-    background: var(--gradient-purple);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3);
+    background: linear-gradient(135deg, var(--accent) 0%, #6b21a8 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35) !important;
   }
 
   /* Premium Editor triggers inside accordions */
