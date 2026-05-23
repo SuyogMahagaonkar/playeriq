@@ -506,31 +506,32 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       );
     };
 
+    // ✅ PRODUCTION: If user has downloaded this item, ALWAYS play the local file
+    // This works whether online or offline — the downloaded copy takes priority
+    if (match) {
+      console.log(`[PlayerPage] Found completed local download for ${downloadId} — playing offline copy`);
+      await playOfflineMatch(match);
+      return;
+    }
+
     if (!navigator.onLine || isOfflinePlayback) {
-      console.log('[PlayerPage] Offline mode: launching local file player...');
-      if (match) {
-        await playOfflineMatch(match);
-        return;
-      } else {
-        console.error('[PlayerPage] Requested item is not downloaded and we are offline.');
-        wrapper.innerHTML = `
+      console.log('[PlayerPage] Offline mode: no local copy found, showing error...');
+      wrapper.innerHTML = `
           <div class="player-offline-error-overlay">
             <div class="player-offline-error-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"></path><path d="M5 12.5a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
             </div>
-            <h3 class="player-offline-error-title">Episode Not Downloaded</h3>
+            <h3 class="player-offline-error-title">Not Downloaded</h3>
             <p class="player-offline-error-message">
-              This episode hasn't been downloaded for offline viewing. Please connect to the internet or watch downloaded episodes from your settings library.
+              This title hasn't been downloaded. Please connect to the internet or go to Downloads to watch offline content.
             </p>
-            <button class="player-offline-error-btn" onclick="window.location.hash = '#/settings'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>Go to My Downloads</span>
+            <button class="player-offline-error-btn" onclick="window.location.hash = '#/downloads'">
+              Go to Downloads
             </button>
           </div>
         `;
-        if (window.lucide) window.lucide.createIcons();
-        return;
-      }
+      if (window.lucide) window.lucide.createIcons();
+      return;
     }
 
     let countdownInterval = null;

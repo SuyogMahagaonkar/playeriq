@@ -1,10 +1,11 @@
 // ========================================
 // PlayerIQ — Native Offline Download Manager (Capacitor v8)
-// Uses streaming fetch with real chunk-by-chunk progress tracking
+// Production-level: fetches real stream URL from API before downloading
 // ========================================
 
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { NODE_PROXY } from './api.js';
 
 const DOWNLOADS_KEY = 'piq_native_downloads';
 
@@ -41,7 +42,8 @@ export const DownloadManager = {
   },
 
   // -------------------------------------------------------
-  // Core download using streaming fetch → real-time progress
+  // Core: resolve real stream URL → stream-download → save
+  // id format: "movie_12345" or "tv_12345_s1_e1"
   // -------------------------------------------------------
   async start(id, type, title, posterPath) {
     console.log(`[DownloadManager] Starting: ${title} (${id})`);
@@ -54,6 +56,10 @@ export const DownloadManager = {
     const data = getDownloadsData();
     if (data[id] && data[id].status === 'COMPLETED') {
       alert(`"${title}" is already downloaded and ready to watch!`);
+      return;
+    }
+    if (data[id] && data[id].status === 'DOWNLOADING') {
+      alert(`"${title}" is already downloading...`);
       return;
     }
 
@@ -69,19 +75,24 @@ export const DownloadManager = {
     saveDownloadsData(data);
     dispatchStatusChange(id, 'DOWNLOADING');
 
-    // Self-hosted test video (same origin = no CORS) + public fallbacks
-    const testUrls = [
-      'https://playeriq.suyogmahagaonkar.me/test-video.mp4',                               // Self-hosted ~1MB, no CORS
-      'https://www.w3schools.com/html/mov_bbb.mp4',                                        // W3Schools ~1MB
-      'https://media.w3.org/2010/05/sintel/trailer.mp4',                                   // W3C CORS ~5MB
-      'https://vjs.zencdn.net/v/oceans.mp4',                                               // VideoJS ~15MB
-    ];
-
     try {
-      await this._streamDownloadWithFallback(id, testUrls, fileName);
+      // Step 1: Resolve the actual stream URL from our production API
+      const streamUrl = await this._resolveStreamUrl(id, type);
+
+      // Step 2: Stream-download it with real-time progress
+      await this._streamDownload(id, streamUrl, fileName);
+
     } catch (e) {
       console.error('[DownloadManager] Download failed:', e.message || e);
-      alert(`Download failed: ${e.message || 'Network error. Check your connection.'}`);
+
+      // Show a helpful error message
+      const msg = e.message?.includes('403') ? 'Stream URL not accessible. Try again later.' :
+                  e.message?.includes('404') ? 'Content not found on server.' :
+                  e.message?.includes('Failed to fetch') ? 'No internet connection.' :
+                  e.message || 'Download failed. Please try again.';
+
+      alert(`Download failed: ${msg}`);
+
       const cur = getDownloadsData();
       if (cur[id]) {
         cur[id].status = 'ERROR';
@@ -91,30 +102,70 @@ export const DownloadManager = {
     }
   },
 
-  // Try multiple URLs in order, use the first that responds with 200
-  async _streamDownloadWithFallback(id, urls, fileName) {
-    let lastError = null;
-    for (const url of urls) {
-      try {
-        console.log(`[DownloadManager] Trying: ${url}`);
-        await this._streamDownload(id, url, fileName);
-        return; // success
-      } catch (e) {
-        console.warn(`[DownloadManager] ${url} failed: ${e.message}, trying next...`);
-        lastError = e;
+  // Resolve the real downloadable MP4 URL from our API
+  async _resolveStreamUrl(id, type) {
+    let endpoint = '';
+
+    if (type === 'movie' || id.startsWith('movie_')) {
+      const tmdbId = id.replace('movie_', '');
+      endpoint = `${NODE_PROXY}/api/stream/movie/${tmdbId}`;
+    } else if (type === 'tv' || id.startsWith('tv_')) {
+      // tv_12345_s1_e1
+      const match = id.match(/^tv_(.+)_s(\d+)_e(\d+)$/);
+      if (match) {
+        const [, tmdbId, season, episode] = match;
+        endpoint = `${NODE_PROXY}/api/stream/tv/${tmdbId}/${season}/${episode}`;
+      } else {
+        throw new Error('Invalid TV download ID format');
+      }
+    } else {
+      throw new Error('Unknown content type for download');
+    }
+
+    console.log(`[DownloadManager] Fetching stream from: ${endpoint}`);
+    const res = await fetch(endpoint, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!res.ok) throw new Error(`API error: HTTP ${res.status}`);
+
+    const streamData = await res.json();
+
+    // Get the best direct MP4 URL
+    let url = streamData.url || '';
+
+    // If API returned a relative /api/ path, make it absolute
+    if (url.startsWith('/api/')) {
+      url = `${NODE_PROXY}${url}`;
+    }
+
+    // Prefer direct MP4 from all_streams if available
+    if (Array.isArray(streamData.all_streams) && streamData.all_streams.length > 0) {
+      const mp4Stream = streamData.all_streams.find(s => 
+        s.url && !s.url.includes('.m3u8') && (s.url.includes('.mp4') || s.type === 'mp4')
+      );
+      if (mp4Stream) {
+        let mp4Url = mp4Stream.url;
+        if (mp4Url.startsWith('/api/')) mp4Url = `${NODE_PROXY}${mp4Url}`;
+        url = mp4Url;
       }
     }
-    throw lastError || new Error('All download URLs failed. Check your internet connection.');
+
+    if (!url) throw new Error('No downloadable stream URL from API');
+
+    console.log(`[DownloadManager] Stream URL resolved: ${url.substring(0, 80)}...`);
+    return url;
   },
 
-  // Streaming fetch — reads chunks one by one, updates progress in real time
+  // Streaming fetch with real-time chunk-by-chunk progress
   async _streamDownload(id, url, fileName) {
-    console.log(`[DownloadManager] Fetching: ${url}`);
+    console.log(`[DownloadManager] Downloading: ${url.substring(0, 80)}`);
 
     const response = await fetch(url, {
       method: 'GET',
       headers: { 'Accept': 'video/mp4,video/*,*/*;q=0.9' }
     });
+
     if (!response.ok) throw new Error(`Server error: HTTP ${response.status}`);
 
     const contentLength = Number(response.headers.get('content-length')) || 0;
@@ -122,33 +173,39 @@ export const DownloadManager = {
 
     let receivedBytes = 0;
     const chunks = [];
-    let lastReportedPct = 0;
+    let lastPct = -1;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
+      // Check if download was cancelled
+      const cur = getDownloadsData();
+      if (!cur[id] || cur[id].status !== 'DOWNLOADING') {
+        reader.cancel();
+        break;
+      }
+
       chunks.push(value);
       receivedBytes += value.length;
 
-      // Calculate real progress percentage
       const pct = contentLength > 0
         ? Math.min(99, Math.round((receivedBytes / contentLength) * 100))
-        : Math.min(99, Math.round((receivedBytes / (10 * 1024 * 1024)) * 100));
+        : Math.min(99, Math.round((receivedBytes / (50 * 1024 * 1024)) * 100));
 
-      // Only fire event if it changed (reduces unnecessary renders)
-      if (pct !== lastReportedPct) {
-        lastReportedPct = pct;
-        const cur = getDownloadsData();
-        if (!cur[id] || cur[id].status !== 'DOWNLOADING') break; // cancelled
-        cur[id].progress = pct;
-        cur[id].totalSize = contentLength || receivedBytes;
-        saveDownloadsData(cur);
-        dispatchProgress(id, pct);
+      if (pct !== lastPct) {
+        lastPct = pct;
+        const curData = getDownloadsData();
+        if (curData[id]) {
+          curData[id].progress = pct;
+          curData[id].totalSize = contentLength || receivedBytes;
+          saveDownloadsData(curData);
+          dispatchProgress(id, pct);
+        }
       }
     }
 
-    // Combine all chunks into one Uint8Array
+    // Combine all chunks
     const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
     const allBytes = new Uint8Array(totalLength);
     let offset = 0;
@@ -157,10 +214,9 @@ export const DownloadManager = {
       offset += chunk.length;
     }
 
-    // Convert to base64 and write to native filesystem
+    // Write to native filesystem as base64
     const base64 = _uint8ArrayToBase64(allBytes);
-
-    await Filesystem.writeFile({
+    const writeResult = await Filesystem.writeFile({
       path: fileName,
       data: base64,
       directory: Directory.Data,
@@ -173,12 +229,13 @@ export const DownloadManager = {
       cur[id].status = 'COMPLETED';
       cur[id].progress = 100;
       cur[id].totalSize = totalLength;
+      cur[id].localPath = writeResult.uri;
       saveDownloadsData(cur);
       dispatchProgress(id, 100, 'COMPLETED');
       dispatchStatusChange(id, 'COMPLETED');
     }
 
-    console.log(`[DownloadManager] Saved ${fileName} (${(totalLength / 1024 / 1024).toFixed(1)} MB)`);
+    console.log(`[DownloadManager] ✅ Saved: ${fileName} (${(totalLength / 1024 / 1024).toFixed(1)} MB)`);
   },
 
   // Web mock for browser testing
@@ -263,11 +320,11 @@ export const DownloadManager = {
         const quota = est.quota || 0;
         const totalDisk = quota > 0 ? quota : 32 * 1024 * 1024 * 1024;
         const freeSpace = Math.max(0, totalDisk - usage);
-        return { usage, quota: totalDisk, totalDisk, freeSpace, otherApps: Math.max(0, totalDisk * 0.35) };
+        return { usage, quota: totalDisk, totalDisk, freeSpace };
       } catch (err) {}
     }
     const total = 32 * 1024 * 1024 * 1024;
-    return { usage: 2e9, quota: total, totalDisk: total, freeSpace: 28e9, otherApps: 2e9 };
+    return { usage: 2e9, quota: total, totalDisk: total, freeSpace: 28e9 };
   },
 
   async getOfflineUrl(id) {
@@ -288,7 +345,7 @@ export const DownloadManager = {
   }
 };
 
-// Fast base64 encoder for binary data (avoids btoa limitations)
+// Efficient base64 encoder for binary Uint8Array
 function _uint8ArrayToBase64(bytes) {
   let binary = '';
   const len = bytes.byteLength;
