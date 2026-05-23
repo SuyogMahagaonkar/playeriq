@@ -276,79 +276,6 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   const player = document.getElementById('vp-player');
   const video = existingVideo || document.getElementById('vp-video');
 
-  let simulatedPaused = true;
-  let simulatedCurrentTime = startTime || 0;
-  let simulatedDuration = streamData.duration || 2700; // Default 45 mins
-  let playInterval = null;
-
-  if (streamData.isOffline) {
-    // Redefine properties on the video element directly to bypass native media engines
-    Object.defineProperties(video, {
-      duration: {
-        get: () => simulatedDuration,
-        configurable: true
-      },
-      paused: {
-        get: () => simulatedPaused,
-        configurable: true
-      },
-      currentTime: {
-        get: () => simulatedCurrentTime,
-        set: (val) => {
-          simulatedCurrentTime = Math.max(0, Math.min(simulatedDuration, val));
-          video.dispatchEvent(new Event('timeupdate'));
-        },
-        configurable: true
-      }
-    });
-
-    // Override play and pause methods
-    video.play = function() {
-      if (simulatedPaused) {
-        simulatedPaused = false;
-        video.dispatchEvent(new Event('play'));
-        video.dispatchEvent(new Event('playing'));
-        
-        let lastTime = Date.now();
-        if (playInterval) clearInterval(playInterval);
-        playInterval = setInterval(() => {
-          if (simulatedPaused) {
-            clearInterval(playInterval);
-            playInterval = null;
-            return;
-          }
-          const now = Date.now();
-          const delta = (now - lastTime) / 1000;
-          lastTime = now;
-          
-          simulatedCurrentTime += delta * video.playbackRate;
-          if (simulatedCurrentTime >= simulatedDuration) {
-            simulatedCurrentTime = simulatedDuration;
-            simulatedPaused = true;
-            clearInterval(playInterval);
-            playInterval = null;
-            video.dispatchEvent(new Event('timeupdate'));
-            video.dispatchEvent(new Event('ended'));
-          } else {
-            video.dispatchEvent(new Event('timeupdate'));
-          }
-        }, 250);
-      }
-      return Promise.resolve();
-    };
-
-    video.pause = function() {
-      if (!simulatedPaused) {
-        simulatedPaused = true;
-        if (playInterval) {
-          clearInterval(playInterval);
-          playInterval = null;
-        }
-        video.dispatchEvent(new Event('pause'));
-      }
-    };
-  }
-
   // ---- 15s Playback Watchdog ----
   // Safari on iOS will stay stuck loading in a loop without firing a hard video.error event.
   // We monitor the first 'play' action: if 15 seconds pass and the video fails to render 
@@ -421,44 +348,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   const isTranscoded = !!streamData.url?.includes('/transcode');
   let seekLocked = false;
 
-  if (streamData.isOffline) {
-    // Offline simulation bypasses Hls/native HLS initialization completely
-    loader.style.display = 'none';
-    
-    // Populate quality selector
-    qualitySelect.innerHTML = '<option value="offline" selected>Offline (Local)</option>';
-    qualitySelect.disabled = true;
-
-    // Render the beautiful offline overlay inside the player container
-    const playerEl = document.getElementById('vp-player');
-    if (playerEl) {
-      const offlineOverlay = document.createElement('div');
-      offlineOverlay.className = 'vp-offline-cinema-overlay animate-fade-in';
-      offlineOverlay.innerHTML = `
-        <div class="vp-offline-cinema-badge">
-          <span class="badge-dot"></span>
-          <span>📴 Offline Cinema Mode</span>
-        </div>
-        <div class="vp-offline-cinema-icon">🎬</div>
-        <div class="vp-offline-cinema-title">${streamData.title || 'Offline Video'}</div>
-        <div class="vp-offline-cinema-subtitle">Playing fully completed local download from secure IndexedDB sandbox.</div>
-      `;
-      playerEl.appendChild(offlineOverlay);
-    }
-
-    // Trigger metadata/canplay mock events synchronously or in next tick
-    setTimeout(() => {
-      video.dispatchEvent(new Event('loadedmetadata'));
-      video.dispatchEvent(new Event('canplay'));
-      updateTime();
-      updateBuffer();
-      
-      // Auto play if enabled
-      if (localStorage.getItem('piq_autoplay') === 'true') {
-        video.play().catch(err => console.warn('[Offline Autoplay] Blocked:', err));
-      }
-    }, 50);
-  } else if (existingVideo) {
+  if (existingVideo) {
     if (video._hls) {
       hls = video._hls;
       // Populate quality selector
@@ -499,8 +389,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     video._knownDuration = knownDuration;
 
     if (isMP4) {
-      // Populate quality selector from available streams
-      if (allStreams.length > 0) {
+      if (streamData.isOffline) {
+        qualitySelect.innerHTML = '<option value="offline" selected>Offline (Local)</option>';
+        qualitySelect.disabled = true;
+      } else if (allStreams.length > 0) {
         // Sort highest resolution first, deduplicate by resolution
         const seen = new Set();
         const sorted = [...allStreams]
@@ -790,7 +682,6 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
 
   // ---- Helper: get effective duration ----
   function getEffectiveDuration() {
-    if (streamData.isOffline) return simulatedDuration;
     // For transcoded streams: knownDuration (from API/TMDB) is preferred because
     // video.duration on fMP4 streams is just the current buffer fragment size.
     if (isTranscoded && knownDuration) return knownDuration;
@@ -1610,7 +1501,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       diagFullscreen.textContent = document.fullscreenEnabled ? 'Supported' : 'Unsupported';
     }
     if (streamData.isOffline) {
-      if (diagAbr) diagAbr.textContent = 'Offline (Local DB)';
+      if (diagAbr) diagAbr.textContent = 'Offline (Local File)';
       if (diagBufferRate) diagBufferRate.textContent = '0 KB/s (Local)';
       if (diagLatency) diagLatency.textContent = '0 ms (Direct)';
       return;

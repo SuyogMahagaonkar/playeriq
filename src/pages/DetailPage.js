@@ -50,17 +50,18 @@ async function setupDownloadButton(btn, downloadId, type, title, posterPath) {
     // Check if it is a detail button or episode button
     const isDetailBtn = btn.classList.contains('detail-btn');
     
-    if (status === 'DOWNLOADING') {
+    if (status === 'DOWNLOADING' || status === 'SAVING') {
       btn.classList.add('downloading');
+      const text = status === 'SAVING' ? 'Saving…' : `Downloading (${progress}%)`;
       btn.innerHTML = `
         <svg class="progress-ring" width="20" height="20" style="transform: rotate(-90deg); margin-right: ${isDetailBtn ? '8px' : '0'};">
           <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.1)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10"/>
           <circle class="progress-ring-bar" stroke="var(--primary, #a855f7)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10" 
             stroke-dasharray="50.2" stroke-dashoffset="${50.2 - (50.2 * progress) / 100}"/>
         </svg>
-        <span>${isDetailBtn ? `Downloading (${progress}%)` : ''}</span>
+        <span>${isDetailBtn ? text : ''}</span>
       `;
-      btn.title = `Downloading... ${progress}%`;
+      btn.title = status === 'SAVING' ? 'Saving to device...' : `Downloading... ${progress}%`;
     } else if (status === 'COMPLETED') {
       btn.classList.add('completed');
       btn.innerHTML = `
@@ -146,7 +147,9 @@ async function setupDownloadButton(btn, downloadId, type, title, posterPath) {
 
   const statusListener = (e) => {
     if (e.detail.id === downloadId) {
-      updateButtonUI(e.detail.status, 0);
+      DownloadManager.getStatus(downloadId).then(curr => {
+        updateButtonUI(e.detail.status, curr.progress);
+      });
     }
   };
 

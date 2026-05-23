@@ -5,6 +5,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileTransfer } from '@capacitor/file-transfer';
 import { NODE_PROXY } from './api.js';
 
 const DOWNLOADS_KEY = 'piq_native_downloads';
@@ -79,8 +80,8 @@ export const DownloadManager = {
       // Step 1: Resolve the actual stream URL from our production API
       const streamUrl = await this._resolveStreamUrl(id, type);
 
-      // Step 2: Stream-download it with real-time progress
-      await this._streamDownload(id, streamUrl, fileName);
+      // Step 2: Stream-download it with real-time progress natively
+      await this._nativeDownload(id, streamUrl, fileName);
 
     } catch (e) {
       console.error('[DownloadManager] Download failed:', e.message || e);
@@ -157,86 +158,85 @@ export const DownloadManager = {
     return url;
   },
 
-  // Streaming fetch with real-time chunk-by-chunk progress
-  async _streamDownload(id, url, fileName) {
-    console.log(`[DownloadManager] Downloading: ${url.substring(0, 80)}`);
+  // Native high-speed download using @capacitor/file-transfer
+  async _nativeDownload(id, url, fileName) {
+    console.log(`[DownloadManager] Starting native download: ${url.substring(0, 80)}`);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Accept': 'video/mp4,video/*,*/*;q=0.9' }
-    });
-
-    if (!response.ok) throw new Error(`Server error: HTTP ${response.status}`);
-
-    const contentLength = Number(response.headers.get('content-length')) || 0;
-    const reader = response.body.getReader();
-
-    let receivedBytes = 0;
-    const chunks = [];
-    let lastPct = -1;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      // Check if download was cancelled
-      const cur = getDownloadsData();
-      if (!cur[id] || cur[id].status !== 'DOWNLOADING') {
-        reader.cancel();
-        break;
-      }
-
-      chunks.push(value);
-      receivedBytes += value.length;
-
-      const pct = contentLength > 0
-        ? Math.min(99, Math.round((receivedBytes / contentLength) * 100))
-        : Math.min(99, Math.round((receivedBytes / (50 * 1024 * 1024)) * 100));
-
-      if (pct !== lastPct) {
-        lastPct = pct;
-        const curData = getDownloadsData();
-        if (curData[id]) {
-          curData[id].progress = pct;
-          curData[id].totalSize = contentLength || receivedBytes;
-          saveDownloadsData(curData);
-          dispatchProgress(id, pct);
-        }
-      }
-    }
-
-    // Combine all chunks
-    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
-    const allBytes = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      allBytes.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    // Write to native filesystem as base64
-    const base64 = _uint8ArrayToBase64(allBytes);
-    const writeResult = await Filesystem.writeFile({
+    // Get the destination URI using Filesystem
+    const uriResult = await Filesystem.getUri({
       path: fileName,
-      data: base64,
-      directory: Directory.Data,
-      recursive: true
+      directory: Directory.Data
     });
+    const targetPath = uriResult.uri;
 
-    // Mark complete
-    const cur = getDownloadsData();
-    if (cur[id]) {
-      cur[id].status = 'COMPLETED';
-      cur[id].progress = 100;
-      cur[id].totalSize = totalLength;
-      cur[id].localPath = writeResult.uri;
-      saveDownloadsData(cur);
-      dispatchProgress(id, 100, 'COMPLETED');
-      dispatchStatusChange(id, 'COMPLETED');
+    // Delete existing file if any, to avoid conflicts
+    try {
+      await Filesystem.deleteFile({
+        path: fileName,
+        directory: Directory.Data
+      });
+    } catch (e) {}
+
+    // Add progress listener
+    let progressListener = null;
+    try {
+      progressListener = await FileTransfer.addListener('progress', (progress) => {
+        if (progress.contentLength > 0) {
+          const pct = Math.min(98, Math.round((progress.bytes / progress.contentLength) * 100));
+          const cur = getDownloadsData();
+          if (cur[id] && cur[id].status === 'DOWNLOADING') {
+            cur[id].progress = pct;
+            cur[id].totalSize = progress.contentLength;
+            saveDownloadsData(cur);
+            dispatchProgress(id, pct);
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('[DownloadManager] Progress listener failed to register:', err);
     }
 
-    console.log(`[DownloadManager] ✅ Saved: ${fileName} (${(totalLength / 1024 / 1024).toFixed(1)} MB)`);
+    try {
+      // Start download
+      await FileTransfer.downloadFile({
+        url: url,
+        path: targetPath,
+        progress: true
+      });
+
+      // Show "Saving…" state briefly
+      const savingData = getDownloadsData();
+      if (savingData[id]) {
+        savingData[id].progress = 99;
+        savingData[id].status = 'SAVING';
+        saveDownloadsData(savingData);
+        dispatchProgress(id, 99, 'SAVING');
+        dispatchStatusChange(id, 'SAVING');
+      }
+
+      // Mark complete
+      const finalData = getDownloadsData();
+      if (finalData[id]) {
+        finalData[id].status = 'COMPLETED';
+        finalData[id].progress = 100;
+        finalData[id].localPath = targetPath;
+        saveDownloadsData(finalData);
+        dispatchProgress(id, 100, 'COMPLETED');
+        dispatchStatusChange(id, 'COMPLETED');
+      }
+      console.log(`[DownloadManager] ✅ Native download completed for ${fileName}`);
+
+    } catch (downloadErr) {
+      console.error('[DownloadManager] Native download error:', downloadErr);
+      throw downloadErr;
+    } finally {
+      // Clean up progress listener
+      if (progressListener) {
+        progressListener.remove();
+      }
+    }
   },
+
 
   // Web mock for browser testing
   mockWebDownload(id, type, title, posterPath) {
