@@ -435,6 +435,11 @@
    📱 HIGH-FIDELITY MOBILE OVERRIDES & OPTIMIZATIONS (≤768px)
    ========================================================================== */
 @media (max-width: 768px) {
+  /* Hide footer on mobile viewports */
+  .footer {
+    display: none !important;
+  }
+
   /* --- Spacing System and Tokens (8px multiples via rem) --- */
   :root {
     --space-xs: 0.5rem;   /* 8px */
