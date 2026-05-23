@@ -69,13 +69,12 @@ export const DownloadManager = {
     saveDownloadsData(data);
     dispatchStatusChange(id, 'DOWNLOADING');
 
-    // Public MP4 test URLs with guaranteed CORS support — tried in order
-    // These are standard media testing CDNs used by major browser vendors
+    // Self-hosted test video (same origin = no CORS) + public fallbacks
     const testUrls = [
-      'https://www.w3schools.com/html/mov_bbb.mp4',                               // W3Schools ~1MB
-      'https://media.w3.org/2010/05/sintel/trailer.mp4',                          // W3C Media CORS ~5MB
-      'https://vjs.zencdn.net/v/oceans.mp4',                                      // VideoJS CDN ~15MB
-      'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', // MDN ~3MB
+      'https://playeriq.suyogmahagaonkar.me/test-video.mp4',                               // Self-hosted ~1MB, no CORS
+      'https://www.w3schools.com/html/mov_bbb.mp4',                                        // W3Schools ~1MB
+      'https://media.w3.org/2010/05/sintel/trailer.mp4',                                   // W3C CORS ~5MB
+      'https://vjs.zencdn.net/v/oceans.mp4',                                               // VideoJS ~15MB
     ];
 
     try {
