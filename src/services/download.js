@@ -1,5 +1,6 @@
 // ========================================
-// PlayerIQ — Premium Native Offline Download Manager
+// PlayerIQ — Native Offline Download Manager (Capacitor v8)
+// Uses @capacitor/file-transfer for native Android/iOS downloads
 // ========================================
 
 import { Capacitor } from '@capacitor/core';
@@ -7,7 +8,20 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const DOWNLOADS_KEY = 'piq_native_downloads';
 
-// Helper to get current downloads from localStorage
+// Lazily import FileTransfer only on native to avoid web errors
+let _FileTransfer = null;
+async function getFileTransfer() {
+  if (_FileTransfer) return _FileTransfer;
+  try {
+    const mod = await import('@capacitor/file-transfer');
+    _FileTransfer = mod.FileTransfer;
+    return _FileTransfer;
+  } catch (e) {
+    console.warn('[DownloadManager] @capacitor/file-transfer not available:', e);
+    return null;
+  }
+}
+
 function getDownloadsData() {
   try {
     const data = localStorage.getItem(DOWNLOADS_KEY);
@@ -17,18 +31,12 @@ function getDownloadsData() {
   }
 }
 
-// Helper to save downloads
 function saveDownloadsData(data) {
   localStorage.setItem(DOWNLOADS_KEY, JSON.stringify(data));
-  // Global event for UI
   window.dispatchEvent(new CustomEvent('downloadsUpdated'));
 }
 
-// Active plugin listeners
-let progressListener = null;
-
 export const DownloadManager = {
-  // --- Settings ---
   async getSettings() {
     return { wifiOnly: true, quality: 'standard' };
   },
@@ -37,19 +45,18 @@ export const DownloadManager = {
     return true;
   },
 
-  // --- Core Lifecycle ---
   async start(id, type, title, posterPath) {
-    console.log(`[DownloadManager] Starting native download for: ${title} (${id})`);
+    console.log(`[DownloadManager] Starting download: ${title} (${id})`);
 
     if (!Capacitor.isNativePlatform()) {
-      alert("Real offline downloads require the Native Android App. In web mode, this would usually fall back to IndexedDB caching, but we've upgraded to native MP4 downloads!");
-      // For web demo purposes, we will mock it
+      // Web: use mock animation
       this.mockWebDownload(id, type, title, posterPath);
       return;
     }
 
     const data = getDownloadsData();
     if (data[id] && data[id].status === 'COMPLETED') {
+      alert(`"${title}" is already downloaded!`);
       return;
     }
 
@@ -63,20 +70,42 @@ export const DownloadManager = {
       timestamp: Date.now()
     };
     saveDownloadsData(data);
+    window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'DOWNLOADING' } }));
 
-    // Provide a generic high-quality MP4 for demonstration since the API serves HLS playlists
-    const demoMp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    // Sample MP4 URL (replace with actual media URL when integrating with the real API)
+    const mp4Url = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
     try {
-      // Background Native Download using Filesystem
-      const res = await Filesystem.downloadFile({
-        url: demoMp4Url,
-        path: fileName,
-        directory: Directory.Data,
-        progress: true
-      });
+      // Try @capacitor/file-transfer first (official Capacitor v8 API)
+      const FileTransfer = await getFileTransfer();
 
-      if (res.path) {
+      if (FileTransfer) {
+        console.log('[DownloadManager] Using FileTransfer plugin...');
+
+        // Add progress listener
+        const progressHandle = await FileTransfer.addListener('progress', (progress) => {
+          if (progress.url !== mp4Url) return;
+          const pct = progress.contentLength > 0
+            ? Math.round((progress.bytes / progress.contentLength) * 100)
+            : 0;
+          const cur = getDownloadsData();
+          if (cur[id] && cur[id].status === 'DOWNLOADING') {
+            cur[id].progress = pct;
+            cur[id].totalSize = progress.contentLength;
+            saveDownloadsData(cur);
+            window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress: pct, status: 'DOWNLOADING' } }));
+          }
+        });
+
+        const res = await FileTransfer.downloadFile({
+          url: mp4Url,
+          path: fileName,
+          directory: Directory.Data,
+          progress: true
+        });
+
+        progressHandle.remove();
+
         const current = getDownloadsData();
         if (current[id]) {
           current[id].status = 'COMPLETED';
@@ -85,10 +114,16 @@ export const DownloadManager = {
           saveDownloadsData(current);
           window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
         }
+        return;
       }
+
+      // Fallback: fetch as blob → base64 → Filesystem.writeFile
+      console.log('[DownloadManager] FileTransfer unavailable, using fetch fallback...');
+      await this._fetchAndWriteFallback(id, mp4Url, fileName);
+
     } catch (e) {
-      console.error('[DownloadManager] Native Download Failed:', e, JSON.stringify(e));
-      alert(`Download failed: ${e.message || JSON.stringify(e)}`);
+      console.error('[DownloadManager] Download failed:', e.message || e);
+      alert(`Download failed: ${e.message || 'Unknown error. Please try again.'}`);
       const current = getDownloadsData();
       if (current[id]) {
         current[id].status = 'ERROR';
@@ -98,7 +133,57 @@ export const DownloadManager = {
     }
   },
 
-  // Mock download for web users so the UI still animates
+  // Fallback: fetch binary → base64 → write file
+  async _fetchAndWriteFallback(id, url, fileName) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const reader = response.body.getReader();
+    const contentLength = Number(response.headers.get('content-length')) || 0;
+    let receivedBytes = 0;
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      receivedBytes += value.length;
+      const pct = contentLength > 0 ? Math.round((receivedBytes / contentLength) * 100) : 0;
+      const cur = getDownloadsData();
+      if (cur[id]) {
+        cur[id].progress = pct;
+        saveDownloadsData(cur);
+        window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress: pct, status: 'DOWNLOADING' } }));
+      }
+    }
+
+    // Convert to base64
+    const blob = new Blob(chunks);
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    const writeResult = await Filesystem.writeFile({
+      path: fileName,
+      data: base64,
+      directory: Directory.Data,
+      recursive: true
+    });
+
+    const current = getDownloadsData();
+    if (current[id]) {
+      current[id].status = 'COMPLETED';
+      current[id].progress = 100;
+      current[id].localPath = writeResult.uri;
+      saveDownloadsData(current);
+      window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'COMPLETED' } }));
+    }
+  },
+
+  // Web mock for browser testing
   mockWebDownload(id, type, title, posterPath) {
     const data = getDownloadsData();
     data[id] = { id, type, title, posterPath, progress: 0, status: 'DOWNLOADING', timestamp: Date.now() };
@@ -111,7 +196,7 @@ export const DownloadManager = {
         clearInterval(interval);
         return;
       }
-      progress += Math.floor(Math.random() * 10) + 5;
+      progress += Math.floor(Math.random() * 8) + 4;
       if (progress >= 100) {
         progress = 100;
         current[id].progress = 100;
@@ -123,7 +208,7 @@ export const DownloadManager = {
         window.dispatchEvent(new CustomEvent('download-progress', { detail: { id, progress, status: 'DOWNLOADING' } }));
       }
       saveDownloadsData(current);
-    }, 1000);
+    }, 800);
   },
 
   async pause(id) {
@@ -141,13 +226,7 @@ export const DownloadManager = {
       data[id].status = 'DOWNLOADING';
       saveDownloadsData(data);
       window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status: 'DOWNLOADING' } }));
-      if (!Capacitor.isNativePlatform()) {
-        this.mockWebDownload(id, data[id].type, data[id].title, data[id].posterPath);
-      } else {
-        // Need to restart CapacitorHttp download in real scenario, or it might not support resume easily.
-        // For MVP, restart from 0
-        this.start(id, data[id].type, data[id].title, data[id].posterPath);
-      }
+      this.start(id, data[id].type, data[id].title, data[id].posterPath);
     }
   },
 
@@ -163,7 +242,7 @@ export const DownloadManager = {
           directory: Directory.Data
         });
       } catch (e) {
-        console.warn('File already gone', e);
+        console.warn('[DownloadManager] File already gone:', e.message);
       }
     }
 
@@ -174,36 +253,32 @@ export const DownloadManager = {
 
   async getStatus(id) {
     const data = getDownloadsData();
-    if (data[id]) {
-      return { status: data[id].status, progress: data[id].progress };
-    }
-    return { status: 'IDLE', progress: 0 };
+    return data[id]
+      ? { status: data[id].status, progress: data[id].progress }
+      : { status: 'IDLE', progress: 0 };
   },
 
   async list() {
     const data = getDownloadsData();
     return Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
   },
-  
+
   async getStorageEstimate() {
     if (navigator.storage && navigator.storage.estimate) {
       try {
         const estimate = await navigator.storage.estimate();
         const usage = estimate.usage || 0;
         const quota = estimate.quota || 0;
-        return {
-          usage,
-          quota,
-          freeSpace: Math.max(0, quota - usage)
-        };
+        const totalDisk = quota > 0 ? quota : 32 * 1024 * 1024 * 1024;
+        const freeSpace = Math.max(0, totalDisk - usage);
+        const otherApps = Math.max(0, totalDisk * 0.4 - usage);
+        return { usage, quota: totalDisk, totalDisk, freeSpace, otherApps };
       } catch (err) {
         console.warn('Storage estimate failed', err);
       }
     }
-    // Fallback if not available
-    const fallbackQuota = 64 * 1024 * 1024 * 1024; // 64 GB
-    const fallbackUsage = 10 * 1024 * 1024 * 1024; // 10 GB
-    return { usage: fallbackUsage, quota: fallbackQuota, freeSpace: fallbackQuota - fallbackUsage };
+    const totalDisk = 32 * 1024 * 1024 * 1024;
+    return { usage: 2 * 1024 * 1024 * 1024, quota: totalDisk, totalDisk, freeSpace: 28 * 1024 * 1024 * 1024, otherApps: 2 * 1024 * 1024 * 1024 };
   },
 
   async getOfflineUrl(id) {
@@ -219,32 +294,10 @@ export const DownloadManager = {
         });
         return Capacitor.convertFileSrc(uri.uri);
       } catch (e) {
-        console.error('Failed to get offline URI', e);
+        console.error('[DownloadManager] Failed to get offline URI:', e);
         return null;
       }
     }
     return null;
   }
 };
-
-// Global Filesystem Download Progress Listener
-if (Capacitor.isNativePlatform()) {
-  Filesystem.addListener('progress', (e) => {
-    // The event URL will match our dummy MP4
-    // We can infer progress if bytes given
-    if (e.url) {
-      const data = getDownloadsData();
-      // Since we don't know the exact ID easily without a map, we assume there's one active
-      for (const key in data) {
-        if (data[key].status === 'DOWNLOADING') {
-          // Approximate progress if available, otherwise just spin
-          if (e.bytes && e.contentLength) {
-            data[key].progress = Math.round((e.bytes / e.contentLength) * 100);
-            saveDownloadsData(data);
-            window.dispatchEvent(new CustomEvent('download-progress', { detail: { id: key, progress: data[key].progress, status: 'DOWNLOADING' } }));
-          }
-        }
-      }
-    }
-  });
-}
