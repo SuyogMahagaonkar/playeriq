@@ -255,6 +255,18 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           </svg>
         </button>
       </div>
+
+      <!-- Custom Dialog Overlay (Netflix-style for Speed/Quality) -->
+      <div id="vp-custom-dialog" class="vp-custom-dialog hidden">
+        <div class="vp-dialog-backdrop" id="vp-dialog-backdrop"></div>
+        <div class="vp-dialog-card">
+          <h3 class="vp-dialog-title">Playback Speed</h3>
+          <div class="vp-dialog-options-list" id="vp-dialog-options-list"></div>
+          <div class="vp-dialog-footer">
+            <button class="vp-dialog-cancel-btn" id="vp-dialog-cancel-btn">CANCEL</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -436,28 +448,130 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       });
     }
 
-    // Speed option: overlay the real vp-speed select transparently on top
+    // Custom Netflix-Style Picker
+    const customDialog = document.getElementById('vp-custom-dialog');
+    const dialogBackdrop = document.getElementById('vp-dialog-backdrop');
+    const dialogOptionsList = document.getElementById('vp-dialog-options-list');
+    const dialogCancelBtn = document.getElementById('vp-dialog-cancel-btn');
+
+    function openCustomPicker(title, nativeSelect) {
+      if (!customDialog || !dialogOptionsList) return;
+
+      const titleEl = customDialog.querySelector('.vp-dialog-title');
+      if (titleEl) titleEl.textContent = title;
+
+      dialogOptionsList.innerHTML = '';
+      const options = Array.from(nativeSelect.options);
+
+      options.forEach(opt => {
+        const isSelected = opt.value === nativeSelect.value;
+        const optItem = document.createElement('div');
+        optItem.className = `vp-dialog-option ${isSelected ? 'selected' : ''}`;
+        optItem.dataset.value = opt.value;
+
+        // Custom Radio Circular indicator
+        const radio = document.createElement('span');
+        radio.className = `vp-dialog-radio ${isSelected ? 'checked' : ''}`;
+        radio.innerHTML = `<span class="vp-dialog-radio-inner"></span>`;
+
+        const label = document.createElement('span');
+        label.className = 'vp-dialog-option-label';
+        
+        let labelText = opt.textContent || opt.text;
+        if (title.toLowerCase().includes('speed') && opt.value === '1') {
+          labelText = '1x (Normal)';
+        }
+        label.textContent = labelText;
+
+        optItem.appendChild(radio);
+        optItem.appendChild(label);
+
+        optItem.addEventListener('click', () => {
+          nativeSelect.value = opt.value;
+          nativeSelect.dispatchEvent(new Event('change'));
+          closeCustomPicker();
+        });
+
+        dialogOptionsList.appendChild(optItem);
+      });
+
+      customDialog.classList.remove('hidden');
+      customDialog.classList.add('visible');
+
+      // Clear any active controls timeout to prevent controls hiding while modal is open
+      clearTimeout(controlsTimeout);
+    }
+
+    function closeCustomPicker() {
+      if (customDialog) {
+        customDialog.classList.remove('visible');
+        customDialog.classList.add('hidden');
+      }
+      showControls();
+    }
+
+    if (dialogCancelBtn) {
+      dialogCancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeCustomPicker();
+      });
+    }
+
+    if (dialogBackdrop) {
+      dialogBackdrop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeCustomPicker();
+      });
+    }
+
+    // Speed option: Custom centered picker
     if (optSpeed) {
       const realSpeed = document.getElementById('vp-speed');
       if (realSpeed) {
-        realSpeed.classList.add('vp-opt-select-overlay');
-        realSpeed.setAttribute('aria-label', 'Playback Speed');
-        optSpeed.appendChild(realSpeed);
+        // Sync initial speed label
+        if (optSpeedLabel) optSpeedLabel.textContent = `Speed (${realSpeed.value}x)`;
+        
         // Update label on change
         realSpeed.addEventListener('change', () => {
           const val = parseFloat(realSpeed.value);
           if (optSpeedLabel) optSpeedLabel.textContent = `Speed (${val}x)`;
         });
+
+        optSpeed.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCustomPicker('Playback Speed', realSpeed);
+        });
       }
     }
 
-    // Quality option: overlay the real vp-quality select transparently on top
+    // Quality option: Custom centered picker
     if (optQuality) {
       const realQuality = document.getElementById('vp-quality');
+      const optQualityLabel = optQuality.querySelector('.vp-opt-text') || document.getElementById('vp-opt-quality-label');
       if (realQuality) {
-        realQuality.classList.add('vp-opt-select-overlay');
-        realQuality.setAttribute('aria-label', 'Video Quality');
-        optQuality.appendChild(realQuality);
+        const updateQualityLabel = () => {
+          if (optQualityLabel) {
+            const selectedText = realQuality.options[realQuality.selectedIndex]?.text || 'Quality';
+            // Show short form e.g. "1080p" instead of full text like "1080p (3708k)"
+            const cleanText = selectedText.split(' ')[0] || 'Quality';
+            optQualityLabel.textContent = cleanText;
+          }
+        };
+
+        // Sync initial label
+        updateQualityLabel();
+
+        // Update label on change
+        realQuality.addEventListener('change', updateQualityLabel);
+
+        // Sync when option list changes dynamically (HLS stream loading)
+        const qualityObserver = new MutationObserver(updateQualityLabel);
+        qualityObserver.observe(realQuality, { childList: true, subtree: true });
+
+        optQuality.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCustomPicker('Video Quality', realQuality);
+        });
       }
     }
 

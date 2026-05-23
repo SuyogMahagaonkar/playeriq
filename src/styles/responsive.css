@@ -4495,6 +4495,188 @@
   .mobile-player-container #vp-volume-overlay {
     display: none !important;
   }
+
+  /* 11. Netflix-Style Option Dialog Picker (Mobile Centered Modal) */
+  .mobile-player-container .vp-custom-dialog {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 12000 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.25s ease !important;
+  }
+
+  .mobile-player-container .vp-custom-dialog.hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    display: none !important; /* fallback */
+  }
+
+  .mobile-player-container .vp-custom-dialog.visible {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: flex !important;
+  }
+
+  /* Backdrop: translucent dark frosted-glass overlay */
+  .mobile-player-container .vp-dialog-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    z-index: 1 !important;
+  }
+
+  /* Card: Netflix-Style dark grey centered card */
+  .mobile-player-container .vp-dialog-card {
+    position: relative !important;
+    background: #181818 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    width: 90% !important;
+    max-width: 290px !important;
+    padding: 24px 20px 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
+    z-index: 2 !important;
+    box-sizing: border-box !important;
+    animation: vpDialogScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  @keyframes vpDialogScaleIn {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Dialog title: sleek bold Netflix typography */
+  .mobile-player-container .vp-dialog-title {
+    font-family: var(--font-display, 'Inter', sans-serif) !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin: 0 0 16px 0 !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  /* Options list vertical flex box */
+  .mobile-player-container .vp-dialog-options-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    margin-bottom: 16px !important;
+    max-height: 240px !important; /* scrolls if there are too many quality profiles */
+    overflow-y: auto !important;
+    padding-right: 4px !important;
+  }
+
+  /* Custom scrollbar for quality option list if it overflows */
+  .mobile-player-container .vp-dialog-options-list::-webkit-scrollbar {
+    width: 4px !important;
+  }
+  .mobile-player-container .vp-dialog-options-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 2px !important;
+  }
+
+  /* Option item container */
+  .mobile-player-container .vp-dialog-option {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 12px 8px !important;
+    gap: 14px !important;
+    cursor: pointer !important;
+    border-radius: 8px !important;
+    transition: background-color 0.15s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  .mobile-player-container .vp-dialog-option:active {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  /* Option text label */
+  .mobile-player-container .vp-dialog-option-label {
+    font-family: var(--font-display, 'Inter', sans-serif) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    transition: color 0.15s ease !important;
+  }
+
+  .mobile-player-container .vp-dialog-option.selected .vp-dialog-option-label {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+  }
+
+  /* Custom Radio indicator */
+  .mobile-player-container .vp-dialog-radio {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    border: 2px solid rgba(255, 255, 255, 0.4) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.2s ease, background-color 0.2s ease !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mobile-player-container .vp-dialog-radio.checked {
+    border-color: #E50914 !important; /* Netflix Red */
+  }
+
+  /* Inner dot for radio button */
+  .mobile-player-container .vp-dialog-radio-inner {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    background-color: #E50914 !important;
+    transform: scale(0) !important;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+
+  .mobile-player-container .vp-dialog-radio.checked .vp-dialog-radio-inner {
+    transform: scale(1) !important;
+  }
+
+  /* Dialog footer with Cancel Button */
+  .mobile-player-container .vp-dialog-footer {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin-top: 8px !important;
+  }
+
+  /* Netflix bold Cancel text button */
+  .mobile-player-container .vp-dialog-cancel-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #E50914 !important;
+    font-family: var(--font-display, 'Inter', sans-serif) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.8px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    text-transform: uppercase !important;
+    border-radius: 4px !important;
+    transition: background-color 0.15s ease !important;
+    min-width: auto !important;
+    min-height: auto !important;
+  }
+
+  .mobile-player-container .vp-dialog-cancel-btn:active {
+    background-color: rgba(229, 9, 20, 0.1) !important;
+  }
 }
 
 
