@@ -20,6 +20,8 @@ import './styles/login.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
 import './styles/mobile-player.css';
+import './styles/connectivity.css';
+import './styles/downloads.css';
 
 
 // Core
@@ -27,6 +29,7 @@ import { Capacitor } from '@capacitor/core';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { initConnectivity, isOnline, onConnectivityChange } from './services/connectivity.js';
 // import { PushNotifications } from '@capacitor/push-notifications';
 
 // Lock orientation to portrait globally on APK startup
@@ -117,75 +120,102 @@ import { render18PlusPage } from './pages/18PlusPage.js';
 import { renderCategoryPage } from './pages/CategoryPage.js';
 import { renderDownloadsPage } from './pages/DownloadsPage.js';
 
-// ---- Connectivity Monitoring ----
-function setupConnectivityMonitoring() {
-  const updateConnectivityUI = () => {
-    const isOnline = navigator.onLine;
-    let banner = document.getElementById('piq-connectivity-banner');
-    
-    if (!isOnline) {
-      if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'piq-connectivity-banner';
-        banner.className = 'piq-connectivity-banner';
-        banner.innerHTML = `
-          <span class="banner-icon">📴</span>
-          <span class="banner-text">Offline Mode — Only downloaded episodes are playable</span>
-        `;
-        document.body.appendChild(banner);
-        // Trigger reflow then add visible
-        setTimeout(() => banner.classList.add('visible'), 50);
-      } else {
-        banner.classList.add('visible');
-      }
-      showConnectivityToast('📴 Switched to Offline Mode', 'offline');
-    } else {
-      if (banner) {
-        banner.classList.remove('visible');
-        setTimeout(() => {
-          if (navigator.onLine && banner.parentNode) banner.remove();
-        }, 400);
-      }
-      showConnectivityToast('📶 Connection Restored', 'online');
-    }
-  };
-
-  window.addEventListener('online', updateConnectivityUI);
-  window.addEventListener('offline', updateConnectivityUI);
-
-  // Initial check
-  if (!navigator.onLine) {
-    setTimeout(() => {
-      let banner = document.getElementById('piq-connectivity-banner');
-      if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'piq-connectivity-banner';
-        banner.className = 'piq-connectivity-banner';
-        banner.innerHTML = `
-          <span class="banner-icon">📴</span>
-          <span class="banner-text">Offline Mode — Only downloaded episodes are playable</span>
-        `;
-        document.body.appendChild(banner);
-        setTimeout(() => banner.classList.add('visible'), 50);
-      }
-    }, 500);
+// ---- Connectivity Monitoring (YouTube-style active probing) ----
+function _getOrCreateBanner() {
+  let banner = document.getElementById('piq-offline-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'piq-offline-banner';
+    banner.className = 'piq-offline-banner';
+    banner.innerHTML = `
+      <span class="banner-icon">📴</span>
+      <span class="banner-text">You're offline — only downloaded videos work</span>
+      <a class="banner-action" href="#/downloads">My Downloads</a>
+    `;
+    document.body.appendChild(banner);
   }
+  return banner;
 }
 
-function showConnectivityToast(message, type) {
-  document.querySelectorAll('.piq-connectivity-toast').forEach(t => t.remove());
-  
-  const toast = document.createElement('div');
-  toast.className = `piq-connectivity-toast ${type}`;
-  toast.innerHTML = `<span class="toast-message">${message}</span>`;
-  document.body.appendChild(toast);
-  
-  setTimeout(() => toast.classList.add('show'), 50);
-  
+function _showOfflineBanner() {
+  const banner = _getOrCreateBanner();
+  // Give browser a frame to mount the element before animating
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => banner.classList.add('visible'));
+  });
+  // Push page content down so banner doesn't overlap
+  document.documentElement.style.setProperty('--offline-banner-h', `${banner.offsetHeight || 42}px`);
+}
+
+function _hideOfflineBanner() {
+  const banner = document.getElementById('piq-offline-banner');
+  if (banner) {
+    banner.classList.remove('visible');
+    setTimeout(() => {
+      if (isOnline() && banner.parentNode) banner.remove();
+    }, 400);
+  }
+  document.documentElement.style.removeProperty('--offline-banner-h');
+}
+
+function _showSnackbar(message, type, actionLabel, actionCb) {
+  // Remove any existing snackbars
+  document.querySelectorAll('.piq-connectivity-snackbar').forEach(s => s.remove());
+
+  const snack = document.createElement('div');
+  snack.className = `piq-connectivity-snackbar ${type}`;
+  snack.innerHTML = `
+    <span class="snackbar-icon">${type === 'online' ? '📶' : '📴'}</span>
+    <span class="snackbar-msg">${message}</span>
+    ${actionLabel ? `<button class="snackbar-action" id="snack-action">${actionLabel}</button>` : ''}
+  `;
+  document.body.appendChild(snack);
+
+  // Wire action button
+  if (actionLabel && actionCb) {
+    const btn = snack.querySelector('#snack-action');
+    if (btn) btn.addEventListener('click', () => { actionCb(); snack.remove(); });
+  }
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => snack.classList.add('show'));
+  });
+
+  const hideMs = actionLabel ? 6000 : 3000;
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 400);
-  }, 3000);
+    snack.classList.remove('show');
+    setTimeout(() => snack.remove(), 400);
+  }, hideMs);
+}
+
+function setupConnectivityMonitoring() {
+  // Initialize the probe-based service
+  initConnectivity();
+
+  // Show initial offline state without toast (silent on boot if offline)
+  if (!isOnline()) {
+    setTimeout(_showOfflineBanner, 600);
+  }
+
+  // React to connectivity changes from the service
+  onConnectivityChange(({ online, wasOffline }) => {
+    if (!online) {
+      _showOfflineBanner();
+      _showSnackbar('You are offline', 'offline', 'Downloads', () => {
+        window.location.hash = '#/downloads';
+      });
+    } else {
+      _hideOfflineBanner();
+      if (wasOffline) {
+        _showSnackbar('Back online!', 'online', 'Reload', () => {
+          // Soft-reload current page by re-triggering the route
+          const hash = window.location.hash || '#/';
+          window.location.hash = '#/__reload__';
+          setTimeout(() => { window.location.hash = hash; }, 50);
+        });
+      }
+    }
+  });
 }
 
 // ---- Boot App ----

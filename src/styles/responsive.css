@@ -3376,88 +3376,10 @@
     border-color: rgba(168, 85, 247, 0.4) !important;
   }
 
-  /* 📴 Connectivity & Offline Styling */
-  #piq-connectivity-banner {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 36px !important;
-    background: rgba(15, 15, 15, 0.85) !important;
-    backdrop-filter: blur(16px) saturate(120%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
-    border-bottom: 1px solid rgba(239, 68, 68, 0.3) !important;
-    color: #f87171 !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.3px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    z-index: 99999 !important;
-    transform: translateY(-100%) !important;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5) !important;
-  }
-
-  #piq-connectivity-banner.visible {
-    transform: translateY(0) !important;
-  }
-
-  #piq-connectivity-banner .banner-icon {
-    font-size: 13px !important;
-    animation: piq-pulse-red 2s infinite !important;
-  }
-
-  @keyframes piq-pulse-red {
-    0% { opacity: 0.6; transform: scale(0.95); }
-    50% { opacity: 1; transform: scale(1.05); }
-    100% { opacity: 0.6; transform: scale(0.95); }
-  }
-
-  .piq-connectivity-toast {
-    position: fixed !important;
-    bottom: 84px !important; /* Float above the mobile bottom navigation bar */
-    left: 50% !important;
-    transform: translate(-50%, 40px) !important;
-    background: rgba(18, 18, 18, 0.9) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    padding: 10px 20px !important;
-    border-radius: 30px !important;
-    z-index: 999999 !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease !important;
-    white-space: nowrap !important;
-  }
-
-  .piq-connectivity-toast.show {
-    opacity: 1 !important;
-    transform: translate(-50%, 0) !important;
-  }
-
-  .piq-connectivity-toast.offline {
-    border-color: rgba(239, 68, 68, 0.4) !important;
-    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.15), 0 0 15px rgba(239, 68, 68, 0.05) !important;
-  }
-
-  .piq-connectivity-toast.online {
-    border-color: rgba(16, 185, 129, 0.4) !important;
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15), 0 0 15px rgba(16, 185, 129, 0.05) !important;
-  }
-
-  .piq-connectivity-toast .toast-message {
-    color: #ffffff !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-  }
+  /* 📴 Connectivity & Offline Styling — now handled by connectivity.css (.piq-offline-banner) */
+  /* Legacy ID banner is hidden to prevent double-banners */
+  #piq-connectivity-banner { display: none !important; }
+  .piq-connectivity-toast  { display: none !important; }
 
   /* 🎬 Premium In-Video Offline Overlay */
   .vp-offline-cinema-overlay {
