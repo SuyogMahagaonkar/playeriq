@@ -1577,15 +1577,19 @@ export async function renderPlayerPage({ params, container }) {
 
     // Cleanup function
     return () => {
-      disableRedirectGuard();
-      clearIframeTracker();
-      if (_keyHandler) {
-        window.removeEventListener('keydown', _keyHandler);
-        _keyHandler = null;
-      }
-      if (activePlayer) {
-        activePlayer.destroy();
-        activePlayer = null;
+      try {
+        disableRedirectGuard();
+        clearIframeTracker();
+        if (_keyHandler) {
+          window.removeEventListener('keydown', _keyHandler);
+          _keyHandler = null;
+        }
+        if (activePlayer) {
+          activePlayer.destroy();
+          activePlayer = null;
+        }
+      } catch (err) {
+        console.error('Error during desktop player page cleanup:', err);
       }
     };
 

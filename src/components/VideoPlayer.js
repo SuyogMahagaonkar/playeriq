@@ -1614,6 +1614,16 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           handleGestureEnd('left', e);
         }
       });
+      // Direct double-click support for desktop mouse seeking
+      gLeft.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const off = (window._playerGetSeekOffset?.() || 0);
+        const cur = video.currentTime + off;
+        if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
+        else video.currentTime = Math.max(0, video.currentTime - 30);
+        showSeekFlash('left');
+        showControls();
+      });
     }
     if (gRight) {
       gRight.addEventListener('mousedown', (e) => {
@@ -1630,6 +1640,17 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           isMouseDown = false;
           handleGestureEnd('right', e);
         }
+      });
+      // Direct double-click support for desktop mouse seeking
+      gRight.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const off = (window._playerGetSeekOffset?.() || 0);
+        const cur = video.currentTime + off;
+        const dur = getEffectiveDuration();
+        if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
+        else video.currentTime = Math.min(dur, video.currentTime + 30);
+        showSeekFlash('right');
+        showControls();
       });
     }
 
@@ -1997,7 +2018,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         } catch(e) {}
       }
       subStyle.remove();
-      if (!preserveVideo) {
+      if (!preserveVideo && container) {
         container.innerHTML = '';
       }
     }

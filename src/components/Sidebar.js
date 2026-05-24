@@ -68,10 +68,13 @@ export function refreshSidebarNav() {
 
   const user = getUser();
   
+  const isMobileDevice = window.innerWidth <= 768;
   let libraryItems = [
-    { label: 'Search', icon: 'search', path: '/search' },
-    { label: 'Downloads', icon: 'download', path: '/downloads' }
+    { label: 'Search', icon: 'search', path: '/search' }
   ];
+  if (isMobileDevice) {
+    libraryItems.push({ label: 'Downloads', icon: 'download', path: '/downloads' });
+  }
   
   if (user) {
     libraryItems.push({ label: 'My Watchlist', icon: 'bookmark', path: '/watchlist' });

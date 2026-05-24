@@ -57,7 +57,7 @@
   /* Layout resets - no sidebar margin */
   .main-content { margin-left: 0; }
   .navbar       { left: 0; }
-  .navbar-hamburger { display: flex; }
+  .navbar-hamburger { display: flex !important; }
 
   /* Hero */
   .hero-banner { height: 450px; min-height: 400px; }

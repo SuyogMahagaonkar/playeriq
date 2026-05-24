@@ -18,9 +18,11 @@ export function createNavbar() {
 
   navbar.innerHTML = `
     <div class="navbar-left">
+      ${window.innerWidth <= 991 ? `
       <button class="navbar-hamburger" id="navbar-hamburger-btn" title="Open Menu">
         <i data-lucide="menu"></i>
       </button>
+      ` : ''}
     </div>
     <div class="navbar-right">
       <div class="search-container" id="search-container">
@@ -37,12 +39,14 @@ export function createNavbar() {
         <div class="search-suggestions" id="search-suggestions" style="display:none"></div>
       </div>
       
-      <!-- Downloads Icon — hidden on mobile (use bottom nav Downloads tab instead) -->
+      <!-- Downloads Icon — hidden on desktop, visible only on mobile/tablet viewports -->
+      ${(window.innerWidth <= 768) ? `
       <button class="navbar-btn navbar-btn-downloads-desktop" id="navbar-downloads" title="My Downloads" onclick="window.location.hash='/downloads'">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
       </button>
+      ` : ''}
 
       <!-- Notifications Wrapper -->
       <div style="position: relative; display: flex; align-items: center;">
@@ -125,12 +129,14 @@ function buildDropdownContent(user) {
           </svg>
           My Watchlist
         </button>
+        ${(window.innerWidth <= 768) ? `
         <button class="profile-dropdown-item" id="pd-downloads" role="menuitem">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           My Downloads
         </button>
+        ` : ''}
         <button class="profile-dropdown-item" id="pd-settings" role="menuitem">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>

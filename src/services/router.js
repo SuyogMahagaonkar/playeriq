@@ -57,7 +57,11 @@ async function handleRoute() {
 
   // Run cleanup of previous page
   if (currentCleanup) {
-    currentCleanup();
+    try {
+      currentCleanup();
+    } catch (err) {
+      console.error('Error during route cleanup:', err);
+    }
     currentCleanup = null;
   }
 

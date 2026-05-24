@@ -208,9 +208,8 @@ body.sidebar-collapsed .navbar {
 }
 
 
-/* Sidebar toggle hamburger in navbar — always visible */
 .navbar-hamburger {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 40px;
