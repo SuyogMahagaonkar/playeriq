@@ -2,7 +2,7 @@
 // PlayerIQ — Detail Page
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders, getMediaImages } from '../services/api.js';
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
@@ -187,6 +187,43 @@ export async function renderDetailPage({ params, container }) {
     const similar = data.similar?.results?.slice(0, 12) || data.recommendations?.results?.slice(0, 12) || [];
     const type = isTV ? 'tv' : 'movie';
 
+    let imagesData = null;
+    try {
+      imagesData = await getMediaImages(id, type, title);
+    } catch (e) {
+      console.warn('Failed to load media images:', e);
+    }
+
+    const backdrops = (imagesData?.backdrops || []).slice(0, 6);
+    const posters = (imagesData?.posters || []).slice(0, 5);
+    const logos = imagesData?.logos || [];
+
+    // Choose best transparent logo if available
+    let logoHTML = `<h1 class="detail-title">${title}</h1>`;
+    if (logos.length > 0) {
+      const enLogo = logos.find(l => l.iso_639_1 === 'en');
+      const hiLogo = logos.find(l => l.iso_639_1 === 'hi');
+      const bestLogo = enLogo || hiLogo || logos[0];
+      if (bestLogo) {
+        logoHTML = `
+          <div class="detail-logo-container">
+            <img class="detail-logo-img animate-logo-in" src="https://image.tmdb.org/t/p/w500${bestLogo.file_path}" alt="${title} Logo" />
+          </div>
+        `;
+      }
+    }
+
+    let backdropMarkup = '';
+    if (backdrops.length > 0) {
+      backdropMarkup = backdrops.map((bd, idx) => `
+        <img class="detail-backdrop ${idx === 0 ? 'active' : ''}" src="${img.backdrop(bd.file_path)}" alt="${title} Backdrop ${idx + 1}" />
+      `).join('');
+    } else {
+      backdropMarkup = data.backdrop_path
+        ? `<img class="detail-backdrop active" src="${img.backdrop(data.backdrop_path)}" alt="${title}" />`
+        : `<div class="detail-backdrop active" style="background:var(--bg-secondary)"></div>`;
+    }
+
     let seasonsHTML = '';
     if (isTV && data.seasons?.length) {
       const isMobile = window.innerWidth <= 767;
@@ -218,24 +255,21 @@ export async function renderDetailPage({ params, container }) {
 
     container.innerHTML = `
       <div class="detail-page animate-fade-in">
-        <div class="detail-backdrop-container">
-          ${data.backdrop_path
-            ? `<img class="detail-backdrop" src="${img.backdrop(data.backdrop_path, 'w1280')}" alt="${title}" />`
-            : `<div class="detail-backdrop" style="background:var(--bg-secondary)"></div>`
-          }
+        <div class="detail-backdrop-container" id="backdrop-slideshow-container">
+          ${backdropMarkup}
           <div class="detail-backdrop-overlay"></div>
           <div class="detail-backdrop-overlay-left"></div>
         </div>
 
         <div class="detail-main">
-          <div class="detail-poster-wrapper">
+          <div class="detail-poster-wrapper" id="detail-poster-wrapper">
             ${data.poster_path
               ? `<img class="detail-poster" src="${img.poster(data.poster_path, 'w500')}" alt="${title}" />`
               : `<div class="detail-poster" style="background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--text-dim)">No Poster</div>`
             }
           </div>
           <div class="detail-info">
-            <h1 class="detail-title">${title}</h1>
+            ${logoHTML}
             ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
             <div class="detail-meta">
               <span class="detail-rating">
@@ -302,6 +336,51 @@ export async function renderDetailPage({ params, container }) {
 
     // Force scroll to top on content render to prevent opening in the middle of a long page
     window.scrollTo({ top: 0, behavior: 'instant' });
+
+    // Start backdrop slideshow
+    const backdropImgs = document.querySelectorAll('#backdrop-slideshow-container .detail-backdrop');
+    let currentSlideIdx = 0;
+    let slideshowInterval = null;
+    if (backdropImgs.length > 1) {
+      slideshowInterval = setInterval(() => {
+        backdropImgs[currentSlideIdx].classList.remove('active');
+        currentSlideIdx = (currentSlideIdx + 1) % backdropImgs.length;
+        backdropImgs[currentSlideIdx].classList.add('active');
+      }, 7000); // cycle every 7 seconds
+    }
+
+    // Interactive poster swapper
+    const posterWrapper = document.getElementById('detail-poster-wrapper');
+    if (posterWrapper && posters.length > 1) {
+      let currentPosterIdx = 0;
+      posterWrapper.style.cursor = 'pointer';
+      posterWrapper.title = 'Click to rotate alternate posters';
+      
+      posterWrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentPosterIdx = (currentPosterIdx + 1) % posters.length;
+        const newSrc = img.poster(posters[currentPosterIdx].file_path);
+        const posterImg = posterWrapper.querySelector('.detail-poster');
+        if (posterImg) {
+          posterImg.style.opacity = '0';
+          posterImg.style.transform = 'scale(0.95) rotateY(-5deg)';
+          setTimeout(() => {
+            posterImg.src = newSrc;
+            posterImg.style.opacity = '1';
+            posterImg.style.transform = 'scale(1) rotateY(0deg)';
+          }, 250);
+        }
+      });
+    }
+
+    // Cleanup interval to prevent memory leaks on navigation
+    const checkSlideCleanup = () => {
+      if (slideshowInterval) {
+        clearInterval(slideshowInterval);
+      }
+      window.removeEventListener('hashchange', checkSlideCleanup);
+    };
+    window.addEventListener('hashchange', checkSlideCleanup);
 
     // Watch button
     document.getElementById('watch-btn')?.addEventListener('click', () => {

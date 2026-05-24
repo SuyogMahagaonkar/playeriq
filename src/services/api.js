@@ -300,3 +300,33 @@ export async function getTop10Series() {
   const data = await res.json();
   return { results: (data.results || []).slice(0, 10) };
 }
+
+export async function getMediaImages(id, type, title = null) {
+  let tmdbId = id;
+  if (String(id).startsWith('mb_')) {
+    if (!title) return null;
+    try {
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(title)}`);
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        if (searchData.results?.[0]) {
+          tmdbId = searchData.results[0].id;
+        } else {
+          return null;
+        }
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,hi,null`);
+    if (res.ok) {
+      return res.json();
+    }
+  } catch (e) {
+    console.warn('Failed to fetch media images:', e);
+  }
+  return null;
+}

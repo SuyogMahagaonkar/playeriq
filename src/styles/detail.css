@@ -2,12 +2,21 @@
    PlayerIQ — Detail Page
    ======================================== */
 .detail-page { min-height: 100vh; }
-.detail-backdrop-container { position: relative; width: 100%; height: 500px; }
+.detail-backdrop-container { position: relative; width: 100%; height: 500px; overflow: hidden; }
 .detail-backdrop {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out, transform 8s ease-in-out;
+  transform: scale(1.03);
+}
+.detail-backdrop.active {
+  opacity: 1;
+  transform: scale(1.08) translate(0.5%, 0.5%);
 }
 .detail-backdrop-overlay {
   position: absolute;
@@ -37,6 +46,14 @@
   box-shadow: var(--shadow-elevated);
   aspect-ratio: 2/3;
   object-fit: cover;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.detail-poster-wrapper {
+  perspective: 1000px;
+}
+.detail-poster-wrapper:hover .detail-poster {
+  transform: scale(1.04) rotateY(-5deg);
+  box-shadow: var(--shadow-glow);
 }
 .detail-info { flex: 1; padding-top: var(--space-xl); }
 .detail-title {
@@ -428,5 +445,46 @@
     width: 30px;
     height: 30px;
     font-size: var(--text-xs);
+  }
+}
+
+/* ========================================
+   Transparent Title Logo Overlay
+   ======================================== */
+.detail-logo-container {
+  display: block;
+  max-width: 320px;
+  margin-bottom: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.detail-logo-img {
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.85));
+}
+
+.animate-logo-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: logoFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes logoFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .detail-logo-container {
+    max-width: 220px;
+    margin-bottom: var(--space-sm);
+    margin-inline: auto;
+  }
+  .detail-logo-img {
+    max-height: 70px;
   }
 }
