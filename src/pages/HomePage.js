@@ -59,18 +59,38 @@ export async function renderHomePage({ container }) {
       media_type: b.subject.subjectType === 1 ? 'movie' : 'tv'
     }));
 
-    // Fetch TMDB images (logos/alternate posters) in parallel for the hero banner items!
+    // Fetch TMDB images and details in parallel for the hero banner items!
     const heroItems = await Promise.all(heroItemsBase.map(async (item) => {
       try {
-        const imagesData = await getMediaImages(item.id, item.media_type, item.title);
-        return {
-          ...item,
-          images: imagesData
-        };
+        const cleanTitle = item.title.replace(/\[.*?\]/g, '').trim();
+        const searchRes = await fetch(`https://api.themoviedb.org/3/search/${item.media_type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
+        
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const tmdbMatch = searchData.results?.[0];
+          
+          if (tmdbMatch) {
+            // Fetch images collection using the matched TMDB ID
+            const imagesRes = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${tmdbMatch.id}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,hi,null`);
+            const imagesData = imagesRes.ok ? await imagesRes.json() : null;
+            
+            // Merge TMDB metadata (vote_average, release_date/first_air_date, overview, backdrop, poster)
+            return {
+              ...item,
+              vote_average: tmdbMatch.vote_average || item.vote_average,
+              release_date: tmdbMatch.release_date || tmdbMatch.first_air_date || item.release_date,
+              first_air_date: tmdbMatch.first_air_date || tmdbMatch.release_date || item.first_air_date,
+              overview: tmdbMatch.overview || item.overview,
+              backdrop_path: tmdbMatch.backdrop_path || item.backdrop_path,
+              poster_path: tmdbMatch.poster_path || item.poster_path,
+              images: imagesData
+            };
+          }
+        }
       } catch (e) {
-        console.warn('Failed to load images for hero item', item.title, e);
-        return item;
+        console.warn('Failed to load TMDB details for hero item', item.title, e);
       }
+      return item;
     }));
 
     const heroHTML = createHeroBanner(heroItems);
