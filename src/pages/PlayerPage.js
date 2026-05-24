@@ -689,6 +689,17 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           startTime
         );
 
+        // MediaSession & Video Title: show title + artwork on lock screen/top bar
+        if (wrapper._initMediaSession) {
+          wrapper._initMediaSession(
+            title,
+            isTV ? `Season ${season} · Episode ${episode}` : '',
+            posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '',
+            null, // onPrev — wired up later via onNextEpisodeClick
+            onNextEpisodeClick
+          );
+        }
+
         // ---- Mobile post-init: rotate-on-play + MediaSession ----
         if (_isMobileDevice()) {
           // Attempt landscape lock (works in installed PWA / Android Chrome)
@@ -701,16 +712,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             showRotatePrompt();
           }
 
-          // MediaSession: show title + artwork on lock screen
-          if (wrapper._initMediaSession) {
-            wrapper._initMediaSession(
-              title,
-              isTV ? `Season ${season} · Episode ${episode}` : '',
-              posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '',
-              null, // onPrev — wired up later via onNextEpisodeClick
-              onNextEpisodeClick
-            );
-          }
+
 
           // Mini-player: when user navigates away mid-play
           const videoEl = wrapper.querySelector('video');
