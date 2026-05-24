@@ -1733,7 +1733,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
     const activeEl = listEl.querySelector('.player-episode-item.active');
     if (activeEl) activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
-    return (season.episodes || []).length;
+    return episodes.length;
 
   } catch (err) {
     console.error('[loadPlayerEpisodes] error:', err);

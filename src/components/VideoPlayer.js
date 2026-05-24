@@ -1671,9 +1671,14 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     function showLockedOverlay() {
       lockedOverlay.classList.remove('hidden');
       clearTimeout(overlayAutoHideTimer);
-      // Auto-hide the unlock prompt after 3s — video stays clear
+      // Auto-hide the unlock prompt after 3s — unless we are holding
+      if (unlockBtn.classList.contains('holding')) {
+        return;
+      }
       overlayAutoHideTimer = setTimeout(() => {
-        lockedOverlay.classList.add('hidden');
+        if (!unlockBtn.classList.contains('holding')) {
+          lockedOverlay.classList.add('hidden');
+        }
       }, 3000);
     }
 
@@ -1718,6 +1723,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     function startUnlockHold(e) {
       e.stopPropagation();
       unlockBtn.classList.add('holding');
+      clearTimeout(overlayAutoHideTimer); // prevent auto-hide while holding
       unlockHoldTimer = setTimeout(() => {
         isLocked = false;
         player.classList.remove('vp-locked');
@@ -1730,24 +1736,22 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }, 2000);
     }
 
-    // Unlock: hold for 2 seconds
-    unlockBtn.addEventListener('touchstart', startUnlockHold, { passive: true });
-
-    unlockBtn.addEventListener('touchend', () => {
+    function stopUnlockHold() {
       clearTimeout(unlockHoldTimer);
       unlockBtn.classList.remove('holding');
-    });
+      if (isLocked) {
+        showLockedOverlay(); // Restart the 3s timer when they release
+      }
+    }
+
+    // Unlock: hold for 2 seconds
+    unlockBtn.addEventListener('touchstart', startUnlockHold, { passive: true });
+    unlockBtn.addEventListener('touchend', stopUnlockHold);
 
     // Mouse support for desktop hold-to-unlock
     unlockBtn.addEventListener('mousedown', startUnlockHold);
-    unlockBtn.addEventListener('mouseup', () => {
-      clearTimeout(unlockHoldTimer);
-      unlockBtn.classList.remove('holding');
-    });
-    unlockBtn.addEventListener('mouseleave', () => {
-      clearTimeout(unlockHoldTimer);
-      unlockBtn.classList.remove('holding');
-    });
+    unlockBtn.addEventListener('mouseup', stopUnlockHold);
+    unlockBtn.addEventListener('mouseleave', stopUnlockHold);
 
     // Mousemove listener to reappear unlock overlay on desktop when locked
     player.addEventListener('mousemove', () => {
