@@ -1748,6 +1748,13 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       clearTimeout(unlockHoldTimer);
       unlockBtn.classList.remove('holding');
     });
+
+    // Mousemove listener to reappear unlock overlay on desktop when locked
+    player.addEventListener('mousemove', () => {
+      if (isLocked) {
+        showLockedOverlay();
+      }
+    });
   }
 
   // Cast

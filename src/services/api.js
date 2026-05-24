@@ -116,7 +116,7 @@ export const getTVDetails = async (id) => {
 export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = null) => {
   const subjectId = String(tvId).replace('mb_', '');
   
-  // If it is a TMDB ID, try official TMDB Season endpoint first (most reliable)
+  // 1. If it is a TMDB ID, try official TMDB Season endpoint first (most reliable)
   if (!String(tvId).startsWith('mb_')) {
     try {
       const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=8e4ad9e56e31ab079517b5be6965b477`);
@@ -131,6 +131,7 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
     }
   }
 
+  // 2. Try proxy search using title and season (highly reliable for MovieBox items)
   if (title) {
     try {
       const query = `?title=${encodeURIComponent(title)}&season=${seasonNumber}${year ? `&year=${year}` : ''}&tvId=${tvId}`;
@@ -142,27 +143,65 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
         }
       }
     } catch (e) {
-      console.warn('Failed to fetch TMDB episodes, falling back to MovieBox dummy data');
+      console.warn('Failed to fetch TMDB episodes, falling back to direct search');
     }
   }
 
-  const res = await fetch(`${NODE_PROXY}/api/moviebox/seasons/${subjectId}`);
-  if (!res.ok) throw new Error('MovieBox seasons failed');
-  const data = await res.json();
-  
-  const seasonData = (data.seasons || []).find(s => s.se === parseInt(seasonNumber));
-  const maxEp = seasonData?.maxEp || 1;
-  
-  const episodes = [];
-  for (let i = 1; i <= maxEp; i++) {
-    episodes.push({ 
-      episode_number: i, 
-      name: `Episode ${i}`, 
-      runtime: null,
-      overview: '' 
-    });
+  // 3. Search TMDB directly by title as a last-resort TMDB fallback if tvId starts with mb_
+  if (title) {
+    try {
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(title)}${year ? `&first_air_date_year=${year}` : ''}`);
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const tmdbTv = searchData.results?.[0];
+        if (tmdbTv) {
+          const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbTv.id}/season/${seasonNumber}?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.episodes && data.episodes.length > 0) {
+              return { episodes: data.episodes };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed TMDB direct search fallback', e);
+    }
   }
 
+  // 4. Try MovieBox seasons fallback
+  try {
+    const res = await fetch(`${NODE_PROXY}/api/moviebox/seasons/${subjectId}`);
+    if (res.ok) {
+      const data = await res.json();
+      const seasonData = (data.seasons || []).find(s => s.se === parseInt(seasonNumber));
+      const maxEp = seasonData?.maxEp || 1;
+      
+      const episodes = [];
+      for (let i = 1; i <= maxEp; i++) {
+        episodes.push({ 
+          episode_number: i, 
+          name: `Episode ${i}`, 
+          runtime: null,
+          overview: '' 
+        });
+      }
+      return { episodes };
+    }
+  } catch (e) {
+    console.warn('MovieBox seasons fetch failed, falling back to absolute safe defaults');
+  }
+
+  // 5. Hard safe fallback: return placeholder episodes so navigation never crashes!
+  const episodes = [];
+  for (let i = 1; i <= 24; i++) {
+    episodes.push({
+      episode_number: i,
+      name: `Episode ${i}`,
+      runtime: 45,
+      overview: 'Episode details are currently offline.'
+    });
+  }
   return { episodes };
 };
 
