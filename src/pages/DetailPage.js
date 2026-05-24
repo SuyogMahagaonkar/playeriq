@@ -300,6 +300,9 @@ export async function renderDetailPage({ params, container }) {
       </div>
     `;
 
+    // Force scroll to top on content render to prevent opening in the middle of a long page
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Watch button
     document.getElementById('watch-btn')?.addEventListener('click', () => {
       if (isTV) {
@@ -385,7 +388,14 @@ export async function renderDetailPage({ params, container }) {
           if (d.staffList && d.staffList.length > 0) {
             html += `<h3 style="margin-top: 20px; margin-bottom: 16px; color: var(--text-main);">Cast & Crew</h3>`;
             html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; margin-top: 12px;">`;
-            const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3C/svg%3E";
+            const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <rect width="100" height="100" fill="var(--bg-tertiary, %230a0a0a)" />
+                <circle cx="50" cy="50" r="48" stroke="var(--accent, %23a855f7)" stroke-width="2" stroke-dasharray="4 2" fill="none" opacity="0.3" />
+                <circle cx="50" cy="38" r="16" fill="var(--accent, %23a855f7)" opacity="0.4" />
+                <path d="M22 82C22 65 34 56 50 56C66 56 78 65 78 82" fill="var(--accent, %23a855f7)" opacity="0.4" />
+              </svg>
+            `)}`;
             
             const staffMap = new Map();
             d.staffList.forEach(staff => {
@@ -403,10 +413,10 @@ export async function renderDetailPage({ params, container }) {
 
             Array.from(staffMap.values()).forEach(staff => {
               html += `
-                <div style="text-align: center;">
-                  <img src="${staff.avatarUrl || fallbackImg}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 8px;">
-                  <div style="font-size: 13px; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.name || ''}">${staff.name || ''}</div>
-                  <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.character}">${staff.character}</div>
+                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%;">
+                  <img src="${staff.avatarUrl || fallbackImg}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; border: 2px solid var(--accent, %23a855f7); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                  <div style="font-size: 13px; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin: 0 auto;" title="${staff.name || ''}">${staff.name || ''}</div>
+                  <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin: 2px auto 0 auto;" title="${staff.character}">${staff.character}</div>
                 </div>
               `;
             });
