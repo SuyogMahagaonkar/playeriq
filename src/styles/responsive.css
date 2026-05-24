@@ -102,18 +102,7 @@
    LARGE PHONE  (≤ 767px)
    ================================================ */
 @media (max-width: 767px) {
-  /* ---- Hero ---- */
-  .hero-banner   { height: 320px; min-height: 300px; }
-  .hero-title    { font-size: var(--text-2xl); }
-  .hero-overview { display: none; }
-  .hero-content  { bottom: 44px; left: var(--space-md); max-width: 85%; }
-  .hero-btn      {
-    padding: var(--space-xs) var(--space-md);
-    font-size: var(--text-xs);
-  }
-  .hero-indicators { left: var(--space-md); bottom: 20px; }
-  .hero-nav     { width: 36px; height: 36px; }
-  .hero-nav svg { width: 18px; height: 18px; }
+
 
   /* ---- Navbar ---- */
   .navbar        { padding: 0 var(--space-md); gap: var(--space-xs); }
@@ -180,15 +169,7 @@
     --navbar-height: 56px;
   }
 
-  /* ---- Hero ---- */
-  .hero-banner   { height: 260px; min-height: 240px; }
-  .hero-title    { font-size: var(--text-xl); }
-  .hero-badge    { font-size: 0.6rem; }
-  .hero-meta     { gap: var(--space-xs); font-size: var(--text-xs); }
-  .hero-content  { bottom: 36px; left: var(--space-sm); max-width: 90%; }
-  .hero-actions  { gap: var(--space-xs); }
-  .hero-btn      { padding: 6px 12px; font-size: 0.7rem; }
-  .hero-nav      { display: none; } /* Too small for nav arrows */
+
 
   /* ---- Navbar ---- */
   .navbar-avatar { width: 30px; height: 30px; font-size: 0.7rem; }
@@ -302,7 +283,7 @@
    SMALL PHONE  (≤ 360px)
    ================================================ */
 @media (max-width: 360px) {
-  .hero-banner { height: 220px; min-height: 200px; }
+
   .movie-grid  { grid-template-columns: repeat(2, 1fr); }
   .content-row-scroll .movie-card { width: 100px; }
   .search-input-wrapper { width: 100px; }
@@ -350,9 +331,7 @@
    LANDSCAPE PHONE  (short + wide screens)
    ================================================ */
 @media (max-height: 500px) and (orientation: landscape) {
-  .hero-banner  { height: 220px; min-height: 200px; }
-  .hero-content { bottom: 20px; }
-  .hero-overview { display: none; }
+
   .login-page   { overflow-y: auto; }
   .login-panel  { justify-content: flex-start; padding-top: var(--space-xl); }
 }
@@ -454,28 +433,7 @@
     font-size: 16px !important; /* Base mobile font-size: 16px */
   }
 
-  /* --- Hero Banner Mobile Adjustments --- */
-  .hero-banner {
-    height: 380px !important;
-    min-height: 380px !important;
-  }
-  .hero-content {
-    bottom: 32px !important;
-    left: 16px !important;
-    max-width: calc(100% - 32px) !important;
-  }
-  .hero-actions {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 12px !important;
-    width: 100% !important;
-  }
-  .hero-btn {
-    flex: 1 1 calc(50% - 6px) !important;
-    justify-content: center !important;
-    padding: 12px 16px !important;
-    font-size: 14px !important;
-  }
+
 
   /* --- Cards & Grid Layouts --- */
   .movie-grid {
@@ -1198,126 +1156,7 @@
     border-radius: 6px !important;
   }
 
-  /* ---- Hero Banner Premium Layout Overhaul ---- */
-  .hero-banner {
-    height: 45vh !important;
-    min-height: 320px !important;
-    max-height: 400px !important;
-    border-radius: 0 !important;
-    overflow: hidden !important;
-  }
 
-  .hero-slide {
-    border-radius: 0 !important;
-    overflow: hidden !important;
-    height: 100% !important;
-  }
-
-  .hero-backdrop {
-    object-position: center 20% !important;
-  }
-
-  .hero-gradient-bottom {
-    background: linear-gradient(to top, var(--bg-primary) 0%, rgba(10, 10, 15, 0.4) 60%, transparent 100%) !important;
-  }
-
-  .hero-content {
-    bottom: 40px !important;
-    left: 16px !important;
-    max-width: calc(100% - 32px) !important;
-    text-align: center !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-  }
-
-  .hero-badge {
-    background: rgba(168, 85, 247, 0.15) !important;
-    color: #a855f7 !important;
-    border: 1px solid rgba(168, 85, 247, 0.3) !important;
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.2) !important;
-    font-size: 11px !important;
-    padding: 4px 10px !important;
-    border-radius: var(--radius-full) !important;
-    margin-bottom: 10px !important;
-    align-self: center !important;
-  }
-
-  .hero-title {
-    font-size: 26px !important;
-    font-weight: 900 !important;
-    letter-spacing: -0.5px !important;
-    line-height: 1.2 !important;
-    color: white !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8) !important;
-    margin-bottom: 8px !important;
-  }
-
-  .hero-meta {
-    justify-content: center !important;
-    font-size: 12px !important;
-    color: var(--text-secondary) !important;
-    gap: 8px !important;
-    margin-bottom: 16px !important;
-  }
-
-  .hero-rating svg {
-    color: #a855f7 !important;
-    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6)) !important;
-  }
-
-  .hero-actions {
-    gap: 10px !important;
-    width: 100% !important;
-  }
-
-  .hero-btn-primary {
-    background: var(--gradient-purple) !important;
-    color: white !important;
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
-    border: none !important;
-    transition: all 0.25s ease !important;
-  }
-
-  .hero-btn-primary:active {
-    transform: scale(0.96) !important;
-  }
-
-  .hero-btn-secondary {
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    color: white !important;
-    transition: all 0.25s ease !important;
-  }
-
-  .hero-btn-secondary:active {
-    transform: scale(0.96) !important;
-  }
-
-  /* Dynamic capsule-pill indicators */
-  .hero-indicators {
-    bottom: 16px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    gap: 6px !important;
-  }
-
-  .hero-indicator {
-    width: 6px !important;
-    height: 6px !important;
-    border-radius: 50% !important;
-    background: rgba(255, 255, 255, 0.2) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-
-  .hero-indicator.active {
-    width: 18px !important;
-    border-radius: 3px !important;
-    background: #a855f7 !important;
-    box-shadow: 0 0 8px rgba(168, 85, 247, 0.6) !important;
-  }
 
   /* ---- Hide top navbar search bar on mobile ---- */
   .navbar-right .search-container {
