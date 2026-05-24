@@ -49,7 +49,10 @@ export async function renderHomePage({ container }) {
     const banners = bannerSection ? bannerSection.banner.banners.filter(b => b.subject) : [];
     
     // Convert banners to TMDB-like structure for the hero banner component
-    const heroItemsBase = banners.map(b => ({
+    const addedTitles = new Set();
+    const finalHeroItemsBase = [];
+    
+    const trendingItemsBase = banners.map(b => ({
       id: `mb_${b.subject.subjectId}`,
       title: b.subject.title,
       name: b.subject.title,
@@ -59,8 +62,69 @@ export async function renderHomePage({ container }) {
       media_type: b.subject.subjectType === 1 ? 'movie' : 'tv'
     }));
 
+    // Add up to 6 unique trending items from banners
+    for (const item of trendingItemsBase) {
+      if (finalHeroItemsBase.length >= 6) break;
+      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!addedTitles.has(normalizedTitle)) {
+        addedTitles.add(normalizedTitle);
+        finalHeroItemsBase.push(item);
+      }
+    }
+
+    // Mix in 4 unique items from Netflix & Prime Video
+    const netflixItems = (netflixData.results || []).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      backdrop_path: item.backdrop_path,
+      poster_path: item.poster_path,
+      overview: item.overview || '',
+      media_type: item.media_type || 'movie'
+    }));
+
+    const primeItems = (primeData.results || []).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      backdrop_path: item.backdrop_path,
+      poster_path: item.poster_path,
+      overview: item.overview || '',
+      media_type: item.media_type || 'movie'
+    }));
+
+    let netflixIdx = 0;
+    let primeIdx = 0;
+    let turn = 0; // 0 for Netflix, 1 for Prime
+    const totalExtraNeeded = 4;
+    let extraAdded = 0;
+
+    while (extraAdded < totalExtraNeeded && (netflixIdx < netflixItems.length || primeIdx < primeItems.length)) {
+      let candidate = null;
+      if (turn === 0 && netflixIdx < netflixItems.length) {
+        candidate = netflixItems[netflixIdx++];
+        turn = 1; // switch turn
+      } else if (turn === 1 && primeIdx < primeItems.length) {
+        candidate = primeItems[primeIdx++];
+        turn = 0; // switch turn
+      } else if (netflixIdx < netflixItems.length) {
+        candidate = netflixItems[netflixIdx++];
+      } else if (primeIdx < primeItems.length) {
+        candidate = primeItems[primeIdx++];
+      }
+
+      if (candidate && candidate.backdrop_path) {
+        const normalizedTitle = candidate.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!addedTitles.has(normalizedTitle)) {
+          addedTitles.add(normalizedTitle);
+          finalHeroItemsBase.push(candidate);
+          extraAdded++;
+        }
+      }
+    }
+
     // Fetch TMDB images and details in parallel for the hero banner items!
-    const heroItems = await Promise.all(heroItemsBase.map(async (item) => {
+    const heroItems = await Promise.all(finalHeroItemsBase.map(async (item) => {
       try {
         const cleanTitle = item.title.replace(/\[.*?\]/g, '').trim();
         const searchRes = await fetch(`https://api.themoviedb.org/3/search/${item.media_type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);

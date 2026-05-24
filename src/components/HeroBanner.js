@@ -6,7 +6,7 @@ import { img } from '../services/api.js';
 import { navigate } from '../services/router.js';
 
 export function createHeroBanner(items) {
-  const filtered = items.filter(m => m.backdrop_path).slice(0, 6);
+  const filtered = items.filter(m => m.backdrop_path).slice(0, 10);
   if (!filtered.length) return '';
 
   const slides = filtered.map((m, i) => {
