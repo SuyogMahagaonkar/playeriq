@@ -264,6 +264,10 @@ export async function renderDetailPage({ params, container }) {
                 <i data-lucide="play" style="width:20px;height:20px"></i>
                 Watch Now
               </button>
+              <button class="detail-btn detail-btn-secondary" id="details-btn">
+                <i data-lucide="info" style="width:18px;height:18px"></i>
+                Details
+              </button>
               <button class="detail-btn detail-btn-secondary" id="share-btn">
                 <i data-lucide="share-2" style="width:18px;height:18px"></i>
                 Share
@@ -367,48 +371,64 @@ export async function renderDetailPage({ params, container }) {
     document.getElementById('details-btn')?.addEventListener('click', () => {
       const modal = document.getElementById('details-modal');
       const content = document.getElementById('details-modal-content');
-      if (modal && content && data.raw_data) {
-        const d = data.raw_data;
+      if (modal && content) {
         let html = '';
-        if (d.aka) html += `<p><strong>Also Known As:</strong> ${d.aka}</p>`;
-        if (d.countryName) html += `<p><strong>Country:</strong> ${d.countryName}</p>`;
-        if (d.contentRating) html += `<p><strong>Rating:</strong> ${d.contentRating}</p>`;
-        if (d.language) html += `<p><strong>Language:</strong> ${d.language}</p>`;
-        if (d.dubs) html += `<p><strong>Dubs:</strong> ${Array.isArray(d.dubs) ? d.dubs.map(x => x.name || x).join(', ') : d.dubs}</p>`;
-        if (d.subtitles) html += `<p><strong>Subtitles:</strong> ${Array.isArray(d.subtitles) ? d.subtitles.map(x => x.name || x).join(', ') : d.subtitles}</p>`;
-        
-        if (d.staffList && d.staffList.length > 0) {
-          html += `<h3 style="margin-top: 20px; margin-bottom: 16px; color: var(--text-main);">Cast & Crew</h3>`;
-          html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; margin-top: 12px;">`;
-          const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3C/svg%3E";
+        if (data.raw_data) {
+          const d = data.raw_data;
+          if (d.aka) html += `<p><strong>Also Known As:</strong> ${d.aka}</p>`;
+          if (d.countryName) html += `<p><strong>Country:</strong> ${d.countryName}</p>`;
+          if (d.contentRating) html += `<p><strong>Rating:</strong> ${d.contentRating}</p>`;
+          if (d.language) html += `<p><strong>Language:</strong> ${d.language}</p>`;
+          if (d.dubs) html += `<p><strong>Dubs:</strong> ${Array.isArray(d.dubs) ? d.dubs.map(x => x.name || x).join(', ') : d.dubs}</p>`;
+          if (d.subtitles) html += `<p><strong>Subtitles:</strong> ${Array.isArray(d.subtitles) ? d.subtitles.map(x => x.name || x).join(', ') : d.subtitles}</p>`;
           
-          const staffMap = new Map();
-          d.staffList.forEach(staff => {
-            if (!staff.name) return;
-            const role = staff.character || (staff.staffType === 1 ? 'Actor' : 'Director');
-            if (staffMap.has(staff.name)) {
-              const existing = staffMap.get(staff.name);
-              if (!existing.character.includes(role)) {
-                existing.character += `, ${role}`;
+          if (d.staffList && d.staffList.length > 0) {
+            html += `<h3 style="margin-top: 20px; margin-bottom: 16px; color: var(--text-main);">Cast & Crew</h3>`;
+            html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; margin-top: 12px;">`;
+            const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23333' width='100' height='100'/%3E%3C/svg%3E";
+            
+            const staffMap = new Map();
+            d.staffList.forEach(staff => {
+              if (!staff.name) return;
+              const role = staff.character || (staff.staffType === 1 ? 'Actor' : 'Director');
+              if (staffMap.has(staff.name)) {
+                const existing = staffMap.get(staff.name);
+                if (!existing.character.includes(role)) {
+                  existing.character += `, ${role}`;
+                }
+              } else {
+                staffMap.set(staff.name, { ...staff, character: role });
               }
-            } else {
-              staffMap.set(staff.name, { ...staff, character: role });
-            }
-          });
+            });
 
-          Array.from(staffMap.values()).forEach(staff => {
-            html += `
-              <div style="text-align: center;">
-                <img src="${staff.avatarUrl || fallbackImg}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 8px;">
-                <div style="font-size: 13px; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.name || ''}">${staff.name || ''}</div>
-                <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.character}">${staff.character}</div>
-              </div>
-            `;
-          });
-          html += `</div>`;
+            Array.from(staffMap.values()).forEach(staff => {
+              html += `
+                <div style="text-align: center;">
+                  <img src="${staff.avatarUrl || fallbackImg}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 8px;">
+                  <div style="font-size: 13px; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.name || ''}">${staff.name || ''}</div>
+                  <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${staff.character}">${staff.character}</div>
+                </div>
+              `;
+            });
+            html += `</div>`;
+          }
+        }
+
+        // Fallback standard TMDB details if raw MovieBox details are empty
+        if (!html) {
+          html += `<p><strong>Title:</strong> ${title}</p>`;
+          html += `<p><strong>Release Year:</strong> ${year}</p>`;
+          html += `<p><strong>Rating:</strong> ⭐ ${rating}</p>`;
+          if (runtime) html += `<p><strong>Runtime:</strong> ${runtime}</p>`;
+          if (data.genres && data.genres.length > 0) {
+            html += `<p><strong>Genres:</strong> ${data.genres.map(g => g.name).join(', ')}</p>`;
+          }
+          if (data.overview) {
+            html += `<p style="margin-top: 15px;"><strong>Overview:</strong><br/>${data.overview}</p>`;
+          }
         }
         
-        content.innerHTML = html || 'No additional details available.';
+        content.innerHTML = html;
         modal.style.display = 'flex';
       }
     });
