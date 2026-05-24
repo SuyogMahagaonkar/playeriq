@@ -1152,9 +1152,13 @@ export async function renderPlayerPage({ params, container }) {
                 <span>•</span>
                 <span>${isTV ? 'TV Series' : 'Movie'}</span>
                 ${genres ? `<span>•</span><span>${genres}</span>` : ''}
-                ${isTV ? `<span>•</span><span>S${currentSeason} E${currentEpisode}</span>` : ''}
+                ${isTV ? `<span>•</span><span class="player-meta-episode">S${currentSeason} E${currentEpisode}</span>` : ''}
               </div>
-              ${data.overview ? `<p class="player-overview">${data.overview}</p>` : ''}
+              <div class="player-ep-details-container" style="margin-top: 12px; display: ${isTV ? 'block' : 'none'};">
+                <h3 class="player-ep-title" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px;"></h3>
+                <p class="player-ep-overview" style="color: var(--text-dim); line-height: 1.5; font-size: 0.95rem;"></p>
+              </div>
+              ${data.overview ? `<p class="player-overview" style="margin-top: 12px; display: ${isTV ? 'none' : 'block'};">${data.overview}</p>` : ''}
             </div>
 
             <div class="player-shortcuts-hint">
@@ -1182,11 +1186,63 @@ export async function renderPlayerPage({ params, container }) {
     // ---- Load the embed ----
     const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
 
+    // Helper to update episode-related details (title, overview, meta) dynamically in DOM
+    function updateEpisodeInfoDOM(season, episode) {
+      if (!isTV) return;
+      
+      // Update document/tab title
+      document.title = `Watching ${title} - S${season} E${episode} | PlayerIQ`;
+
+      // 1. Update the metadata span
+      const metaEpEl = container.querySelector('.player-meta-episode');
+      if (metaEpEl) {
+        metaEpEl.textContent = `S${season} E${episode}`;
+      }
+
+      // 2. Fetch the active episode details
+      const details = episodeDetails.get(`S${season}E${episode}`);
+      const epTitleEl = container.querySelector('.player-ep-title');
+      const epOverviewEl = container.querySelector('.player-ep-overview');
+      const seriesOverviewEl = container.querySelector('.player-overview');
+
+      if (details) {
+        if (epTitleEl) {
+          epTitleEl.textContent = details.name ? `Episode ${episode}: ${details.name}` : `Episode ${episode}`;
+          epTitleEl.style.display = 'block';
+        }
+        if (epOverviewEl) {
+          if (details.overview) {
+            epOverviewEl.textContent = details.overview;
+            epOverviewEl.style.display = 'block';
+            if (seriesOverviewEl) seriesOverviewEl.style.display = 'none';
+          } else {
+            // Fallback to series overview
+            epOverviewEl.style.display = 'none';
+            if (seriesOverviewEl) {
+              seriesOverviewEl.style.display = 'block';
+              seriesOverviewEl.style.marginTop = '12px';
+            }
+          }
+        }
+      } else {
+        // Fallback
+        if (epTitleEl) epTitleEl.style.display = 'none';
+        if (epOverviewEl) epOverviewEl.style.display = 'none';
+        if (seriesOverviewEl) {
+          seriesOverviewEl.style.display = 'block';
+          seriesOverviewEl.style.marginTop = '12px';
+        }
+      }
+    }
+
     // For TV: load episode list FIRST so episodeRuntimes is populated
     // before loadPlayer runs, giving the player the correct episode duration.
     if (isTV) {
       const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
+
+      // Update DOM with initially loaded episode details
+      updateEpisodeInfoDOM(currentSeason, currentEpisode);
 
       // Save initial TV progress with high-res episode screenshot and description
       let epStill = data.backdrop_path || data.poster_path;
@@ -1226,6 +1282,13 @@ export async function renderPlayerPage({ params, container }) {
       // Load episodes first to ensure metadata is refreshed/cached
       const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
+
+      // Update DOM episode information dynamically
+      updateEpisodeInfoDOM(currentSeason, currentEpisode);
+
+      // Silently update browser address bar hash to preserve share/refresh state
+      const newHash = `#/watch/tv/${id}?s=${currentSeason}&e=${currentEpisode}`;
+      window.history.replaceState(null, '', newHash);
 
       let epStill = data.backdrop_path || data.poster_path;
       let epTitle = '';
