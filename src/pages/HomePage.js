@@ -62,12 +62,25 @@ export async function renderHomePage({ container }) {
       media_type: b.subject.subjectType === 1 ? 'movie' : 'tv'
     }));
 
+    // Check if a candidate title is a duplicate of any already added titles (handles suffix brackets and substring overlaps!)
+    const isDuplicateTitle = (candidateTitle) => {
+      const cleanCandidate = (candidateTitle || '').replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      if (!cleanCandidate) return true;
+      
+      for (const added of addedTitles) {
+        if (added === cleanCandidate || added.includes(cleanCandidate) || cleanCandidate.includes(added)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     // Add up to 6 unique trending items from banners
     for (const item of trendingItemsBase) {
       if (finalHeroItemsBase.length >= 6) break;
-      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (!addedTitles.has(normalizedTitle)) {
-        addedTitles.add(normalizedTitle);
+      if (!isDuplicateTitle(item.title)) {
+        const cleanNorm = item.title.replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+        addedTitles.add(cleanNorm);
         finalHeroItemsBase.push(item);
       }
     }
@@ -114,9 +127,9 @@ export async function renderHomePage({ container }) {
       }
 
       if (candidate && candidate.backdrop_path) {
-        const normalizedTitle = candidate.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (!addedTitles.has(normalizedTitle)) {
-          addedTitles.add(normalizedTitle);
+        if (!isDuplicateTitle(candidate.title)) {
+          const cleanNorm = candidate.title.replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+          addedTitles.add(cleanNorm);
           finalHeroItemsBase.push(candidate);
           extraAdded++;
         }
