@@ -1045,7 +1045,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     // On mobile, populate flanking time labels. On desktop, use combined vp-time.
     const timeCurrent = document.getElementById('vp-time-current');
     const timeTotal   = document.getElementById('vp-time-total');
-    if ((window.innerWidth <= 768 || ('ontouchstart' in window)) && timeCurrent && timeTotal) {
+    if (timeCurrent && timeTotal) {
       timeCurrent.textContent = formatTime(cur);
       timeTotal.textContent   = formatTime(dur);
       timeDisplay.textContent = '';
