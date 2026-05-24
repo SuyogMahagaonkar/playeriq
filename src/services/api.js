@@ -305,7 +305,7 @@ export async function getMediaImages(id, type, title = null) {
   let tmdbId = id;
   if (String(id).startsWith('mb_')) {
     if (!title) return null;
-    const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+    const cleanTitle = title.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
     try {
       const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
       if (searchRes.ok) {

@@ -10,7 +10,7 @@ export function createHeroBanner(items) {
   if (!filtered.length) return '';
 
   const slides = filtered.map((m, i) => {
-    const title = m.title || m.name;
+    const title = (m.title || m.name || '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
     const year = (m.release_date || m.first_air_date || '').slice(0, 4);
     const rating = m.vote_average?.toFixed(1) || '—';
     const type = m.media_type === 'tv' ? 'tv' : 'movie';
