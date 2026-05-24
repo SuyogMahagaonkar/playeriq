@@ -19,17 +19,44 @@ export function createHeroBanner(items) {
     const bannerSrcset = `srcset="${img.backdrop(m.backdrop_path, 'w300')} 300w, ${img.backdrop(m.backdrop_path, 'w780')} 780w, ${img.backdrop(m.backdrop_path, 'w1280')} 1280w, ${img.backdrop(m.backdrop_path, 'original')} 1920w"`;
     const bannerSizes = `sizes="(max-width: 768px) 100vw, 100vw"`;
 
+    // Premium dynamic localized title logo selection
+    const logos = m.images?.logos || [];
+    let logoHTML = `<h1 class="hero-title">${title}</h1>`;
+    if (logos.length > 0) {
+      const enLogo = logos.find(l => l.iso_639_1 === 'en');
+      const hiLogo = logos.find(l => l.iso_639_1 === 'hi');
+      const bestLogo = enLogo || hiLogo || logos[0];
+      if (bestLogo) {
+        logoHTML = `
+          <div class="hero-logo-container">
+            <img class="hero-logo-img" src="https://image.tmdb.org/t/p/w500${bestLogo.file_path}" alt="${title} Logo" />
+          </div>
+        `;
+      }
+    }
+
+    // Mobil portrait floating poster card
+    const posterUrl = m.poster_path ? img.poster(m.poster_path) : img.backdrop(m.backdrop_path);
+    const mobilePosterHTML = `
+      <div class="hero-mobile-poster-container">
+        <img class="hero-mobile-poster" src="${posterUrl}" alt="${title} mobile poster" loading="lazy" />
+      </div>
+    `;
+
     return `
       <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}" data-detail-route="/${type}/${m.id}">
         <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'original')}" ${bannerSrcset} ${bannerSizes} alt="${title}" loading="eager" />
         <div class="hero-gradient-left"></div>
         <div class="hero-gradient-bottom"></div>
+        
+        ${mobilePosterHTML}
+        
         <div class="hero-content">
           <div class="hero-badge">
             <i data-lucide="trending-up" style="width:14px;height:14px"></i>
             Trending #${i + 1}
           </div>
-          <h1 class="hero-title">${title}</h1>
+          ${logoHTML}
           <div class="hero-meta">
             <span class="hero-rating">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -99,7 +126,7 @@ export function initHeroBanner() {
     interval = setInterval(() => goTo(current + 1), 6000);
   };
 
-  // Touch gesture support (Disney+ Hotstar style)
+  // Touch gesture support
   let touchStartX = 0;
   let touchEndX = 0;
 
@@ -114,13 +141,11 @@ export function initHeroBanner() {
 
   function handleSwipe() {
     const diff = touchEndX - touchStartX;
-    if (Math.abs(diff) > 50) { // minimum swipe distance of 50px
+    if (Math.abs(diff) > 50) {
       if (diff > 0) {
-        // Swipe Right -> Go to previous slide
         goTo(current - 1);
         resetInterval();
       } else {
-        // Swipe Left -> Go to next slide
         goTo(current + 1);
         resetInterval();
       }

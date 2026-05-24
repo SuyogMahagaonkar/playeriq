@@ -1,4 +1,4 @@
-import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series } from '../services/api.js';
+import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -49,7 +49,7 @@ export async function renderHomePage({ container }) {
     const banners = bannerSection ? bannerSection.banner.banners.filter(b => b.subject) : [];
     
     // Convert banners to TMDB-like structure for the hero banner component
-    const heroItems = banners.map(b => ({
+    const heroItemsBase = banners.map(b => ({
       id: `mb_${b.subject.subjectId}`,
       title: b.subject.title,
       name: b.subject.title,
@@ -57,6 +57,20 @@ export async function renderHomePage({ container }) {
       poster_path: b.subject.cover?.url,
       overview: b.subject.genre || '',
       media_type: b.subject.subjectType === 1 ? 'movie' : 'tv'
+    }));
+
+    // Fetch TMDB images (logos/alternate posters) in parallel for the hero banner items!
+    const heroItems = await Promise.all(heroItemsBase.map(async (item) => {
+      try {
+        const imagesData = await getMediaImages(item.id, item.media_type, item.title);
+        return {
+          ...item,
+          images: imagesData
+        };
+      } catch (e) {
+        console.warn('Failed to load images for hero item', item.title, e);
+        return item;
+      }
     }));
 
     const heroHTML = createHeroBanner(heroItems);
