@@ -3997,6 +3997,7 @@
     width: 100% !important;
     height: 48px !important;
     pointer-events: auto !important;
+    margin-top: 16px !important; /* Moved downward */
     margin-bottom: 0 !important;
   }
 
@@ -4162,11 +4163,11 @@
   /* 5. Center controls group (Play/Pause — frosted glass translucent button) */
   .mobile-player-container #vp-play-btn {
     position: absolute !important;
-    top: 50% !important;
+    top: 45% !important; /* Slightly higher */
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    width: 68px !important;
-    height: 68px !important;
+    width: 56px !important; /* Reduced size */
+    height: 56px !important; /* Reduced size */
     background: rgba(0, 0, 0, 0.35) !important;
     border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 50% !important;
@@ -4181,56 +4182,17 @@
   }
 
   .mobile-player-container #vp-play-btn svg {
-    width: 32px !important;
-    height: 32px !important;
+    width: 28px !important; /* Reduced size */
+    height: 28px !important; /* Reduced size */
     color: #ffffff !important;
   }
 
-  .mobile-player-container #vp-skip-back {
-    position: absolute !important;
-    top: 50% !important;
-    left: calc(50% - 90px) !important;
-    transform: translate(-50%, -50%) !important;
-    width: 52px !important;
-    height: 52px !important;
-    background: transparent !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 100 !important;
-    pointer-events: auto !important;
-  }
-
-  .mobile-player-container #vp-skip-back svg {
-    width: 38px !important;
-    height: 38px !important;
-    color: #ffffff !important;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important;
-  }
-
+  /* Hide the 10s skip buttons since 30s double tap works perfectly */
+  .mobile-player-container #vp-skip-back,
   .mobile-player-container #vp-skip-forward {
-    position: absolute !important;
-    top: 50% !important;
-    left: calc(50% + 90px) !important;
-    transform: translate(-50%, -50%) !important;
-    width: 52px !important;
-    height: 52px !important;
-    background: transparent !important;
-    border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 100 !important;
-    pointer-events: auto !important;
+    display: none !important;
   }
 
-  .mobile-player-container #vp-skip-forward svg {
-    width: 38px !important;
-    height: 38px !important;
-    color: #ffffff !important;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important;
-  }
 
   /* 6. Netflix-style Bottom Progress Bar & Time Layout */
   .mobile-player-container .vp-progress-wrap {
@@ -4365,37 +4327,8 @@
     display: none !important;
   }
 
-  /* Fullscreen exit / shrink button in top-right (replaces X button, no border) */
+  /* Hide the old absolute-positioned main fullscreen button since it is now in the top bar */
   .mobile-player-container #vp-fs-btn {
-    position: absolute !important;
-    top: max(8px, env(safe-area-inset-top)) !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-    bottom: auto !important;
-    left: auto !important;
-    z-index: 110 !important;
-    pointer-events: auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: transparent !important;
-    border: none !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 50% !important;
-    cursor: pointer !important;
-    box-shadow: none !important;
-  }
-
-  /* Fullscreen button icon size (matches cast button) */
-  .mobile-player-container #vp-fs-btn svg {
-    width: 22px !important;
-    height: 22px !important;
-    stroke-width: 2.2 !important;
-  }
-
-  /* Hide top close X button since fullscreen button replaces it */
-  .mobile-player-container #vp-top-close-btn {
     display: none !important;
   }
 

@@ -325,8 +325,8 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
       </button>
       <div class="vp-top-title" id="vp-top-title">Now Playing</div>
-      <button class="vp-btn" id="vp-top-close-btn" title="Close" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      <button class="vp-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     `;
     controls.insertBefore(topBar, controls.firstChild);
@@ -400,7 +400,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     const bSlider = document.getElementById('vp-brightness-slider');
     const bSliderFill = document.getElementById('vp-brightness-slider-fill');
     const topCastBtn = document.getElementById('vp-top-cast-btn');
-    const topCloseBtn = document.getElementById('vp-top-close-btn');
+    const topFsBtn = document.getElementById('vp-top-fs-btn');
     const optSpeed = document.getElementById('vp-opt-speed');
     const optSpeedLabel = document.getElementById('vp-opt-speed-label');
     const optLock = document.getElementById('vp-opt-lock');
@@ -432,10 +432,11 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       });
     }
 
-    if (topCloseBtn) {
-      topCloseBtn.addEventListener('click', (e) => {
+    if (topFsBtn) {
+      topFsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        window.history.back();
+        const mainFsBtn = document.getElementById('vp-fs-btn');
+        if (mainFsBtn) mainFsBtn.click();
       });
     }
 
