@@ -189,7 +189,8 @@ export async function renderDetailPage({ params, container }) {
 
     let imagesData = null;
     try {
-      imagesData = await getMediaImages(id, type, title);
+      const cleanTitleForImages = title.replace(/\[.*?\]/g, '').trim();
+      imagesData = await getMediaImages(id, type, cleanTitleForImages);
     } catch (e) {
       console.warn('Failed to load media images:', e);
     }
