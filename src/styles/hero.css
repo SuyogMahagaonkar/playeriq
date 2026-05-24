@@ -5,9 +5,9 @@
 .hero-banner {
   position: relative;
   width: 100%;
-  height: 70vh;
-  min-height: 520px;
-  max-height: 800px;
+  height: 80vh;
+  min-height: 550px;
+  max-height: 850px;
   overflow: hidden;
   background: #000;
 }
@@ -33,13 +33,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 20%;
-  transform: scale(1.02);
+  object-position: center center;
+  transform: scale(1.01);
   transition: transform 12s cubic-bezier(0.1, 0.8, 0.2, 1);
 }
 
 .hero-slide.active .hero-backdrop {
-  transform: scale(1.08) translate(0.3%, 0.3%);
+  transform: scale(1.05) translate(0.2%, 0.2%);
 }
 
 .hero-gradient-left {
