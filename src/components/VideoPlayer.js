@@ -1319,7 +1319,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   // ========================================================
   // MOBILE-ONLY ENHANCEMENTS
   // ========================================================
-  function isMobile() { return window.innerWidth <= 768 || ('ontouchstart' in window); }
+  function isMobile() { return true; }
 
   // ---- Cinematic Mode Toggle (cover ↔ contain) ----
   const cinematicBtn = document.getElementById('vp-cinematic-btn');
@@ -1445,8 +1445,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     let longPressTimer = null;
     let lastTapTime = { left: 0, right: 0 };
 
+    let isMouseDown = false;
+
     function handleGestureStart(side, e) {
-      const t = e.changedTouches[0];
+      const t = e.changedTouches ? e.changedTouches[0] : e;
       touchStartX = t.clientX;
       touchStartY = t.clientY;
       touchStartTime = Date.now();
@@ -1466,8 +1468,8 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
     }
 
     function handleGestureMove(side, e) {
-      e.preventDefault(); // prevent page scroll during swipe
-      const t = e.changedTouches[0];
+      if (e.cancelable) e.preventDefault(); // prevent page scroll during swipe
+      const t = e.changedTouches ? e.changedTouches[0] : e;
       const dy = touchStartY - t.clientY;
       const dx = Math.abs(t.clientX - touchStartX);
 
@@ -1583,6 +1585,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     }
 
+    // Touch listeners
     if (gLeft) {
       gLeft.addEventListener('touchstart', (e) => handleGestureStart('left', e),  { passive: true });
       gLeft.addEventListener('touchmove',  (e) => handleGestureMove('left', e),   { passive: false });
@@ -1594,7 +1597,43 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       gRight.addEventListener('touchend',   (e) => handleGestureEnd('right', e),   { passive: true });
     }
 
-    // Remove the old video click toggle on mobile (gesture zones handle it)
+    // Mouse listeners for desktop support
+    if (gLeft) {
+      gLeft.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        handleGestureStart('left', e);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isMouseDown && swipeSide === 'left') {
+          handleGestureMove('left', e);
+        }
+      });
+      window.addEventListener('mouseup', (e) => {
+        if (isMouseDown && swipeSide === 'left') {
+          isMouseDown = false;
+          handleGestureEnd('left', e);
+        }
+      });
+    }
+    if (gRight) {
+      gRight.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        handleGestureStart('right', e);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isMouseDown && swipeSide === 'right') {
+          handleGestureMove('right', e);
+        }
+      });
+      window.addEventListener('mouseup', (e) => {
+        if (isMouseDown && swipeSide === 'right') {
+          isMouseDown = false;
+          handleGestureEnd('right', e);
+        }
+      });
+    }
+
+    // Remove the old video click toggle on mobile/desktop (gesture zones handle it)
     video.removeEventListener('click', togglePlay);
   } // end isMobile
 

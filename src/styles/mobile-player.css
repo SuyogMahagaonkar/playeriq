@@ -1,13 +1,13 @@
 /* ============================================================
    PlayerIQ — Netflix-Style Mobile Player Additions
-   Scope: @media (max-width: 1024px) ONLY
+   Scope: @media all ONLY
    Desktop is completely untouched.
    ============================================================ */
 
 /* ============================================================
    1. GESTURE ZONES — invisible touch surfaces, left/right halves
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-gesture-zone {
     position: absolute;
     top: 0;
@@ -28,7 +28,7 @@
 /* ============================================================
    2. SWIPE OVERLAYS — volume (right) & brightness (left)
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-swipe-overlay {
     position: absolute;
     top: 50%;
@@ -100,7 +100,7 @@
 /* ============================================================
    3. DOUBLE-TAP SEEK FLASH — "+15s" / "−10s" ripple
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-seek-flash {
     position: absolute;
     top: 0;
@@ -178,7 +178,7 @@
 /* ============================================================
    4. LOCK SCREEN CONTROLS
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   /* Lock toggle button — fades with controls, stays dim when locked */
   .vp-lock-btn {
     position: absolute;
@@ -307,7 +307,7 @@
 /* ============================================================
    5. SPEED PREVIEW TOAST — long-press 2× speed
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-speed-toast {
     position: absolute;
     top: 50%;
@@ -348,7 +348,7 @@
 /* ============================================================
    6. CINEMATIC MODE TOGGLE button (injected into controls bar)
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-cinematic-btn {
     /* Inherits vp-btn styles */
     opacity: 0.85;
@@ -379,7 +379,7 @@
 /* ============================================================
    7. OFFLINE BANNER
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-offline-banner {
     position: absolute;
     top: 0;
@@ -430,7 +430,7 @@
 /* ============================================================
    8. AUTOPLAY COUNTDOWN CARD
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-autoplay-card {
     position: absolute;
     bottom: 90px;
@@ -684,7 +684,7 @@
 /* ============================================================
    10. ROTATE-TO-LANDSCAPE PROMPT
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   .vp-rotate-prompt {
     position: fixed;
     bottom: 96px;
@@ -733,7 +733,7 @@
 /* ============================================================
    11. FULLSCREEN FIT — landscape cinematic on mobile
    ============================================================ */
-@media (max-width: 1024px) {
+@media all {
   /* When fullscreen on mobile, video fits entire viewport */
   .vp-player:fullscreen,
   .vp-player:-webkit-full-screen {

@@ -3952,6 +3952,7 @@
     transform: scale(0.98) !important;
     box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3) !important;
   }
+}
 
   /* ==========================================================================
      🎬 PREMIUM NETFLIX MOBILE PLAYER INTERFACE REDESIGN (≤768px ONLY)
@@ -4603,12 +4604,10 @@
     border-radius: 4px !important;
     transition: background-color 0.15s ease !important;
     min-width: auto !important;
-    min-height: auto !important;
   }
 
   .mobile-player-container .vp-dialog-cancel-btn:active {
     background-color: rgba(168, 85, 247, 0.1) !important;
   }
-}
 
 
