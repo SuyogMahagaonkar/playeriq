@@ -532,7 +532,7 @@ export async function renderDetailPage({ params, container }) {
   }
 }
 
-async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
+async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageNumber = 1) {
   const listEl = document.getElementById('episode-list');
   if (!listEl) return;
   listEl.innerHTML = '<div class="load-more-trigger"><div class="load-more-spinner"></div></div>';
@@ -551,18 +551,71 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
       }
     }
 
+    // Pagination calculations
+    const allEpisodes = season.episodes || [];
+    const totalEpisodes = allEpisodes.length;
+    const episodesPerPage = 10;
+    const totalPages = Math.ceil(totalEpisodes / episodesPerPage);
+    const currentPage = Math.max(1, Math.min(pageNumber, totalPages));
+    const startIndex = (currentPage - 1) * episodesPerPage;
+    const pageEpisodes = allEpisodes.slice(startIndex, startIndex + episodesPerPage);
+
+    // Build pagination HTML helper
+    let paginationHTML = '';
+    if (totalPages > 1) {
+      const pageNumbers = [];
+      if (totalPages <= 5) {
+        for (let p = 1; p <= totalPages; p++) pageNumbers.push(p);
+      } else {
+        pageNumbers.push(1);
+        let start = Math.max(2, currentPage - 1);
+        let end = Math.min(totalPages - 1, currentPage + 1);
+        if (currentPage <= 3) {
+          end = 4;
+        } else if (currentPage >= totalPages - 2) {
+          start = totalPages - 3;
+        }
+        if (start > 2) pageNumbers.push('...');
+        for (let p = start; p <= end; p++) pageNumbers.push(p);
+        if (end < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+
+      paginationHTML = `
+        <div class="episodes-pagination">
+          <button class="pagination-btn pagination-prev" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
+            <i data-lucide="chevron-left" style="width:16px;height:16px;"></i>
+            <span>Previous</span>
+          </button>
+          <div class="pagination-pages">
+            ${pageNumbers.map(p => {
+              if (p === '...') {
+                return `<span class="pagination-page ellipsis">...</span>`;
+              }
+              return `
+                <button class="pagination-page ${p === currentPage ? 'active' : ''}" data-page="${p}">
+                  ${p}
+                </button>
+              `;
+            }).join('')}
+          </div>
+          <button class="pagination-btn pagination-next" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
+            <span>Next</span>
+            <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+          </button>
+        </div>
+      `;
+    }
+
     if (isMobile) {
       // ==== Premium Mobile Hotstar-style episode list ====
-      const episodesHTML = (season.episodes || []).map((ep, i) => {
+      const episodesHTML = pageEpisodes.map((ep, i) => {
         const isUnaired = !ep.air_date || ep.air_date > todayStr;
         const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
         const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
 
         let cardClass = isUnaired ? 'mobile-episode-row unaired' : 'mobile-episode-row';
-        if (i >= 3) {
-          cardClass += ' collapsed-hidden';
-        }
-        
+        const globalIndex = startIndex + i;
         const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
 
         // Watch history progress mapping
@@ -581,7 +634,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
         const stillSrc = ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>');
 
         return `
-          <div class="${cardClass}" ${routeStr} data-index="${i}">
+          <div class="${cardClass}" ${routeStr} data-index="${globalIndex}">
             <div class="mobile-ep-thumb-wrapper">
               <img class="mobile-ep-thumb" data-src="${stillSrc}" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Episode ${ep.episode_number} still" />
               <span class="mobile-ep-duration">${durationStr}</span>
@@ -613,17 +666,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
         `;
       }).join('');
 
-      let showAllHTML = '';
-      if (season.episodes && season.episodes.length > 3) {
-        showAllHTML = `
-          <button class="mobile-ep-show-all-btn" id="mobile-ep-show-all-btn" aria-expanded="false" aria-controls="episode-list">
-            <span>Show All Episodes (${season.episodes.length})</span>
-            <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
-          </button>
-        `;
-      }
-
-      listEl.innerHTML = episodesHTML + showAllHTML;
+      listEl.innerHTML = episodesHTML + paginationHTML;
 
       // Click Play on row
       listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
@@ -684,34 +727,6 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
           }
         });
       });
-
-      // Show All Button click handler
-      const showAllBtn = listEl.querySelector('#mobile-ep-show-all-btn');
-      if (showAllBtn) {
-        showAllBtn.addEventListener('click', () => {
-          const isExpanded = showAllBtn.classList.contains('expanded');
-          if (isExpanded) {
-            showAllBtn.classList.remove('expanded');
-            showAllBtn.setAttribute('aria-expanded', 'false');
-            showAllBtn.querySelector('span').textContent = `Show All Episodes (${season.episodes.length})`;
-            listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
-              const index = parseInt(row.dataset.index || '0');
-              if (index >= 3) {
-                row.classList.add('collapsed-hidden');
-              }
-            });
-            announceToScreenReader('Collapsed episodes list, showing first three episodes.');
-          } else {
-            showAllBtn.classList.add('expanded');
-            showAllBtn.setAttribute('aria-expanded', 'true');
-            showAllBtn.querySelector('span').textContent = 'Show Less';
-            listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
-              row.classList.remove('collapsed-hidden');
-            });
-            announceToScreenReader('Expanded episodes list, showing all episodes.');
-          }
-        });
-      }
 
       // Intersection Observer for lazy loading thumbnails
       if ('IntersectionObserver' in window) {
@@ -777,7 +792,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
 
     } else {
       // ==== Standard Desktop Grid ====
-      const episodesHTML = (season.episodes || []).map(ep => {
+      const episodesHTML = pageEpisodes.map(ep => {
         const isUnaired = !ep.air_date || ep.air_date > todayStr;
         const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
         const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
@@ -816,7 +831,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
         `;
       }).join('');
 
-      listEl.innerHTML = episodesHTML;
+      listEl.innerHTML = episodesHTML + paginationHTML;
 
       // Desktop click listeners
       listEl.querySelectorAll('.notify-btn').forEach(btn => {
@@ -890,6 +905,25 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null) {
         });
       });
     }
+
+    // Pagination button event listeners (shared)
+    listEl.querySelectorAll('.pagination-btn, .pagination-page').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetPage = btn.dataset.page;
+        if (targetPage && targetPage !== '...') {
+          const pageNum = parseInt(targetPage);
+          const cleanTitle = (title || '').replace(/\[.*?\]/g, '').trim();
+          loadEpisodes(tvId, seasonNumber, cleanTitle, year, pageNum);
+          
+          // Scroll to the top of the seasons & episodes section
+          const targetHeader = document.querySelector('.detail-section');
+          if (targetHeader) {
+            targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      });
+    });
 
     if (window.lucide) window.lucide.createIcons();
 
