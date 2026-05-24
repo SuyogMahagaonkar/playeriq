@@ -69,9 +69,7 @@ export function refreshSidebarNav() {
   const user = getUser();
   
   const isMobileDevice = window.innerWidth <= 768;
-  let libraryItems = [
-    { label: 'Search', icon: 'search', path: '/search' }
-  ];
+  let libraryItems = [];
   if (isMobileDevice) {
     libraryItems.push({ label: 'Downloads', icon: 'download', path: '/downloads' });
   }
@@ -113,13 +111,15 @@ export function refreshSidebarNav() {
       </a>
     `).join('')}
     
-    <div class="sidebar-section-label">Library</div>
-    ${libraryItems.map(item => `
-      <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
-        <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
-        <span class="sidebar-link-text">${item.label}</span>
-      </a>
-    `).join('')}
+    ${libraryItems.length > 0 ? `
+      <div class="sidebar-section-label">Library</div>
+      ${libraryItems.map(item => `
+        <a href="#${item.path}" class="sidebar-link" data-path="${item.path}" data-label="${item.label}">
+          <span class="sidebar-link-icon"><i data-lucide="${item.icon}"></i></span>
+          <span class="sidebar-link-text">${item.label}</span>
+        </a>
+      `).join('')}
+    ` : ''}
     
     ${accountSection}
   `;

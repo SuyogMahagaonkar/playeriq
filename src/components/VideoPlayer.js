@@ -22,6 +22,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
+  let playInterval = null;
 
   const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
   const isSkipRecapsEnabled = localStorage.getItem('piq_skip_recaps') === 'true';

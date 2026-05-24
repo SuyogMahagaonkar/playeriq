@@ -466,44 +466,46 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       activePlayer = createVideoPlayer(
         wrapper,
         streamData,
-        (currentTime, duration) => {
-          let epStill = posterPath;
-          let epTitle = '';
-          let epOverview = '';
-          if (isTV) {
-            epTitle = `Episode ${episode}`;
-            epOverview = 'Offline playback from IndexedDB.';
-          }
+        {
+          onProgress: (currentTime, duration) => {
+            let epStill = posterPath;
+            let epTitle = '';
+            let epOverview = '';
+            if (isTV) {
+              epTitle = `Episode ${episode}`;
+              epOverview = 'Offline playback from IndexedDB.';
+            }
 
-          saveProgress({
-            id,
-            title,
-            type: isTV ? 'tv' : 'movie',
-            poster_path: posterPath,
-            backdrop_path: backdropPath,
-            season,
-            episode,
-            currentTime,
-            duration,
-            episode_title: epTitle,
-            episode_still: epStill,
-            episode_overview: epOverview
-          });
+            saveProgress({
+              id,
+              title,
+              type: isTV ? 'tv' : 'movie',
+              poster_path: posterPath,
+              backdrop_path: backdropPath,
+              season,
+              episode,
+              currentTime,
+              duration,
+              episode_title: epTitle,
+              episode_still: epStill,
+              episode_overview: epOverview
+            });
 
-          // Floating Next Episode button in last 60 seconds
-          const remaining = duration - currentTime;
-          const nextEpNum = episode + 1;
-          if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
-            showNextEpisodeFloatingButton(nextEpNum);
-          } else {
-            hideNextEpisodeFloatingButton();
-          }
-        },
-        () => {
-          console.warn('[Player] Offline player error callback');
-        },
-        onEnded,
-        startTime
+            // Floating Next Episode button in last 60 seconds
+            const remaining = duration - currentTime;
+            const nextEpNum = episode + 1;
+            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+              showNextEpisodeFloatingButton(nextEpNum);
+            } else {
+              hideNextEpisodeFloatingButton();
+            }
+          },
+          onFatalError: () => {
+            console.warn('[Player] Offline player error callback');
+          },
+          onEnded,
+          startTime
+        }
       );
     };
 
@@ -635,58 +637,60 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         activePlayer = createVideoPlayer(
           wrapper,
           streamData,
-          (currentTime, duration) => {
-            // Extract episode metadata if TV
-            let epStill = backdropPath || posterPath;
-            let epTitle = '';
-            let epOverview = '';
-            if (isTV) {
-              const details = episodeDetails.get(`S${season}E${episode}`);
-              if (details) {
-                if (details.still_path) {
-                  epStill = img.still(details.still_path);
+          {
+            onProgress: (currentTime, duration) => {
+              // Extract episode metadata if TV
+              let epStill = backdropPath || posterPath;
+              let epTitle = '';
+              let epOverview = '';
+              if (isTV) {
+                const details = episodeDetails.get(`S${season}E${episode}`);
+                if (details) {
+                  if (details.still_path) {
+                    epStill = img.still(details.still_path);
+                  }
+                  epTitle = details.name;
+                  epOverview = details.overview;
                 }
-                epTitle = details.name;
-                epOverview = details.overview;
               }
-            }
 
-            // Save progress every 5 seconds (called by VideoPlayer)
-            saveProgress({
-              id,
-              title,
-              type: isTV ? 'tv' : 'movie',
-              poster_path: posterPath,
-              backdrop_path: backdropPath,
-              season,
-              episode,
-              currentTime,
-              duration,
-              episode_title: epTitle,
-              episode_still: epStill,
-              episode_overview: epOverview
-            });
+              // Save progress every 5 seconds (called by VideoPlayer)
+              saveProgress({
+                id,
+                title,
+                type: isTV ? 'tv' : 'movie',
+                poster_path: posterPath,
+                backdrop_path: backdropPath,
+                season,
+                episode,
+                currentTime,
+                duration,
+                episode_title: epTitle,
+                episode_still: epStill,
+                episode_overview: epOverview
+              });
 
-            // Floating Next Episode button in last 60 seconds
-            const remaining = duration - currentTime;
-            const nextEpNum = episode + 1;
-            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
-              showNextEpisodeFloatingButton(nextEpNum);
-            } else {
-              hideNextEpisodeFloatingButton();
-            }
-          },
-          () => {
-            // onFatalError callback
-            console.warn('[Player] Custom player failed or timed out. Switching to iframe fallback...');
-            if (activePlayer) {
-              activePlayer.destroy();
-              activePlayer = null;
-            }
-            loadIframeFallback();
-          },
-          onEnded,
-          startTime
+              // Floating Next Episode button in last 60 seconds
+              const remaining = duration - currentTime;
+              const nextEpNum = episode + 1;
+              if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+                showNextEpisodeFloatingButton(nextEpNum);
+              } else {
+                hideNextEpisodeFloatingButton();
+              }
+            },
+            onFatalError: () => {
+              // onFatalError callback
+              console.warn('[Player] Custom player failed or timed out. Switching to iframe fallback...');
+              if (activePlayer) {
+                activePlayer.destroy();
+                activePlayer = null;
+              }
+              loadIframeFallback();
+            },
+            onEnded,
+            startTime
+          }
         );
 
         // MediaSession & Video Title: show title + artwork on lock screen/top bar
@@ -2971,27 +2975,29 @@ async function renderMobileLayout({
       activePlayer = createVideoPlayer(
         wrapper,
         streamData,
-        (currentTime, duration) => {
-          saveProgress({
-            id,
-            title,
-            type: isTV ? 'tv' : 'movie',
-            poster_path,
-            backdrop_path: data.backdrop_path,
-            season: currentSeason,
-            episode: currentEpisode,
-            currentTime,
-            duration
-          });
-        },
-        () => {
-          activePlayer.destroy();
-          activePlayer = null;
-          loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
-        },
-        handlePlaybackEnded,
-        0,
-        activeVideo
+        {
+          onProgress: (currentTime, duration) => {
+            saveProgress({
+              id,
+              title,
+              type: isTV ? 'tv' : 'movie',
+              poster_path,
+              backdrop_path: data.backdrop_path,
+              season: currentSeason,
+              episode: currentEpisode,
+              currentTime,
+              duration
+            });
+          },
+          onFatalError: () => {
+            activePlayer.destroy();
+            activePlayer = null;
+            loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+          },
+          onEnded: handlePlaybackEnded,
+          startTime: 0,
+          existingVideo: activeVideo
+        }
       );
 
       window.activeVideoElement = null;
