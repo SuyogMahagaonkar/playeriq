@@ -116,6 +116,21 @@ export const getTVDetails = async (id) => {
 export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = null) => {
   const subjectId = String(tvId).replace('mb_', '');
   
+  // If it is a TMDB ID, try official TMDB Season endpoint first (most reliable)
+  if (!String(tvId).startsWith('mb_')) {
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.episodes && data.episodes.length > 0) {
+          return { episodes: data.episodes };
+        }
+      }
+    } catch (e) {
+      console.warn('Failed TMDB official season fetch, falling back to proxy search', e);
+    }
+  }
+
   if (title) {
     try {
       const query = `?title=${encodeURIComponent(title)}&season=${seasonNumber}${year ? `&year=${year}` : ''}&tvId=${tvId}`;

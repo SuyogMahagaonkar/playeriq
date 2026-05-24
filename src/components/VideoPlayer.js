@@ -1559,17 +1559,17 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         }
         if (side === 'left') {
           // Rewind 30s
-          const off = (window._playerGetSeekOffset?.() || 0);
+          const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
           const cur = video.currentTime + off;
-          if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
+          if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
           else video.currentTime = Math.max(0, video.currentTime - 30);
           showSeekFlash('left');
         } else {
           // Forward 30s
-          const off = (window._playerGetSeekOffset?.() || 0);
+          const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
           const cur = video.currentTime + off;
           const dur = getEffectiveDuration();
-          if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
+          if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
           else video.currentTime = Math.min(dur, video.currentTime + 30);
           showSeekFlash('right');
         }
@@ -1617,9 +1617,9 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       // Direct double-click support for desktop mouse seeking
       gLeft.addEventListener('dblclick', (e) => {
         e.stopPropagation();
-        const off = (window._playerGetSeekOffset?.() || 0);
+        const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
-        if (window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
         else video.currentTime = Math.max(0, video.currentTime - 30);
         showSeekFlash('left');
         showControls();
@@ -1644,10 +1644,10 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       // Direct double-click support for desktop mouse seeking
       gRight.addEventListener('dblclick', (e) => {
         e.stopPropagation();
-        const off = (window._playerGetSeekOffset?.() || 0);
+        const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
         const dur = getEffectiveDuration();
-        if (window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
+        if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.min(dur, cur + 30));
         else video.currentTime = Math.min(dur, video.currentTime + 30);
         showSeekFlash('right');
         showControls();
@@ -1707,8 +1707,15 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     }, { passive: true });
 
-    // Unlock: hold for 2 seconds
-    unlockBtn.addEventListener('touchstart', (e) => {
+    lockBtn.addEventListener('mousedown', (e) => {
+      if (isLocked) {
+        e.stopPropagation();
+        showLockedOverlay();
+      }
+    });
+
+    // Helper functions for hold-to-unlock
+    function startUnlockHold(e) {
       e.stopPropagation();
       unlockBtn.classList.add('holding');
       unlockHoldTimer = setTimeout(() => {
@@ -1721,9 +1728,23 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
         lockBtn.querySelector('path').setAttribute('d', 'M7 11V7a5 5 0 0 1 10 0v4');
         showControls(); // restore all controls after unlock
       }, 2000);
-    }, { passive: true });
+    }
+
+    // Unlock: hold for 2 seconds
+    unlockBtn.addEventListener('touchstart', startUnlockHold, { passive: true });
 
     unlockBtn.addEventListener('touchend', () => {
+      clearTimeout(unlockHoldTimer);
+      unlockBtn.classList.remove('holding');
+    });
+
+    // Mouse support for desktop hold-to-unlock
+    unlockBtn.addEventListener('mousedown', startUnlockHold);
+    unlockBtn.addEventListener('mouseup', () => {
+      clearTimeout(unlockHoldTimer);
+      unlockBtn.classList.remove('holding');
+    });
+    unlockBtn.addEventListener('mouseleave', () => {
       clearTimeout(unlockHoldTimer);
       unlockBtn.classList.remove('holding');
     });

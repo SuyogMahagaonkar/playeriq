@@ -1736,6 +1736,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
     return (season.episodes || []).length;
 
   } catch (err) {
+    console.error('[loadPlayerEpisodes] error:', err);
     listEl.innerHTML = '<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>';
     return 0;
   }
