@@ -16,7 +16,7 @@
   padding-right: var(--space-xl);
   z-index: var(--z-navbar);
   transition: left var(--transition-smooth), background var(--transition-normal);
-  background: transparent;
+  background: linear-gradient(to bottom, rgba(10, 10, 15, 0.85) 0%, rgba(10, 10, 15, 0.4) 50%, rgba(10, 10, 15, 0) 100%);
 }
 
 /* Navbar shifts when sidebar collapses */

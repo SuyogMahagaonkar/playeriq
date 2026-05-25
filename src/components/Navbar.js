@@ -29,13 +29,6 @@ export function createNavbar() {
       `}
     </div>
     <div class="navbar-right">
-      ${window.innerWidth > 991 ? `
-      <div class="header-safesearch-toggle ${localStorage.getItem('piq_safesearch') !== 'false' ? 'locked' : 'unlocked'}" id="header-safesearch-btn" title="${localStorage.getItem('piq_safesearch') !== 'false' ? 'SafeSearch Active: Filtering 18+ Content' : '18+ Catalog Unlocked'}">
-        <span class="safesearch-label">${localStorage.getItem('piq_safesearch') !== 'false' ? 'SafeSearch' : '18+ Unlocked'}</span>
-        <div class="safesearch-switch"></div>
-      </div>
-      ` : ''}
-
       <div class="search-container" id="search-container">
         <div class="search-input-wrapper">
           <i data-lucide="search"></i>
@@ -544,76 +537,6 @@ export function setupNavbarEvents() {
       toggleNotifDropdown(false);
     }
   });
-
-  // Live SafeSearch toggle click listener
-  const safeSearchToggle = document.getElementById('header-safesearch-btn');
-  if (safeSearchToggle) {
-    safeSearchToggle.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const currentVal = localStorage.getItem('piq_safesearch') !== 'false'; // true if safe
-      const targetVal = !currentVal; // false if unlocking 18+
-
-      const user = getUser();
-      let parentalPin = '';
-
-      if (user) {
-        try {
-          const { getSettings } = await import('../services/firebase.js');
-          const prefs = await getSettings(user.uid);
-          parentalPin = prefs.parentalPin || '';
-        } catch (err) {
-          console.warn('Failed to load parental pin', err);
-        }
-      }
-
-      const applySafeSearchChange = async (enableSafe) => {
-        localStorage.setItem('piq_safesearch', enableSafe ? 'true' : 'false');
-        
-        // Save to Firestore if signed in
-        if (user) {
-          try {
-            const { getSettings, saveSettings } = await import('../services/firebase.js');
-            const prefs = await getSettings(user.uid).catch(() => ({}));
-            prefs.safeSearch = enableSafe;
-            await saveSettings(user.uid, prefs);
-          } catch (err) {
-            console.warn('Failed to save SafeSearch state in Firestore', err);
-          }
-        }
-
-        // Visual feedback
-        safeSearchToggle.className = `header-safesearch-toggle ${enableSafe ? 'locked' : 'unlocked'}`;
-        const label = safeSearchToggle.querySelector('.safesearch-label');
-        if (label) label.textContent = enableSafe ? 'SafeSearch' : '18+ Unlocked';
-        safeSearchToggle.title = enableSafe ? 'SafeSearch Active: Filtering 18+ Content' : '18+ Catalog Unlocked';
-
-        // Show a glowing toast
-        showToast(enableSafe ? '🔒 SafeSearch Enabled' : '🔓 18+ Catalog Unlocked', enableSafe ? '#00c853' : '#f43f5e');
-
-        // Refresh sidebar lists
-        refreshSidebarNav();
-
-        // Dispatch hashchange or reload page securely
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
-      };
-
-      if (!targetVal) {
-        // Turning SafeSearch OFF (unlocking 18+) -> check parental pin
-        if (parentalPin) {
-          const pin = await promptNavbarPin(parentalPin);
-          if (pin === parentalPin) {
-            await applySafeSearchChange(false);
-          }
-        } else {
-          // No parental PIN -> unlock instantly
-          await applySafeSearchChange(false);
-        }
-      } else {
-        // Turning SafeSearch ON (locking 18+) -> no PIN required
-        await applySafeSearchChange(true);
-      }
-    });
-  }
 }
 
 function renderSuggestions(results, container) {
