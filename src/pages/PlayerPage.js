@@ -202,9 +202,10 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
         episode_overview: epOverview
       });
 
-      // Stop tracking if fully watched (under 5 min left)
-      if (duration - simulatedCurrentTime <= 300) {
-        console.log('[Iframe Tracker] Fully watched (under 5 min remaining). Clearing.');
+      // Stop tracking if fully watched (90% watch threshold or under 5 min left)
+      const simulatedPct = duration > 0 ? (simulatedCurrentTime / duration) : 0;
+      if (simulatedPct >= 0.90 || (duration - simulatedCurrentTime <= 300)) {
+        console.log('[Iframe Tracker] Fully watched (90% watched or under 5 min remaining). Clearing.');
         clearInterval(iframeInterval);
         iframeInterval = null;
       }
@@ -312,11 +313,11 @@ async function getSavedPlaybackTime(id, isTV, season, episode) {
                item.type === 'movie';
       }
     });
-
     if (match) {
-      // If already watched or less than 5 minutes remaining, play from start
+      // If already watched, 90% watched, or less than 5 minutes remaining, play from start
       if (match.watched) return 0;
-      if (match.duration > 0 && (match.duration - match.currentTime <= 300)) return 0;
+      const matchPct = match.duration > 0 ? (match.currentTime / match.duration) : 0;
+      if (match.duration > 0 && (matchPct >= 0.90 || (match.duration - match.currentTime <= 300))) return 0;
 
       if (match.currentTime > 0 && match.duration > 0) {
         const percent = (match.currentTime / match.duration) * 100;

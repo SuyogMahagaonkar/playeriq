@@ -155,10 +155,13 @@ export async function logout() {
   await signOutUser();
 }
 
-// ---- Watch History (Cloud or Local fallback) ----
 export async function saveProgress(media) {
-  // If only less than 5 minutes (300 seconds) remaining, treat as fully watched
-  const isWatched = media.duration > 0 && (media.duration - media.currentTime <= 300);
+  // A title is watched if progress is 90% or higher, OR less than 5 minutes (300s) remaining
+  const progressPercent = media.duration > 0 ? (media.currentTime / media.duration) : 0;
+  const isWatched = media.duration > 0 && (
+    progressPercent >= 0.90 || 
+    (media.duration - media.currentTime <= 300)
+  );
   const mediaWithWatched = {
     ...media,
     watched: isWatched || media.watched || false

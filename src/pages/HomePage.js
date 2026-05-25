@@ -176,7 +176,8 @@ export async function renderHomePage({ container }) {
     const history = await getWatchHistory();
     let continueWatchingItems = history.filter(item => {
       if (item.watched) return false;
-      if (item.duration > 0 && (item.duration - item.currentTime <= 300)) return false;
+      const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
+      if (item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300))) return false;
       return true;
     });
 

@@ -121,11 +121,13 @@ function renderPage(container, items, user) {
   const count = items.length;
 
   const completedItems = items.filter(item => {
-    return item.watched || (item.duration > 0 && (item.duration - item.currentTime <= 300));
+    const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
+    return item.watched || (item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300)));
   });
 
   const inProgressItems = items.filter(item => {
-    return !item.watched && !(item.duration > 0 && (item.duration - item.currentTime <= 300));
+    const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
+    return !item.watched && !(item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300)));
   });
 
   const completedGroups = groupTVHistoryItems(completedItems);
