@@ -5,7 +5,7 @@
 import { navigate } from '../services/router.js';
 import { searchMovieBox } from '../services/api.js';
 import { addRecentSearch } from '../services/state.js';
-import { toggleSidebar } from './Sidebar.js';
+import { toggleSidebar, refreshSidebarNav } from './Sidebar.js';
 import { getUser, login, logout, onUserChange } from '../services/auth.js';
 import { renderLoginPage } from '../pages/LoginPage.js';
 
@@ -22,9 +22,20 @@ export function createNavbar() {
       <button class="navbar-hamburger" id="navbar-hamburger-btn" title="Open Menu">
         <i data-lucide="menu"></i>
       </button>
-      ` : ''}
+      ` : `
+      <a href="#/" class="navbar-brand" id="navbar-brand-btn">
+        <span class="navbar-brand-text">Player<span class="navbar-brand-accent">IQ</span></span>
+      </a>
+      `}
     </div>
     <div class="navbar-right">
+      ${window.innerWidth > 991 ? `
+      <div class="header-safesearch-toggle ${localStorage.getItem('piq_safesearch') !== 'false' ? 'locked' : 'unlocked'}" id="header-safesearch-btn" title="${localStorage.getItem('piq_safesearch') !== 'false' ? 'SafeSearch Active: Filtering 18+ Content' : '18+ Catalog Unlocked'}">
+        <span class="safesearch-label">${localStorage.getItem('piq_safesearch') !== 'false' ? 'SafeSearch' : '18+ Unlocked'}</span>
+        <div class="safesearch-switch"></div>
+      </div>
+      ` : ''}
+
       <div class="search-container" id="search-container">
         <div class="search-input-wrapper">
           <i data-lucide="search"></i>
@@ -108,12 +119,24 @@ function buildDropdownContent(user) {
 
     dropdown.innerHTML = `
       <div class="profile-dropdown-header">
-        <div class="profile-dropdown-avatar">${avatarHtml}</div>
+        <div class="profile-dropdown-avatar" style="box-shadow: 0 0 15px var(--accent-glow);">${avatarHtml}</div>
         <div class="profile-dropdown-info">
           <div class="profile-dropdown-name">${user.displayName ?? 'User'}</div>
           <div class="profile-dropdown-email">${user.email ?? ''}</div>
         </div>
         <span class="profile-dropdown-badge">Pro</span>
+      </div>
+
+      <!-- User Passport Stats Panel -->
+      <div class="profile-dropdown-stats">
+        <div class="profile-stat-box" id="pd-stat-history" title="View Watch History">
+          <span class="profile-stat-value" id="pd-stat-history-value">...</span>
+          <span class="profile-stat-label">Watched</span>
+        </div>
+        <div class="profile-stat-box" id="pd-stat-watchlist" title="View Watchlist">
+          <span class="profile-stat-value" id="pd-stat-watchlist-value">...</span>
+          <span class="profile-stat-label">Watchlist</span>
+        </div>
       </div>
 
       <div class="profile-dropdown-menu">
@@ -154,6 +177,14 @@ function buildDropdownContent(user) {
     `;
 
     // Events
+    dropdown.querySelector('#pd-stat-history')?.addEventListener('click', () => {
+      closeDropdown();
+      navigate('/history');
+    });
+    dropdown.querySelector('#pd-stat-watchlist')?.addEventListener('click', () => {
+      closeDropdown();
+      navigate('/watchlist');
+    });
     dropdown.querySelector('#pd-history')?.addEventListener('click', () => {
       closeDropdown();
       navigate('/history');
@@ -174,6 +205,29 @@ function buildDropdownContent(user) {
       closeDropdown();
       await logout();
     });
+
+    // Asynchronously fetch and populate counts
+    (async () => {
+      try {
+        const { fetchWatchlist, fetchWatchHistory } = await import('../services/firebase.js');
+        const [watchlist, history] = await Promise.all([
+          fetchWatchlist(user.uid).catch(() => []),
+          fetchWatchHistory(user.uid).catch(() => [])
+        ]);
+        
+        const wlVal = document.getElementById('pd-stat-watchlist-value');
+        const histVal = document.getElementById('pd-stat-history-value');
+        
+        if (wlVal) wlVal.textContent = String(watchlist.length);
+        if (histVal) histVal.textContent = String(history.length);
+      } catch (err) {
+        console.warn('Failed to fetch user passport metrics:', err);
+        const wlVal = document.getElementById('pd-stat-watchlist-value');
+        const histVal = document.getElementById('pd-stat-history-value');
+        if (wlVal) wlVal.textContent = '0';
+        if (histVal) histVal.textContent = '0';
+      }
+    })();
 
   } else {
     // ---- Guest / signed-out view ----
@@ -384,12 +438,24 @@ export function setupNavbarEvents() {
     }
   }
 
-  // Search input
+  // Focus empty input suggestion tags listener
+  input.addEventListener('focus', () => {
+    const q = input.value.trim();
+    if (!q) {
+      renderTrendingSuggestions(suggestions, input);
+    }
+  });
+
+  // Search input change/type listener
   input.addEventListener('input', (e) => {
     const q = e.target.value.trim();
     clearBtn.style.display = q ? 'flex' : 'none';
 
     if (searchTimeout) clearTimeout(searchTimeout);
+    if (!q) {
+      renderTrendingSuggestions(suggestions, input);
+      return;
+    }
     if (q.length < 2) { suggestions.style.display = 'none'; return; }
 
     searchTimeout = setTimeout(async () => {
@@ -417,7 +483,7 @@ export function setupNavbarEvents() {
   clearBtn?.addEventListener('click', () => {
     input.value = '';
     clearBtn.style.display = 'none';
-    suggestions.style.display = 'none';
+    renderTrendingSuggestions(suggestions, input);
     input.focus();
   });
 
@@ -478,6 +544,76 @@ export function setupNavbarEvents() {
       toggleNotifDropdown(false);
     }
   });
+
+  // Live SafeSearch toggle click listener
+  const safeSearchToggle = document.getElementById('header-safesearch-btn');
+  if (safeSearchToggle) {
+    safeSearchToggle.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const currentVal = localStorage.getItem('piq_safesearch') !== 'false'; // true if safe
+      const targetVal = !currentVal; // false if unlocking 18+
+
+      const user = getUser();
+      let parentalPin = '';
+
+      if (user) {
+        try {
+          const { getSettings } = await import('../services/firebase.js');
+          const prefs = await getSettings(user.uid);
+          parentalPin = prefs.parentalPin || '';
+        } catch (err) {
+          console.warn('Failed to load parental pin', err);
+        }
+      }
+
+      const applySafeSearchChange = async (enableSafe) => {
+        localStorage.setItem('piq_safesearch', enableSafe ? 'true' : 'false');
+        
+        // Save to Firestore if signed in
+        if (user) {
+          try {
+            const { getSettings, saveSettings } = await import('../services/firebase.js');
+            const prefs = await getSettings(user.uid).catch(() => ({}));
+            prefs.safeSearch = enableSafe;
+            await saveSettings(user.uid, prefs);
+          } catch (err) {
+            console.warn('Failed to save SafeSearch state in Firestore', err);
+          }
+        }
+
+        // Visual feedback
+        safeSearchToggle.className = `header-safesearch-toggle ${enableSafe ? 'locked' : 'unlocked'}`;
+        const label = safeSearchToggle.querySelector('.safesearch-label');
+        if (label) label.textContent = enableSafe ? 'SafeSearch' : '18+ Unlocked';
+        safeSearchToggle.title = enableSafe ? 'SafeSearch Active: Filtering 18+ Content' : '18+ Catalog Unlocked';
+
+        // Show a glowing toast
+        showToast(enableSafe ? '🔒 SafeSearch Enabled' : '🔓 18+ Catalog Unlocked', enableSafe ? '#00c853' : '#f43f5e');
+
+        // Refresh sidebar lists
+        refreshSidebarNav();
+
+        // Dispatch hashchange or reload page securely
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      };
+
+      if (!targetVal) {
+        // Turning SafeSearch OFF (unlocking 18+) -> check parental pin
+        if (parentalPin) {
+          const pin = await promptNavbarPin(parentalPin);
+          if (pin === parentalPin) {
+            await applySafeSearchChange(false);
+          }
+        } else {
+          // No parental PIN -> unlock instantly
+          await applySafeSearchChange(false);
+        }
+      } else {
+        // Turning SafeSearch ON (locking 18+) -> no PIN required
+        await applySafeSearchChange(true);
+      }
+    });
+  }
 }
 
 function renderSuggestions(results, container) {
@@ -675,4 +811,158 @@ export async function clearAllNotifications() {
   }
   refreshNotifBadge();
   renderNotificationsDropdown();
+}
+
+// ========================================
+// Premium Navbar Helper Functions
+// ========================================
+
+function showToast(msg, bg = 'rgba(168, 85, 247, 0.95)') {
+  document.querySelectorAll('.settings-saved-toast').forEach(t => t.remove());
+  const toast = document.createElement('div');
+  toast.className = 'settings-saved-toast';
+  toast.style.position = 'fixed';
+  toast.style.bottom = '30px';
+  toast.style.right = '30px';
+  toast.style.background = bg;
+  toast.style.color = '#fff';
+  toast.style.padding = '12px 24px';
+  toast.style.borderRadius = '12px';
+  toast.style.fontSize = '14px';
+  toast.style.fontWeight = '700';
+  toast.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
+  toast.style.zIndex = '100005';
+  toast.style.fontFamily = 'var(--font-body)';
+  toast.style.animation = 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+function promptNavbarPin(correctPin) {
+  return new Promise((resolve) => {
+    // Inject custom modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'pin-modal-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.right = '0';
+    overlay.style.bottom = '0';
+    overlay.style.background = 'rgba(0, 0, 0, 0.85)';
+    overlay.style.backdropFilter = 'blur(12px)';
+    overlay.style.webkitBackdropFilter = 'blur(12px)';
+    overlay.style.zIndex = '100000';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    overlay.innerHTML = `
+      <div class="pin-modal-card" style="background: rgba(18, 18, 28, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; width: 90%; max-width: 360px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); backdrop-filter: blur(20px);">
+        <div class="pin-modal-header" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px;">
+          <span style="color: var(--accent); margin-bottom: 8px;">
+            <svg style="width:40px;height:40px;filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </span>
+          <h3 style="margin: 0; font-size: 20px; color: #fff; font-family: var(--font-display); font-weight: 800;">Parental PIN Required</h3>
+        </div>
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.5; margin: 0 0 20px;">Enter your 4-digit parental PIN to decrypt the 18+ catalog bypass.</p>
+        <div class="pin-input-row" style="display: flex; justify-content: center; margin-bottom: 15px;">
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" id="navbar-pin-input" autocomplete="off" autofocus 
+            style="background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-size: 28px !important; letter-spacing: 8px !important; text-align: center !important; padding: 10px !important; border-radius: 10px !important; width: 160px !important; outline: none !important; transition: all 0.2s !important;"/>
+        </div>
+        <div class="pin-error-msg" id="navbar-pin-error" style="color: #ff3366; font-size: 13px; margin-bottom: 15px; min-height: 18px; font-weight: 600;"></div>
+        <div class="pin-modal-actions" style="display: flex; gap: 12px;">
+          <button class="pin-btn-cancel" id="navbar-pin-cancel" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; background: rgba(255, 255, 255, 0.08); color: #fff; transition: all 0.2s;">Cancel</button>
+          <button class="pin-btn-confirm" id="navbar-pin-confirm" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; background: var(--accent); color: #fff; transition: all 0.2s;">Verify</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#navbar-pin-input');
+    const errorMsg = overlay.querySelector('#navbar-pin-error');
+    const btnCancel = overlay.querySelector('#navbar-pin-cancel');
+    const btnConfirm = overlay.querySelector('#navbar-pin-confirm');
+
+    input?.focus();
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    btnCancel?.addEventListener('click', () => close(null));
+
+    const submit = () => {
+      const pinVal = input.value.trim();
+      if (!/^\d{4}$/.test(pinVal)) {
+        errorMsg.textContent = 'PIN must be exactly 4 digits.';
+        input.value = '';
+        input.focus();
+        return;
+      }
+
+      if (pinVal === correctPin) {
+        close(pinVal);
+      } else {
+        errorMsg.textContent = 'Incorrect PIN. Access denied.';
+        input.value = '';
+        input.focus();
+      }
+    };
+
+    btnConfirm?.addEventListener('click', submit);
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  });
+}
+
+function renderTrendingSuggestions(container, input) {
+  const trendingTags = [
+    { label: '#Action', query: 'Action' },
+    { label: '#SciFi', query: 'Sci-Fi' },
+    { label: '#Trending', query: 'Trending' },
+    { label: '#DrStone', query: 'Dr. Stone' },
+    { label: '#Anime', query: 'Anime' },
+    { label: '#FamilyHits', query: 'Family' }
+  ];
+
+  container.innerHTML = `
+    <div class="search-trending-title">Trending Searches</div>
+    <div class="trending-pill-container">
+      ${trendingTags.map(tag => `
+        <button class="trending-pill" data-query="${tag.query}">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); flex-shrink:0;">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+          ${tag.label}
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  container.style.display = 'block';
+
+  container.querySelectorAll('.trending-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const q = pill.dataset.query;
+      input.value = q;
+      const clearBtn = document.getElementById('search-clear');
+      if (clearBtn) clearBtn.style.display = 'flex';
+      addRecentSearch(q);
+      navigate(`/search?q=${encodeURIComponent(q)}`);
+      container.style.display = 'none';
+      input.blur();
+    });
+  });
 }

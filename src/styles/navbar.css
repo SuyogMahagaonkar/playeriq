@@ -66,14 +66,14 @@ body.sidebar-collapsed .navbar {
   border-radius: var(--radius-full);
   padding: var(--space-xs) var(--space-md);
   width: 260px;
-  transition: all var(--transition-normal);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .search-input-wrapper:focus-within {
-  width: 360px;
+  width: 380px;
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--accent);
-  box-shadow: 0 0 20px rgba(229, 9, 20, 0.15);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), 0 0 40px rgba(168, 85, 247, 0.1);
 }
 
 .search-input-wrapper svg {
@@ -395,4 +395,187 @@ body.sidebar-collapsed .navbar {
 
 .notif-empty-state-subtitle {
   font-size: 11px;
+}
+
+/* ---- Premium Desktop Collapsing Brand Logo ---- */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  opacity: 0;
+  transform: translateX(-20px);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  margin-left: 20px;
+}
+
+body.sidebar-collapsed .navbar-brand {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.navbar-brand-icon {
+  font-size: var(--text-lg);
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.navbar-brand-text {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-extrabold);
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.navbar-brand-accent {
+  color: var(--accent);
+}
+
+/* ---- Trending Search Suggestion Tags ---- */
+.search-trending-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 16px 20px 8px 20px;
+  text-align: left;
+}
+
+.trending-pill-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 20px 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.trending-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 5px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.trending-pill:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 10px rgba(168, 85, 247, 0.25);
+}
+
+.trending-pill i {
+  width: 11px;
+  height: 11px;
+  color: var(--accent);
+}
+
+/* ---- Premium SafeSearch Toggle Pill ---- */
+.header-safesearch-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 4px 12px 4px 6px;
+  border-radius: 100px;
+  transition: all 0.3s ease;
+  user-select: none;
+  cursor: pointer;
+  margin-right: 12px;
+}
+
+.header-safesearch-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.safesearch-switch {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 100px;
+  transition: background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.safesearch-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Active 18+ Unlocked mode (SafeSearch = false) */
+.header-safesearch-toggle.unlocked {
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.04);
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.1);
+}
+
+.header-safesearch-toggle.unlocked:hover {
+  border-color: rgba(244, 63, 94, 0.6);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.header-safesearch-toggle.unlocked .safesearch-switch {
+  background: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.5);
+}
+
+.header-safesearch-toggle.unlocked .safesearch-switch::after {
+  transform: translateX(14px);
+}
+
+/* Locked Safe Mode active (SafeSearch = true) */
+.header-safesearch-toggle.locked {
+  border-color: rgba(0, 200, 83, 0.35);
+  background: rgba(0, 200, 83, 0.04);
+  box-shadow: 0 0 15px rgba(0, 200, 83, 0.1);
+}
+
+.header-safesearch-toggle.locked:hover {
+  border-color: rgba(0, 200, 83, 0.6);
+  background: rgba(0, 200, 83, 0.08);
+}
+
+.header-safesearch-toggle.locked .safesearch-switch {
+  background: #00c853;
+  box-shadow: 0 0 8px rgba(0, 200, 83, 0.5);
+}
+
+.safesearch-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.header-safesearch-toggle.unlocked .safesearch-label {
+  color: #fb7185;
+}
+
+.header-safesearch-toggle.locked .safesearch-label {
+  color: #00e676;
 }

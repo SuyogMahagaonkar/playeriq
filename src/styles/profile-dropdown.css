@@ -335,3 +335,43 @@
   width: 18px;
   height: 18px;
 }
+
+/* ---- Premium Passport Quick Stats Panel ---- */
+.profile-dropdown-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-stat-box {
+  background: rgba(15, 15, 20, 0.8);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.profile-stat-box:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.profile-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-hover);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
+}
+
+.profile-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
