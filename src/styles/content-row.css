@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-xl);
+  padding: 0 var(--space-xl) 0 45px;
   margin-bottom: var(--space-sm);
 }
 
@@ -59,7 +59,7 @@
 .content-row-scroll {
   display: flex;
   gap: var(--space-md);
-  padding: var(--space-sm) var(--space-xl) var(--space-lg);
+  padding: var(--space-sm) var(--space-xl) var(--space-lg) 45px;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
