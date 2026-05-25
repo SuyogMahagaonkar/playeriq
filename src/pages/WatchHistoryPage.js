@@ -40,6 +40,15 @@ export async function renderWatchHistoryPage({ container }) {
   }
 }
 
+function getMillis(timestamp) {
+  if (!timestamp) return 0;
+  if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
+  if (typeof timestamp === 'number') return timestamp;
+  if (timestamp instanceof Date) return timestamp.getTime();
+  const parsed = Date.parse(timestamp);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 function groupTVHistoryItems(historyItems) {
   const groupedList = [];
   const tvGroups = {};
@@ -53,24 +62,28 @@ function groupTVHistoryItems(historyItems) {
     } else {
       groupedList.push({
         type: 'movie',
-        item: item
+        item: item,
+        latestTimestamp: getMillis(item.timestamp)
       });
     }
   });
 
   Object.keys(tvGroups).forEach(tvId => {
     const eps = tvGroups[tvId];
+    const maxTimestamp = Math.max(...eps.map(ep => getMillis(ep.timestamp)));
+
     if (eps.length === 1) {
       groupedList.push({
         type: 'single-tv',
-        item: eps[0]
+        item: eps[0],
+        latestTimestamp: maxTimestamp
       });
     } else {
+      // Sort episodes inside the folder: descending order of time (latest watched first)
       eps.sort((a, b) => {
-        if (Number(a.season) !== Number(b.season)) {
-          return Number(a.season) - Number(b.season);
-        }
-        return Number(a.episode) - Number(b.episode);
+        const ta = getMillis(a.timestamp);
+        const tb = getMillis(b.timestamp);
+        return tb - ta;
       });
 
       const distinctSeasons = new Set(eps.map(ep => Number(ep.season)));
@@ -82,7 +95,8 @@ function groupTVHistoryItems(historyItems) {
           id: `${tvId}_season_${seasonNum}`,
           title: `${eps[0].title || eps[0].name} (Season ${seasonNum})`,
           poster_path: eps[0].showPosterPath || eps[0].poster_path,
-          episodes: eps
+          episodes: eps,
+          latestTimestamp: maxTimestamp
         });
       } else {
         groupedList.push({
@@ -90,11 +104,15 @@ function groupTVHistoryItems(historyItems) {
           id: tvId,
           title: eps[0].title || eps[0].name,
           poster_path: eps[0].showPosterPath || eps[0].poster_path,
-          episodes: eps
+          episodes: eps,
+          latestTimestamp: maxTimestamp
         });
       }
     }
   });
+
+  // Sort the final list of grouped cards strictly in descending order of time (most recently watched first)
+  groupedList.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 
   return groupedList;
 }
