@@ -175,21 +175,43 @@ function isSafeContent(item) {
     if (genreStr.includes(bg)) return false;
   }
 
-  // 2. Title & Series Check (Harden SafeSearch against low-budget erotic web series, channels, Vivamax hits, JAV, and platforms)
-  // We use precise word boundaries (\b) to target explicit content while ensuring 
-  // safe mainstream titles (like "Sex Education" or "Sex and the City") are NOT blocked.
+  // 2. Text Content Extraction (Title, Name, Description, Overview)
   const titleStr = (item.title || item.name || '').toLowerCase();
+  const descStr = (item.description || item.overview || '').toLowerCase();
   
-  // Exact Title Blocks (to prevent false positives with generic safe words like "True Romance" or "Atlantic City")
+  // Exact Title Blocks (to prevent false positives with generic safe words)
   const exactBlocks = ['romance', 'tl'];
   if (exactBlocks.includes(titleStr)) {
     return false;
   }
+
+  // 3. Foolproof Substring Blocks (No word boundaries needed, absolute explicit matches)
+  const badSubstrings = [
+    '18+', '18plus', '18 plus', 'r-18', 'r18', 'xxx', 'softcore',
+    'porn', 'brazzers', 'nudity', 'striptease', 'kamasutra', 'hentai',
+    'bhabhi', 'bhabi', 'tharki', 'mastram', 'jalebi bai', 'charmsukh',
+    'palang tod', 'riti riwaj', 'siskiyan', 'sursuri', 'gandii baat',
+    'khuli khidki', 'cuckold', 'swinger', 'playboy', 'sensual desire',
+    'hot scene', 'bedroom scene', 'unrated version', 'uncut version',
+    'ullu', 'kooku', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies',
+    'primeplay', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti',
+    'chikooflix', 'gupchup', 'altbalaji', 'vivamax', 'viva max', 'jav',
+    'sex movie', 'sex scene', 'sex video', 'sex show', 'sex tape',
+    'hardcore sex', 'lesbian sex', 'gay sex', 'desi hot', 'desi sexy',
+    'desi bhabhi', 'hot web series', '18+ web series', 'adult web series',
+    'uncut web series', 'unrated web series', 'teens love'
+  ];
+
+  for (const sub of badSubstrings) {
+    if (titleStr.includes(sub) || descStr.includes(sub) || genreStr.includes(sub)) {
+      return false;
+    }
+  }
+
+  // 4. Regex Word-Boundary Check for other explicit words (to avoid false positives with words like "Sex Education" or "Lust Stories")
+  const badTitleRegex = /\b(milf|erotic|erotica|nympho|orgasm|incest|nude|naked|seduction|adultery|adult\s?movie|adult\s?show|fap|slut|lust|eks|seva|sexa|2x1|borders\s?of\s?love|room\s?service|higop|next\s?room\s?affair|cheaters|kuch\s?pal\s?pyar\s?ke|boss\s?ma'am|bula|selina's\s?gold|virgin\s?forest|pamasahe|lulu|siklo|kara\s?cruz|hugot|pantaxa|pabuya|isla|taya|salamat\s?daks|mama\s?katsu|sulutan|kazuko|ala\s?ala|mayank|hatsukoi\s?jikan|seika|papa\s?katsu|kiss\s?&\s?kill|kiss\s?and\s?kill|99\s?moons|female\s?hostel|megane\s?no\s?megami|jalwa|tubero|big\s?and\s?black|trauma|sex\s?weather|you\s?will\s?regret\s?this|date\s?for\s?hire|pihit|city\s?girl|white\s?lily|romance\s?and\s?cegrete|romance\s?&\s?cegrete|nurse\s?abi|isapad|x-deal\s?2|sexy\s?ghotala|kaam\s?sastra|high\s?on\s?sex)\b/i;
   
-  const badTitleRegex = /\b(porn|xxx|milf|erotic|erotica|brazzers|nympho|orgasm|incest|18\+|nude|nudity|naked|striptease|kamasutra|seduction|adultery|adult\s?movie|adult\s?show|hentai|fap|slut|bhabhi|bhabi|tharki|mastram|jalebi\s?bai|charmsukh|palang\s?tod|riti\s?riwaj|siskiyan|sursuri|gandii\s?baat|khuli\s?khidki|cuckold|swinger|intercourse|strip\s?club|playboy|sensual\s?desire|hot\s?scene|bedroom\s?scene|unrated\s?version|uncut\s?version|lust|ullu|kooku|nuefliks|hotshots|fliz|rabbit\s?movies|primeplay|neonx|hotmasti|fappot|glowmax|cinemadosti|chikooflix|gupchup|altbalaji|sex\s?movie|sex\s?scene|sex\s?video|sex\s?show|sex\s?tape|hardcore\s?sex|lesbian\s?sex|gay\s?sex|desi\s?hot|desi\s?sexy|desi\s?bhabhi|hot\s?web\s?series|18\+\s?web\s?series|adult\s?web\s?series|uncut\s?web\s?series|unrated\s?web\s?series|eks|seva|sexa|2x1|borders\s?of\s?love|room\s?service|higop|next\s?room\s?affair|cheaters|kuch\s?pal\s?pyar\s?ke|boss\s?ma'am|bula|vivamax|viva\s?max|selina's\s?gold|virgin\s?forest|pamasahe|lulu|siklo|kara\s?cruz|hugot|pantaxa|pabuya|isla|taya|salamat\s?daks|mama\s?katsu|sulutan|kazuko|ala\s?ala|mayank|hatsukoi\s?jikan|seika|jav|papa\s?katsu|kiss\s?&\s?kill|kiss\s?and\s?kill|99\s?moons|female\s?hostel|megane\s?no\s?megami|jalwa|tubero|big\s?and\s?black|trauma|sex\s?weather|you\s?will\s?regret\s?this|date\s?for\s?hire|pihit|city\s?girl|white\s?lily|romance\s?and\s?cegrete|romance\s?&\s?cegrete|nurse\s?abi|isapad|x-deal\s?2|sexy\s?ghotala|kaam\s?sastra|high\s?on\s?sex|teens\s?love)\b/i;
-  
-  // Catch cases where "xxx" might be attached directly to words (like MOMxxx)
-  if (titleStr.includes('xxx') || badTitleRegex.test(titleStr)) {
+  if (badTitleRegex.test(titleStr) || badTitleRegex.test(descStr)) {
     return false;
   }
 
