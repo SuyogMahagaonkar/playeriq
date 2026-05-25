@@ -1950,7 +1950,8 @@ export function createVideoPlayer(container, streamData, {
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else {
-      player.requestFullscreen?.();
+      const wrapper = document.getElementById('video-wrapper') || player;
+      wrapper.requestFullscreen?.().catch(() => {});
     }
   }
   fsBtn.addEventListener('click', toggleFs);
@@ -2226,7 +2227,7 @@ export function createVideoPlayer(container, streamData, {
 
   // ---- Cleanup ----
   return {
-    destroy(preserveVideo = false) {
+    destroy(preserveVideo = false, preserveFullscreen = false) {
       if (diagInterval) {
         clearInterval(diagInterval);
         diagInterval = null;
@@ -2254,7 +2255,7 @@ export function createVideoPlayer(container, streamData, {
       releaseWakeLock();
       
       // Exit fullscreen and restore native status bar
-      if (document.fullscreenElement) {
+      if (document.fullscreenElement && !preserveFullscreen) {
         document.exitFullscreen?.().catch(() => {});
       }
       if (Capacitor && Capacitor.isNativePlatform()) {

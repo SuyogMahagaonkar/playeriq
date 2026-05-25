@@ -430,7 +430,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
   // Cleanup existing player
   if (activePlayer) {
-    activePlayer.destroy();
+    const wasFullscreen = !!document.fullscreenElement;
+    activePlayer.destroy(false, wasFullscreen);
     activePlayer = null;
   }
 
@@ -3024,7 +3025,8 @@ async function renderMobileLayout({
             });
           },
           onFatalError: () => {
-            activePlayer.destroy();
+            const wasFullscreen = !!document.fullscreenElement;
+            activePlayer.destroy(false, wasFullscreen);
             activePlayer = null;
             loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
           },
