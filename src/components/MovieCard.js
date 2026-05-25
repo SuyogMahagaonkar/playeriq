@@ -172,6 +172,7 @@ export function attachCardClicks(container) {
 
       if (!type || !id) return;
 
+      const initialHash = window.location.hash;
       isHovered = true;
       // Fetch details from TMDB dynamically
       let tmdbData = null;
@@ -182,8 +183,8 @@ export function attachCardClicks(container) {
         console.warn('Failed to fetch TMDB hover preview details', e);
       }
 
-      // Check if mouse has already left during the network request!
-      if (!isHovered) return;
+      // Check if mouse has already left, route changed, or card was removed during the network request!
+      if (!isHovered || !card.isConnected || window.location.hash !== initialHash) return;
 
       // Prevent duplicate overlays
       const existing = document.querySelector('.hover-preview-card');
