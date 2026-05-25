@@ -467,6 +467,7 @@ export function attachCardClicks(container) {
 
         // Dismiss handlers
         const destroyPreview = () => {
+          window.removeEventListener('hashchange', destroyPreview);
           window.removeEventListener('message', ytListener);
           clearTimeout(fallbackTimer);
           if (!previewCard) return;
@@ -476,6 +477,7 @@ export function attachCardClicks(container) {
           setTimeout(() => target.remove(), 250);
         };
 
+        window.addEventListener('hashchange', destroyPreview);
         previewCard.addEventListener('mouseleave', destroyPreview);
     };
 

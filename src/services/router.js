@@ -43,6 +43,9 @@ export function navigate(path) {
 let lastActiveHash = '#/';
 
 async function handleRoute() {
+  // Redundant fail-safe sweep to remove any stray hover preview cards during page transition
+  document.querySelectorAll('.hover-preview-card').forEach(el => el.remove());
+
   const hash = getHash();
   const { path, query } = parseQuery(hash);
 
