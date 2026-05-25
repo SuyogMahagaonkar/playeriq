@@ -152,6 +152,11 @@ export function attachCardClicks(container) {
     const handleMouseEnter = async () => {
       if (window.innerWidth <= 991) return; // Touch device responsive fallback
       
+      // Do not trigger the dynamic hover expander preview popup for Continue Watching cards
+      if (card.querySelector('.card-delete-btn') || card.closest('.content-row')?.querySelector('.content-row-title')?.textContent.includes('Continue Watching')) {
+        return;
+      }
+      
       const route = card.dataset.route || '';
       let type = '';
       let id = '';
