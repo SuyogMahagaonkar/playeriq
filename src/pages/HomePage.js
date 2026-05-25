@@ -1,4 +1,4 @@
-import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages, isSafeItem } from '../services/api.js';
+import { getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages, isSafeItem, getTrendingAll, getBollywoodMovies, getSouthIndianMovies, getCinemaMovies } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -34,32 +34,32 @@ export async function renderHomePage({ container }) {
   }
 
   try {
-    const [homeData, netflixData, primeData, top10MoviesData, top10SeriesData] = await Promise.all([
-      getMovieBoxHome(),
+    const [trendingAllData, netflixData, primeData, top10MoviesData, top10SeriesData, bollywoodData, southIndianData, cinemaData] = await Promise.all([
+      getTrendingAll().catch(() => ({ results: [] })),
       getLatestNetflix().catch(() => ({ results: [] })),
       getLatestPrime().catch(() => ({ results: [] })),
       getTop10Movies().catch(() => ({ results: [] })),
-      getTop10Series().catch(() => ({ results: [] }))
+      getTop10Series().catch(() => ({ results: [] })),
+      getBollywoodMovies().catch(() => ({ results: [] })),
+      getSouthIndianMovies().catch(() => ({ results: [] })),
+      getCinemaMovies().catch(() => ({ results: [] }))
     ]);
     
-    const items = homeData.items || [];
-    
-    // Find banner section
-    const bannerSection = items.find(i => i.type === 'BANNER' && i.banner?.banners);
-    const banners = bannerSection ? bannerSection.banner.banners.filter(b => b.subject) : [];
+    // Find banner section (using top trending blockbusters of the week from TMDB!)
+    const banners = (trendingAllData.results || []).slice(0, 10);
     
     // Convert banners to TMDB-like structure for the hero banner component
     const addedTitles = new Set();
     const finalHeroItemsBase = [];
     
     const trendingItemsBase = banners.map(b => ({
-      id: `mb_${b.subject.subjectId}`,
-      title: b.subject.title,
-      name: b.subject.title,
-      backdrop_path: b.image?.url || b.subject.cover?.url,
-      poster_path: b.subject.cover?.url,
-      overview: b.subject.genre || '',
-      media_type: b.subject.subjectType === 1 ? 'movie' : 'tv'
+      id: b.id,
+      title: b.title || b.name,
+      name: b.title || b.name,
+      backdrop_path: b.backdrop_path,
+      poster_path: b.poster_path,
+      overview: b.overview || '',
+      media_type: b.media_type || 'movie'
     }));
 
     // Check if a candidate title is a duplicate of any already added titles (handles suffix brackets and substring overlaps!)
@@ -424,43 +424,71 @@ export async function renderHomePage({ container }) {
       `;
     }
 
-    // Extract lists from the home payload, removing Upcoming Calendar and limiting to exactly 5 rows
-    const validRows = items.filter(i => {
-      const isCorrectType = 
-        (i.type === 'SUBJECTS_MOVIE' && i.subjects && i.subjects.length > 0 && i.title) ||
-        (i.type === 'CUSTOM' && i.customData?.items && i.customData.items.length > 0 && i.title) ||
-        (i.type === 'APPOINTMENT_LIST' && i.subjects && i.subjects.length > 0 && i.title);
-      if (!isCorrectType) return false;
-      
-      const lowerTitle = (i.title || '').toLowerCase();
-      if (lowerTitle.includes('upcoming calendar')) return false;
-      return true;
-    }).slice(0, 5);
-    
-    let rowsHTML = validRows.map((rowObj, index) => {
-      let rawItems = [];
-      if (rowObj.type === 'SUBJECTS_MOVIE' || rowObj.type === 'APPOINTMENT_LIST') {
-        rawItems = rowObj.subjects;
-      } else if (rowObj.type === 'CUSTOM') {
-        rawItems = rowObj.customData.items.map(ci => ci.subject).filter(Boolean);
-      }
+    // 5. Cinema Row
+    const mappedCinema = (cinemaData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let cinemaHTML = '';
+    if (mappedCinema.length > 0) {
+      cinemaHTML = createContentRow(
+        `<i data-lucide="film" class="search-section-icon" style="color:#ffae00;"></i> 🔥 Cinema`,
+        mappedCinema,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
 
-      // Map MovieBox items to our common format
-      const mappedItems = rawItems.map(mbItem => ({
-        id: `mb_${mbItem.subjectId || mbItem.id}`,
-        title: mbItem.title,
-        name: mbItem.title,
-        poster_path: mbItem.cover?.url || mbItem.cover_url || mbItem.poster_path,
-        backdrop_path: mbItem.cover?.url || mbItem.cover_url || mbItem.backdrop_path,
-        vote_average: mbItem.imdbRate || mbItem.rating ? parseFloat(mbItem.imdbRate || mbItem.rating) : null,
-        release_date: mbItem.releaseDate || mbItem.release_date,
-        media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
-      }));
+    // 6. Bollywood Row
+    const mappedBollywood = (bollywoodData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let bollywoodHTML = '';
+    if (mappedBollywood.length > 0) {
+      bollywoodHTML = createContentRow(
+        `<i data-lucide="tv" class="search-section-icon" style="color:#a855f7;"></i> Bollywood`,
+        mappedBollywood,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
 
-      // Only first 3 rows load immediately, rest are handled by intersection observer (or just render all since data is already fetched!)
-      const icon = index % 2 === 0 ? 'film' : 'tv';
-      return createContentRow(`<i data-lucide="${icon}" class="search-section-icon"></i> ${rowObj.title}`, mappedItems, 'mixed', null, 'portrait');
-    }).join('');
+    // 7. South Indian Row
+    const mappedSouthIndian = (southIndianData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let southIndianHTML = '';
+    if (mappedSouthIndian.length > 0) {
+      southIndianHTML = createContentRow(
+        `<i data-lucide="video" class="search-section-icon" style="color:#00ff88;"></i> South Indian`,
+        mappedSouthIndian,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
 
     const top10ToggleHTML = `
       <div class="top10-mobile-toggle" style="display: none;">
@@ -472,7 +500,7 @@ export async function renderHomePage({ container }) {
       </div>
     `;
 
-    container.innerHTML = heroHTML + continueWatchingHTML + netflixHTML + primeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + `<div id="home-rows-container">${rowsHTML}</div>` + createFooter();
+    container.innerHTML = heroHTML + continueWatchingHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + createFooter();
 
     // Inject outline top 10 style
     const top10Style = document.createElement('style');

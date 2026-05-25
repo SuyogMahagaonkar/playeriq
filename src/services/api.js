@@ -476,3 +476,43 @@ export async function getMediaImages(id, type, title = null) {
   }
   return null;
 }
+
+export async function getTrendingAll(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch trending all');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getBollywoodMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=hi&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Bollywood movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getSouthIndianMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=te|ta|kn|ml&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch South Indian movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getCinemaMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=en&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Cinema movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
