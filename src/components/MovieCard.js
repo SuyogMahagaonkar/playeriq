@@ -146,10 +146,10 @@ export function attachCardClicks(container) {
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter') handler(e); });
 
     // ---- Hotstar-Style Desktop Hover Expander ----
-    let hoverTimer = null;
     let previewCard = null;
+    let isHovered = false;
 
-    const handleMouseEnter = () => {
+    const handleMouseEnter = async () => {
       if (window.innerWidth <= 991) return; // Touch device responsive fallback
       
       const route = card.dataset.route || '';
@@ -172,23 +172,26 @@ export function attachCardClicks(container) {
 
       if (!type || !id) return;
 
-      hoverTimer = setTimeout(async () => {
-        // Prevent duplicate overlays
-        const existing = document.querySelector('.hover-preview-card');
-        if (existing) existing.remove();
+      isHovered = true;
+      // Fetch details from TMDB dynamically
+      let tmdbData = null;
+      try {
+        const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings`);
+        if (res.ok) tmdbData = await res.json();
+      } catch (e) {
+        console.warn('Failed to fetch TMDB hover preview details', e);
+      }
 
-        const rect = card.getBoundingClientRect();
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+      // Check if mouse has already left during the network request!
+      if (!isHovered) return;
 
-        // Fetch details from TMDB dynamically
-        let tmdbData = null;
-        try {
-          const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings`);
-          if (res.ok) tmdbData = await res.json();
-        } catch (e) {
-          console.warn('Failed to fetch TMDB hover preview details', e);
-        }
+      // Prevent duplicate overlays
+      const existing = document.querySelector('.hover-preview-card');
+      if (existing) existing.remove();
+
+      const rect = card.getBoundingClientRect();
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
 
         // Search trailer YouTube key (filter out Red-Band, R-Rated, and restricted videos to ensure autoplay muting operates 100% of the time)
         const videos = tmdbData?.videos?.results || [];
@@ -458,11 +461,10 @@ export function attachCardClicks(container) {
         };
 
         previewCard.addEventListener('mouseleave', destroyPreview);
-      }, 500);
     };
 
     const handleMouseLeave = () => {
-      clearTimeout(hoverTimer);
+      isHovered = false;
     };
 
     card.addEventListener('mouseenter', handleMouseEnter);
