@@ -10,6 +10,7 @@
   max-height: 850px;
   overflow: hidden;
   background: #000;
+  margin-top: calc(-1 * (var(--navbar-height) + env(safe-area-inset-top, 0px)));
 }
 
 .hero-slide {
@@ -315,6 +316,7 @@
     max-height: none !important;
     background: transparent !important;
     padding-bottom: var(--space-md) !important;
+    margin-top: 0 !important;
   }
 
   .hero-slide {

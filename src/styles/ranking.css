@@ -13,6 +13,7 @@
   background: #040406;
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  margin-top: calc(-1 * (var(--navbar-height) + env(safe-area-inset-top, 0px)));
 }
 
 .spotlight-backdrop {
@@ -463,6 +464,7 @@
   .ranking-spotlight {
     height: auto;
     border-radius: var(--radius-md);
+    margin-top: 0 !important;
   }
 
   .spotlight-backdrop {
