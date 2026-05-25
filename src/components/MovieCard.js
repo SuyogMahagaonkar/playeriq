@@ -190,10 +190,32 @@ export function attachCardClicks(container) {
           console.warn('Failed to fetch TMDB hover preview details', e);
         }
 
-        // Search trailer YouTube key
+        // Search trailer YouTube key (filter out Red-Band, R-Rated, and restricted videos to ensure autoplay muting operates 100% of the time)
         const videos = tmdbData?.videos?.results || [];
-        const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube') || videos.find(v => v.site === 'YouTube');
-        const youtubeKey = trailer ? trailer.key : '';
+        let cleanTrailer = videos.find(v => 
+          v.type === 'Trailer' && 
+          v.site === 'YouTube' && 
+          !v.name.toLowerCase().includes('red band') && 
+          !v.name.toLowerCase().includes('restricted') &&
+          !v.name.toLowerCase().includes('r-rated') &&
+          !v.name.toLowerCase().includes('r rated')
+        );
+
+        if (!cleanTrailer) {
+          cleanTrailer = videos.find(v => 
+            v.site === 'YouTube' && 
+            !v.name.toLowerCase().includes('red band') && 
+            !v.name.toLowerCase().includes('restricted') &&
+            !v.name.toLowerCase().includes('r-rated') &&
+            !v.name.toLowerCase().includes('r rated')
+          );
+        }
+
+        if (!cleanTrailer) {
+          cleanTrailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube') || videos.find(v => v.site === 'YouTube');
+        }
+
+        const youtubeKey = cleanTrailer ? cleanTrailer.key : '';
 
         // Extract metadata details
         const title = tmdbData?.title || tmdbData?.name || card.querySelector('.movie-card-title')?.textContent || 'Unknown';
@@ -259,7 +281,7 @@ export function attachCardClicks(container) {
 
         const trailerHTML = youtubeKey
           ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(tmdbData?.backdrop_path || item?.backdrop_path || '')}); background-size:cover; background-position:center;">
-               <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0" allow="autoplay" frameborder="0"></iframe>
+               <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&wmode=transparent&autohide=1&origin=${encodeURIComponent(window.location.origin)}" allow="autoplay" frameborder="0"></iframe>
                <button class="preview-volume-btn" aria-label="Toggle Sound">
                  <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
                  <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -309,12 +331,12 @@ export function attachCardClicks(container) {
           if (previewCard) previewCard.classList.add('active');
         }, 10);
 
-        // Fade in iframe after 1200ms once initial YouTube controls have loaded & hidden
+        // Fade in iframe after 1800ms once initial YouTube controls have loaded & hidden
         setTimeout(() => {
           if (previewCard) {
             previewCard.querySelector('.preview-iframe')?.classList.add('playing');
           }
-        }, 1200);
+        }, 1800);
 
         // Fetch User and setup wishlist trigger state
         const user = getUser();

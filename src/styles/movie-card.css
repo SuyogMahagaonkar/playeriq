@@ -292,10 +292,10 @@
 
 .preview-iframe {
   position: absolute;
-  top: -12.5%;
-  left: -12.5%;
-  width: 125%;
-  height: 125%;
+  top: -17.5%;
+  left: -17.5%;
+  width: 135%;
+  height: 135%;
   border: 0;
   pointer-events: none; /* Mouse coordinates pass through cleanly */
   opacity: 0;
