@@ -87,9 +87,6 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
       : `<div class="movie-card-poster" style="background:var(--bg-tertiary);width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:var(--text-xs);">No Image</div>`
     }
         <div class="movie-card-gradient"></div>
-        <div class="movie-card-play">
-          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </div>
         ${deleteBtn}
         ${rating > 0 ? `
           <div class="movie-card-rating ${ratingClass}">
@@ -101,15 +98,6 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
         ${movieBoxBadge}
         ${progressData ? '' : '<div class="movie-card-quality">HD</div>'}
         ${progressHTML}
-      </div>
-      
-      <div class="movie-card-info">
-        <div class="movie-card-title">${title}</div>
-        <div class="movie-card-meta">
-          ${customSubtitle ? `<span class="movie-card-lang" style="color:var(--primary); font-weight:600">${customSubtitle}</span>` : ''}
-          <span class="movie-card-year">${year}</span>
-          ${lang && !customSubtitle ? `<span class="movie-card-lang">${lang}</span>` : ''}
-        </div>
       </div>
     </div>
   `;
@@ -125,7 +113,6 @@ export function createSkeletonCard(cardLayout = 'portrait') {
   return `
     <div class="movie-card-skeleton ${layoutClass}" style="width:${cardWidth}">
       <div class="skeleton-poster"></div>
-      <div class="skeleton-title"></div>
     </div>
   `;
 }
@@ -243,16 +230,36 @@ export function attachCardClicks(container) {
           ? (tmdbData.overview.length > 140 ? tmdbData.overview.slice(0, 137) + '...' : tmdbData.overview)
           : 'No synopsis available.';
 
+        // Calculate the centered horizontal position for the wide preview card
+        const previewWidth = 320;
+        let previewLeft = rect.left + scrollLeft - (previewWidth - rect.width) / 2;
+        
+        // Safety bounds checks so it stays fully on screen
+        if (previewLeft < 16) {
+          previewLeft = 16;
+        } else {
+          const maxLeft = window.innerWidth + scrollLeft - previewWidth - 16;
+          if (previewLeft > maxLeft) {
+            previewLeft = maxLeft;
+          }
+        }
+
+        // Shift top slightly up so the hover expander looks perfectly layered
+        let previewTop = rect.top + scrollTop - 20;
+        if (previewTop < scrollTop + 16) {
+          previewTop = scrollTop + 16;
+        }
+
         // Build expanded hover preview element
         previewCard = document.createElement('div');
         previewCard.className = 'hover-preview-card';
-        previewCard.style.top = `${rect.top + scrollTop}px`;
-        previewCard.style.left = `${rect.left + scrollLeft}px`;
-        previewCard.style.width = `${rect.width}px`;
+        previewCard.style.top = `${previewTop}px`;
+        previewCard.style.left = `${previewLeft}px`;
+        previewCard.style.width = `${previewWidth}px`;
 
         const trailerHTML = youtubeKey
-          ? `<div class="preview-trailer-wrapper">
-               <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1" allow="autoplay" frameborder="0"></iframe>
+          ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(tmdbData?.backdrop_path || item?.backdrop_path || '')}); background-size:cover; background-position:center;">
+               <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0" allow="autoplay" frameborder="0"></iframe>
                <button class="preview-volume-btn" aria-label="Toggle Sound">
                  <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
                  <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -297,10 +304,17 @@ export function attachCardClicks(container) {
 
         document.body.appendChild(previewCard);
 
-        // Position alignment so it center-expands slightly
+        // Position alignment so it center-expands smoothly
         setTimeout(() => {
           if (previewCard) previewCard.classList.add('active');
         }, 10);
+
+        // Fade in iframe after 1200ms once initial YouTube controls have loaded & hidden
+        setTimeout(() => {
+          if (previewCard) {
+            previewCard.querySelector('.preview-iframe')?.classList.add('playing');
+          }
+        }, 1200);
 
         // Fetch User and setup wishlist trigger state
         const user = getUser();
@@ -372,10 +386,10 @@ export function attachCardClicks(container) {
             e.preventDefault();
             muted = !muted;
             
-            // PostMessage to Youtube Player API
+            // PostMessage to Youtube Player API (using unMute with capital M)
             iframe.contentWindow.postMessage(JSON.stringify({
               event: 'command',
-              func: muted ? 'mute' : 'unmute',
+              func: muted ? 'mute' : 'unMute',
               args: []
             }), '*');
 

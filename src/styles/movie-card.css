@@ -11,8 +11,8 @@
   flex-shrink: 0;
 }
 .movie-card:hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-elevated), 0 0 30px rgba(229,9,20,0.1);
+  transform: scale(1.03);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.15);
   z-index: 2;
 }
 .movie-card-poster-wrapper {
@@ -257,24 +257,25 @@
 .hover-preview-card {
   position: absolute;
   z-index: 1000;
-  background: rgba(10, 10, 15, 0.7);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border-radius: var(--radius-md);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(168, 85, 247, 0.2);
+  width: 320px;
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(35px) saturate(180%);
+  -webkit-backdrop-filter: blur(35px) saturate(180%);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 40px rgba(168, 85, 247, 0.25);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transform: translate(0, 0) scale(1);
+  transform: scale(0.85);
   opacity: 0;
   pointer-events: none;
-  transition: transform var(--transition-bounce), opacity var(--transition-normal);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
   transform-origin: center center;
 }
 
 .hover-preview-card.active {
-  transform: translate(-11%, -12%) scale(1.22);
+  transform: scale(1.06);
   opacity: 1;
   pointer-events: auto;
 }
@@ -290,12 +291,19 @@
 }
 
 .preview-iframe {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 16/9;
+  position: absolute;
+  top: -12.5%;
+  left: -12.5%;
+  width: 125%;
+  height: 125%;
   border: 0;
-  pointer-events: none; /* Allows mouse tracking to pass through seamlessly */
-  transform: scale(1.05); /* Avoid youtube outer edge borders */
+  pointer-events: none; /* Mouse coordinates pass through cleanly */
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.preview-iframe.playing {
+  opacity: 1;
 }
 
 /* Volume button overlay */
@@ -340,12 +348,13 @@
 
 .preview-title {
   font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: var(--weight-bold);
-  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
   margin-bottom: var(--space-sm);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
 .preview-actions {
@@ -367,17 +376,17 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: white;
-  background: var(--accent);
-  border: none;
+  background: var(--gradient-accent);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-glow-sm);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.35);
 }
 
 .preview-watch-btn:hover {
   background: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
+  transform: translateY(-2.5px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.55), 0 0 15px rgba(255, 255, 255, 0.15);
 }
 
 .preview-watch-btn svg {
@@ -390,19 +399,20 @@
   height: 36px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.08);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .preview-wishlist-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
 }
 
 .preview-wishlist-btn.in-list {
@@ -431,18 +441,22 @@
 }
 
 .preview-age {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 8px;
   border-radius: var(--radius-xs);
   font-size: 0.65rem;
-  font-weight: var(--weight-semibold);
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .preview-desc {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: var(--text-muted);
+  font-size: 0.775rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
