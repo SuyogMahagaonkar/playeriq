@@ -16,6 +16,7 @@ import './styles/detail.css';
 import './styles/player.css';
 import './styles/video-player.css';
 import './styles/responsive.css';
+import './styles/ranking.css';
 import './styles/login.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';

@@ -301,6 +301,18 @@ export async function getTop10Series() {
   return { results: (data.results || []).slice(0, 10) };
 }
 
+export async function getTrendingMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch trending movies');
+  return res.json();
+}
+
+export async function getTrendingTV(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/trending/tv/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch trending series');
+  return res.json();
+}
+
 export async function getMediaImages(id, type, title = null) {
   let tmdbId = id;
   if (String(id).startsWith('mb_')) {
