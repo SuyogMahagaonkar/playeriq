@@ -173,6 +173,15 @@ export async function renderHomePage({ container }) {
     const heroHTML = createHeroBanner(heroItems);
 
     // Continue Watching
+    const getMillis = (timestamp) => {
+      if (!timestamp) return 0;
+      if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
+      if (typeof timestamp === 'number') return timestamp;
+      if (timestamp instanceof Date) return timestamp.getTime();
+      const parsed = Date.parse(timestamp);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
     const history = await getWatchHistory();
     let continueWatchingItems = history.filter(item => {
       if (item.watched) return false;
@@ -185,6 +194,30 @@ export async function renderHomePage({ container }) {
     if (isSafe) {
       continueWatchingItems = continueWatchingItems.filter(isSafeItem);
     }
+
+    // Collapse multiple episodes of the same show into exactly one card (latest active episode)
+    const tvLatestEpisodes = {};
+    const finalContinueWatching = [];
+
+    continueWatchingItems.forEach(item => {
+      if (item.type === 'tv') {
+        const existing = tvLatestEpisodes[item.id];
+        const itemTime = getMillis(item.timestamp);
+        if (!existing || itemTime > getMillis(existing.timestamp)) {
+          tvLatestEpisodes[item.id] = item;
+        }
+      } else {
+        finalContinueWatching.push(item);
+      }
+    });
+
+    Object.keys(tvLatestEpisodes).forEach(showId => {
+      finalContinueWatching.push(tvLatestEpisodes[showId]);
+    });
+
+    // Sort final list chronologically (most recently watched first)
+    finalContinueWatching.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
+    continueWatchingItems = finalContinueWatching;
 
     let continueWatchingHTML = '';
     if (continueWatchingItems && continueWatchingItems.length > 0) {

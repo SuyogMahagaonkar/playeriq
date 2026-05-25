@@ -3,6 +3,8 @@
 // ========================================
 
 import { img } from '../services/api.js';
+import { getUser } from '../services/auth.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 
 export function createMovieCard(item, type = 'movie', customRoute = null, customSubtitle = null, progressData = null, showDeleteBtn = false, cardLayout = 'portrait') {
   const title = item.title || item.name || 'Unknown';
@@ -128,7 +130,7 @@ export function createSkeletonCard(cardLayout = 'portrait') {
   `;
 }
 
-// Attach click handlers to all movie cards in a container
+// Attach click and hover handlers to all movie cards in a container
 export function attachCardClicks(container) {
   container.querySelectorAll('.movie-card[data-route]').forEach(card => {
     if (card.dataset.initialized === 'true') return;
@@ -149,12 +151,258 @@ export function attachCardClicks(container) {
     }
 
     const handler = (e) => {
-      // Don't navigate if clicking delete
-      if (e.target.closest('.card-delete-btn')) return;
+      // Don't navigate if clicking delete or hover actions
+      if (e.target.closest('.card-delete-btn') || e.target.closest('.preview-wishlist-btn') || e.target.closest('.preview-watch-btn')) return;
       window.location.hash = card.dataset.route;
     };
     card.addEventListener('click', handler);
     card.addEventListener('keydown', (e) => { if (e.key === 'Enter') handler(e); });
+
+    // ---- Hotstar-Style Desktop Hover Expander ----
+    let hoverTimer = null;
+    let previewCard = null;
+
+    const handleMouseEnter = () => {
+      if (window.innerWidth <= 991) return; // Touch device responsive fallback
+      
+      const route = card.dataset.route || '';
+      let type = '';
+      let id = '';
+      
+      if (route.includes('/watch/movie/')) {
+        type = 'movie';
+        id = route.split('/watch/movie/')[1]?.split('?')[0]?.replace('mb_', '');
+      } else if (route.includes('/watch/tv/')) {
+        type = 'tv';
+        id = route.split('/watch/tv/')[1]?.split('?')[0]?.replace('mb_', '');
+      } else if (route.includes('/movie/')) {
+        type = 'movie';
+        id = route.split('/movie/')[1]?.split('?')[0]?.replace('mb_', '');
+      } else if (route.includes('/tv/')) {
+        type = 'tv';
+        id = route.split('/tv/')[1]?.split('?')[0]?.replace('mb_', '');
+      }
+
+      if (!type || !id) return;
+
+      hoverTimer = setTimeout(async () => {
+        // Prevent duplicate overlays
+        const existing = document.querySelector('.hover-preview-card');
+        if (existing) existing.remove();
+
+        const rect = card.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+        // Fetch details from TMDB dynamically
+        let tmdbData = null;
+        try {
+          const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings`);
+          if (res.ok) tmdbData = await res.json();
+        } catch (e) {
+          console.warn('Failed to fetch TMDB hover preview details', e);
+        }
+
+        // Search trailer YouTube key
+        const videos = tmdbData?.videos?.results || [];
+        const trailer = videos.find(v => v.type === 'Trailer' && v.site === 'YouTube') || videos.find(v => v.site === 'YouTube');
+        const youtubeKey = trailer ? trailer.key : '';
+
+        // Extract metadata details
+        const title = tmdbData?.title || tmdbData?.name || card.querySelector('.movie-card-title')?.textContent || 'Unknown';
+        const rawYear = tmdbData?.release_date || tmdbData?.first_air_date || '';
+        const year = rawYear.slice(0, 4) || '2026';
+        const lang = tmdbData?.original_language?.toUpperCase() || 'EN';
+        
+        let ageRating = 'U/A 13+';
+        if (type === 'movie') {
+          const releaseDates = tmdbData?.release_dates?.results || [];
+          const usRelease = releaseDates.find(r => r.iso_3166_1 === 'US') || releaseDates.find(r => r.iso_3166_1 === 'IN') || releaseDates[0];
+          if (usRelease?.release_dates?.[0]?.certification) {
+            ageRating = usRelease.release_dates[0].certification;
+          }
+        } else {
+          const ratings = tmdbData?.content_ratings?.results || [];
+          const usRating = ratings.find(r => r.iso_3166_1 === 'US') || ratings.find(r => r.iso_3166_1 === 'IN') || ratings[0];
+          if (usRating?.rating) {
+            ageRating = usRating.rating;
+          }
+        }
+        if (!ageRating) ageRating = 'U/A 13+';
+
+        let duration = '';
+        if (type === 'movie' && tmdbData?.runtime) {
+          const hours = Math.floor(tmdbData.runtime / 60);
+          const mins = tmdbData.runtime % 60;
+          duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        } else if (tmdbData?.episode_run_time?.[0]) {
+          duration = `${tmdbData.episode_run_time[0]}m`;
+        }
+
+        const overview = tmdbData?.overview
+          ? (tmdbData.overview.length > 140 ? tmdbData.overview.slice(0, 137) + '...' : tmdbData.overview)
+          : 'No synopsis available.';
+
+        // Build expanded hover preview element
+        previewCard = document.createElement('div');
+        previewCard.className = 'hover-preview-card';
+        previewCard.style.top = `${rect.top + scrollTop}px`;
+        previewCard.style.left = `${rect.left + scrollLeft}px`;
+        previewCard.style.width = `${rect.width}px`;
+
+        const trailerHTML = youtubeKey
+          ? `<div class="preview-trailer-wrapper">
+               <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1" allow="autoplay" frameborder="0"></iframe>
+               <button class="preview-volume-btn" aria-label="Toggle Sound">
+                 <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
+                 <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+               </button>
+             </div>`
+          : `<div class="preview-no-trailer" style="background-image:url(${img.backdrop(tmdbData?.backdrop_path || item?.backdrop_path || '')}); background-size:cover; background-position:center; width:100%; aspect-ratio:16/9;">
+               <div class="preview-no-trailer-overlay"></div>
+             </div>`;
+
+        const watchlistIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+        const watchlistCheckedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+        previewCard.innerHTML = `
+          ${trailerHTML}
+          <div class="preview-details-container">
+            <div class="preview-title">${title}</div>
+            <div class="preview-actions">
+              <button class="preview-watch-btn btn-primary" data-route="${route}">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Watch Now
+              </button>
+              <button class="preview-wishlist-btn" data-id="${id}" data-type="${type}" data-title="${title}" data-poster="${tmdbData?.poster_path || item?.poster_path || ''}" data-backdrop="${tmdbData?.backdrop_path || item?.backdrop_path || ''}" data-rating="${tmdbData?.vote_average || 0}">
+                ${watchlistIcon}
+              </button>
+            </div>
+            <div class="preview-meta">
+              <span class="preview-year">${year}</span>
+              <span class="preview-dot">•</span>
+              <span class="preview-age">${ageRating}</span>
+              ${duration ? `
+                <span class="preview-dot">•</span>
+                <span class="preview-duration">${duration}</span>
+              ` : ''}
+              ${lang ? `
+                <span class="preview-dot">•</span>
+                <span class="preview-lang">${lang}</span>
+              ` : ''}
+            </div>
+            <div class="preview-desc">${overview}</div>
+          </div>
+        `;
+
+        document.body.appendChild(previewCard);
+
+        // Position alignment so it center-expands slightly
+        setTimeout(() => {
+          if (previewCard) previewCard.classList.add('active');
+        }, 10);
+
+        // Fetch User and setup wishlist trigger state
+        const user = getUser();
+        const wishlistBtn = previewCard.querySelector('.preview-wishlist-btn');
+        if (user && wishlistBtn) {
+          try {
+            const isAdded = await isInWatchlist(user.uid, id);
+            if (isAdded) {
+              wishlistBtn.innerHTML = watchlistCheckedIcon;
+              wishlistBtn.classList.add('in-list');
+              wishlistBtn.title = 'Remove from Watchlist';
+            }
+          } catch (e) {
+            console.warn('Failed to verify watchlist state in cloud', e);
+          }
+        }
+
+        // Wire Watchlist Click
+        wishlistBtn?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (!user) {
+            alert('Please sign in to manage your watchlist!');
+            return;
+          }
+          const isAdded = wishlistBtn.classList.contains('in-list');
+          wishlistBtn.disabled = true;
+          try {
+            if (isAdded) {
+              await removeFromWatchlist(user.uid, id);
+              wishlistBtn.innerHTML = watchlistIcon;
+              wishlistBtn.classList.remove('in-list');
+              wishlistBtn.title = 'Add to Watchlist';
+            } else {
+              await addToWatchlist(user.uid, {
+                id: Number(id) || id,
+                title,
+                type,
+                poster_path: wishlistBtn.dataset.poster ? `https://image.tmdb.org/t/p/w500${wishlistBtn.dataset.poster}` : '',
+                backdrop_path: wishlistBtn.dataset.backdrop ? `https://image.tmdb.org/t/p/original${wishlistBtn.dataset.backdrop}` : '',
+                vote_average: Number(wishlistBtn.dataset.rating) || 0
+              });
+              wishlistBtn.innerHTML = watchlistCheckedIcon;
+              wishlistBtn.classList.add('in-list');
+              wishlistBtn.title = 'Remove from Watchlist';
+            }
+          } catch (err) {
+            console.error('Wishlist toggle error:', err);
+          } finally {
+            wishlistBtn.disabled = false;
+          }
+        });
+
+        // Wire Watch Now Click
+        previewCard.querySelector('.preview-watch-btn')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          destroyPreview();
+          window.location.hash = route;
+        });
+
+        // Wire Sound Toggle Click
+        const volumeBtn = previewCard.querySelector('.preview-volume-btn');
+        const iframe = previewCard.querySelector('.preview-iframe');
+        if (volumeBtn && iframe) {
+          let muted = true;
+          volumeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            muted = !muted;
+            
+            // PostMessage to Youtube Player API
+            iframe.contentWindow.postMessage(JSON.stringify({
+              event: 'command',
+              func: muted ? 'mute' : 'unmute',
+              args: []
+            }), '*');
+
+            volumeBtn.querySelector('.vol-off').style.display = muted ? 'block' : 'none';
+            volumeBtn.querySelector('.vol-on').style.display = muted ? 'none' : 'block';
+          });
+        }
+
+        // Dismiss handlers
+        const destroyPreview = () => {
+          if (!previewCard) return;
+          const target = previewCard;
+          previewCard = null;
+          target.classList.remove('active');
+          setTimeout(() => target.remove(), 250);
+        };
+
+        previewCard.addEventListener('mouseleave', destroyPreview);
+      }, 500);
+    };
+
+    const handleMouseLeave = () => {
+      clearTimeout(hoverTimer);
+    };
+
+    card.addEventListener('mouseenter', handleMouseEnter);
+    card.addEventListener('mouseleave', handleMouseLeave);
   });
 }
 
