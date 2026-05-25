@@ -1,4 +1,4 @@
-import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages } from '../services/api.js';
+import { getMovieBoxHome, getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages, isSafeItem } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -174,11 +174,16 @@ export async function renderHomePage({ container }) {
 
     // Continue Watching
     const history = await getWatchHistory();
-    const continueWatchingItems = history.filter(item => {
+    let continueWatchingItems = history.filter(item => {
       if (item.watched) return false;
       if (item.duration > 0 && (item.duration - item.currentTime <= 300)) return false;
       return true;
     });
+
+    const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+    if (isSafe) {
+      continueWatchingItems = continueWatchingItems.filter(isSafeItem);
+    }
 
     let continueWatchingHTML = '';
     if (continueWatchingItems && continueWatchingItems.length > 0) {

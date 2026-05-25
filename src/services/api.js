@@ -19,6 +19,70 @@ function isSafeSearchOn() {
   return pref !== 'false'; // default to true
 }
 
+export function isSafeItem(item) {
+  if (!item) return false;
+
+  // TMDB adult flag
+  if (item.adult === true) return false;
+  
+  // Get title, overview/description, and genre
+  const title = (item.title || item.name || '').toLowerCase();
+  const overview = (item.overview || item.description || '').toLowerCase();
+  
+  // Clean genres string or check array
+  let genresStr = '';
+  if (typeof item.genres === 'string') {
+    genresStr = item.genres;
+  } else if (Array.isArray(item.genres)) {
+    genresStr = item.genres.map(g => g.name || g).join(' ');
+  } else if (item.genre) {
+    genresStr = String(item.genre);
+  }
+  genresStr = genresStr.toLowerCase();
+
+  // 1. Explicit Genre Blocks
+  const badGenres = ['erotica', 'adult', 'softcore', 'porn', 'sensual', '18+', 'vivamax', 'viva max', 'pinoy softcore', 'tagalog erotic', 'hentai', 'tl anime', 'anime 18+', 'adult anime'];
+  for (const bg of badGenres) {
+    if (genresStr.includes(bg)) return false;
+  }
+
+  // 2. Exact Title Blocks
+  const exactBlocks = ['romance', 'tl'];
+  if (exactBlocks.includes(title)) {
+    return false;
+  }
+
+  // 3. Substring Blocks
+  const badSubstrings = [
+    '18+', '18plus', '18 plus', 'r-18', 'r18', 'xxx', 'softcore',
+    'porn', 'brazzers', 'nudity', 'striptease', 'kamasutra', 'hentai',
+    'bhabhi', 'bhabi', 'tharki', 'mastram', 'jalebi bai', 'charmsukh',
+    'palang tod', 'riti riwaj', 'siskiyan', 'sursuri', 'gandii baat',
+    'khuli khidki', 'cuckold', 'swinger', 'playboy', 'sensual desire',
+    'hot scene', 'bedroom scene', 'unrated version', 'uncut version',
+    'ullu', 'kooku', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies',
+    'primeplay', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti',
+    'chikooflix', 'gupchup', 'altbalaji', 'vivamax', 'viva max', 'jav',
+    'sex movie', 'sex scene', 'sex video', 'sex show', 'sex tape',
+    'hardcore sex', 'lesbian sex', 'gay sex', 'desi hot', 'desi sexy',
+    'desi bhabhi', 'hot web series', '18+ web series', 'adult web series',
+    'uncut web series', 'unrated web series', 'teens love'
+  ];
+  for (const sub of badSubstrings) {
+    if (title.includes(sub) || overview.includes(sub) || genresStr.includes(sub)) {
+      return false;
+    }
+  }
+
+  // 4. Regex Word-Boundary Check for other explicit words
+  const badTitleRegex = /\b(milf|erotic|erotica|nympho|orgasm|incest|nude|naked|seduction|adultery|adult\s?movie|adult\s?show|fap|slut|lust|eks|seva|sexa|2x1|borders\s?of\s?love|room\s?service|higop|next\s?room\s?affair|cheaters|kuch\s?pal\s?pyar\s?ke|boss\s?ma'am|bula|selina's\s?gold|virgin\s?forest|pamasahe|lulu|siklo|kara\s?cruz|hugot|pantaxa|pabuya|isla|taya|salamat\s?daks|mama\s?katsu|sulutan|kazuko|ala\s?ala|mayank|hatsukoi\s?jikan|seika|papa\s?katsu|kiss\s?&\s?kill|kiss\s?and\s?kill|99\s?moons|female\s?hostel|megane\s?no\s?megami|jalwa|tubero|big\s?and\s?black|trauma|sex\s?weather|you\s?will\s?regret\s?this|date\s?for\s?hire|pihit|city\s?girl|white\s?lily|romance\s?and\s?cegrete|romance\s?&\s?cegrete|nurse\s?abi|isapad|x-deal\s?2|sexy\s?ghotala|kaam\s?sastra|high\s?on\s?sex)\b/i;
+  if (badTitleRegex.test(title) || badTitleRegex.test(overview)) {
+    return false;
+  }
+
+  return true;
+}
+
 let cachedHomeData = null;
 let cachedHomeSafeState = null;
 
@@ -30,45 +94,78 @@ export async function getMovieBoxHome(forceRefresh = false) {
   const safeParam = currentSafe ? '?safe=true' : '?safe=false';
   const res = await fetch(`${NODE_PROXY}/api/moviebox/home${safeParam}`);
   if (!res.ok) throw new Error('Failed to fetch home');
-  cachedHomeData = await res.json();
+  let data = await res.json();
+
+  if (currentSafe && data.items) {
+    // 1. Filter out unwanted categories
+    const unwantedRowRegex = /wwe|skill|course|cricket|anime|hentai|18\+|kids|learning|high-ctr/i;
+    data.items = data.items.filter(row => {
+      const title = (row.title || '').toLowerCase();
+      return !unwantedRowRegex.test(title);
+    });
+
+    // 2. Filter subjects recursively
+    data.items = data.items.map(row => {
+      if (row.subjects) {
+        row.subjects = row.subjects.filter(s => isSafeItem(s));
+      }
+      if (row.customData?.items) {
+        row.customData.items = row.customData.items.filter(ci => isSafeItem(ci.subject));
+      }
+      if (row.banner?.banners) {
+        row.banner.banners = row.banner.banners.filter(b => isSafeItem(b.subject));
+      }
+      return row;
+    });
+  }
+
+  cachedHomeData = data;
   cachedHomeSafeState = currentSafe;
   return cachedHomeData;
 }
 
 export const getMovieDetails = async (id) => {
+  let details = null;
   if (!String(id).startsWith('mb_')) {
     const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
     if (!res.ok) throw new Error('TMDB details failed');
-    return res.json();
+    details = await res.json();
+  } else {
+    const subjectId = String(id).replace('mb_', '');
+    const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`);
+    if (!res.ok) throw new Error('MovieBox details failed');
+    const data = await res.json();
+    
+    details = {
+      id: `mb_${subjectId}`,
+      title: data.title,
+      runtime: data.durationSeconds ? Math.floor(data.durationSeconds / 60) : 0,
+      vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : null,
+      overview: data.description || '',
+      release_date: data.releaseDate || '',
+      genres: data.genre ? data.genre.split(',').map(g => ({ name: g.trim() })) : [],
+      poster_path: data.cover?.url || data.coverUrl || null,
+      backdrop_path: data.cover?.url || data.coverUrl || null,
+      similar: { results: [] },
+      seasons: [],
+      raw_data: data
+    };
   }
-  
-  const subjectId = String(id).replace('mb_', '');
-  const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`);
-  if (!res.ok) throw new Error('MovieBox details failed');
-  const data = await res.json();
-  
-  return {
-    id: `mb_${subjectId}`,
-    title: data.title,
-    runtime: data.durationSeconds ? Math.floor(data.durationSeconds / 60) : 0,
-    vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : null,
-    overview: data.description || '',
-    release_date: data.releaseDate || '',
-    genres: data.genre ? data.genre.split(',').map(g => ({ name: g.trim() })) : [],
-    poster_path: data.cover?.url || data.coverUrl || null,
-    backdrop_path: data.cover?.url || data.coverUrl || null,
-    similar: { results: [] },
-    seasons: [],
-    raw_data: data
-  };
+
+  if (isSafeSearchOn() && !isSafeItem(details)) {
+    throw new Error('This content is blocked by Safe Search');
+  }
+
+  return details;
 };
 
 export const getTVDetails = async (id) => {
+  let details = null;
   if (!String(id).startsWith('mb_')) {
     const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
     if (!res.ok) throw new Error('TMDB tv details failed');
     const data = await res.json();
-    return {
+    details = {
       ...data,
       seasons: (data.seasons || []).map(s => ({
         season_number: s.season_number,
@@ -76,41 +173,47 @@ export const getTVDetails = async (id) => {
         episode_count: s.episode_count
       }))
     };
+  } else {
+    const subjectId = String(id).replace('mb_', '');
+    const [infoRes, seasonsRes] = await Promise.all([
+      fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`),
+      fetch(`${NODE_PROXY}/api/moviebox/seasons/${subjectId}`)
+    ]);
+    if (!infoRes.ok) throw new Error('MovieBox details failed');
+    const data = await infoRes.json();
+    
+    let seasonsData = { seasons: [] };
+    if (seasonsRes.ok) {
+      seasonsData = await seasonsRes.json();
+    }
+    
+    const seasons = (seasonsData.seasons || []).map(s => ({
+      season_number: s.se,
+      name: `Season ${s.se}`,
+      episode_count: s.maxEp
+    }));
+
+    details = {
+      id: `mb_${subjectId}`,
+      name: data.title,
+      runtime: data.durationSeconds ? Math.floor(data.durationSeconds / 60) : 0,
+      vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : null,
+      overview: data.description || '',
+      first_air_date: data.releaseDate || '',
+      genres: data.genre ? data.genre.split(',').map(g => ({ name: g.trim() })) : [],
+      poster_path: data.cover?.url || data.coverUrl || null,
+      backdrop_path: data.cover?.url || data.coverUrl || null,
+      similar: { results: [] },
+      seasons: seasons,
+      raw_data: data
+    };
   }
 
-  const subjectId = String(id).replace('mb_', '');
-  const [infoRes, seasonsRes] = await Promise.all([
-    fetch(`${NODE_PROXY}/api/moviebox/info/${subjectId}`),
-    fetch(`${NODE_PROXY}/api/moviebox/seasons/${subjectId}`)
-  ]);
-  if (!infoRes.ok) throw new Error('MovieBox details failed');
-  const data = await infoRes.json();
-  
-  let seasonsData = { seasons: [] };
-  if (seasonsRes.ok) {
-    seasonsData = await seasonsRes.json();
+  if (isSafeSearchOn() && !isSafeItem(details)) {
+    throw new Error('This content is blocked by Safe Search');
   }
-  
-  const seasons = (seasonsData.seasons || []).map(s => ({
-    season_number: s.se,
-    name: `Season ${s.se}`,
-    episode_count: s.maxEp
-  }));
 
-  return {
-    id: `mb_${subjectId}`,
-    name: data.title,
-    runtime: data.durationSeconds ? Math.floor(data.durationSeconds / 60) : 0,
-    vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : null,
-    overview: data.description || '',
-    first_air_date: data.releaseDate || '',
-    genres: data.genre ? data.genre.split(',').map(g => ({ name: g.trim() })) : [],
-    poster_path: data.cover?.url || data.coverUrl || null,
-    backdrop_path: data.cover?.url || data.coverUrl || null,
-    similar: { results: [] },
-    seasons: seasons,
-    raw_data: data
-  };
+  return details;
 };
 
 export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = null) => {
@@ -210,7 +313,11 @@ export async function searchMovieBox(query, type = 'all') {
   const url = `${NODE_PROXY}/api/moviebox/search?q=${encodeURIComponent(query)}&type=${type}${safeParam}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`MovieBox search failed: ${res.status}`);
-  return res.json();
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
 }
 
 export async function getLatestNetflix(page = 1) {
@@ -221,7 +328,7 @@ export async function getLatestNetflix(page = 1) {
   ]);
   const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
   
-  const mixed = [];
+  let mixed = [];
   const max = Math.max((movies.results || []).length, (tvs.results || []).length);
   for (let i = 0; i < max; i++) {
     if (movies.results?.[i]) {
@@ -231,6 +338,11 @@ export async function getLatestNetflix(page = 1) {
       mixed.push({ ...tvs.results[i], media_type: 'tv' });
     }
   }
+
+  if (isSafe) {
+    mixed = mixed.filter(isSafeItem);
+  }
+
   return { results: mixed };
 }
 
@@ -242,7 +354,7 @@ export async function getLatestPrime(page = 1) {
   ]);
   const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
   
-  const mixed = [];
+  let mixed = [];
   const max = Math.max((movies.results || []).length, (tvs.results || []).length);
   for (let i = 0; i < max; i++) {
     if (movies.results?.[i]) {
@@ -252,6 +364,11 @@ export async function getLatestPrime(page = 1) {
       mixed.push({ ...tvs.results[i], media_type: 'tv' });
     }
   }
+
+  if (isSafe) {
+    mixed = mixed.filter(isSafeItem);
+  }
+
   return { results: mixed };
 }
 
@@ -291,26 +408,42 @@ export async function getTop10Movies() {
   const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
   if (!res.ok) throw new Error('Failed to fetch top 10 movies');
   const data = await res.json();
-  return { results: (data.results || []).slice(0, 10) };
+  let results = data.results || [];
+  if (isSafeSearchOn()) {
+    results = results.filter(isSafeItem);
+  }
+  return { results: results.slice(0, 10) };
 }
 
 export async function getTop10Series() {
   const res = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
   if (!res.ok) throw new Error('Failed to fetch top 10 series');
   const data = await res.json();
-  return { results: (data.results || []).slice(0, 10) };
+  let results = data.results || [];
+  if (isSafeSearchOn()) {
+    results = results.filter(isSafeItem);
+  }
+  return { results: results.slice(0, 10) };
 }
 
 export async function getTrendingMovies(page = 1) {
   const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch trending movies');
-  return res.json();
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
 }
 
 export async function getTrendingTV(page = 1) {
   const res = await fetch(`https://api.themoviedb.org/3/trending/tv/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch trending series');
-  return res.json();
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
 }
 
 export async function getMediaImages(id, type, title = null) {

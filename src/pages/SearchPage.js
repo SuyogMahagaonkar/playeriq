@@ -2,7 +2,7 @@
 // PlayerIQ — Search Page (MovieBox Native)
 // ========================================
 
-import { searchMovieBox } from '../services/api.js';
+import { searchMovieBox, isSafeItem } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { addRecentSearch, getState, setState, removeRecentSearch } from '../services/state.js';
 import { createFooter } from '../components/Footer.js';
@@ -130,7 +130,8 @@ export async function renderSearchPage({ query, container }) {
         let personalizedData = [];
         try {
           const localWatchHistory = JSON.parse(localStorage.getItem('piq_continue_watching') || '[]');
-          personalizedData = localWatchHistory.slice(0, 3).map(item => ({
+          const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+          let mappedPersonalized = localWatchHistory.map(item => ({
             id: item.id,
             title: item.title,
             poster_path: item.poster_path,
@@ -139,6 +140,10 @@ export async function renderSearchPage({ query, container }) {
             type: item.type,
             isPersonalized: true
           }));
+          if (isSafe) {
+            mappedPersonalized = mappedPersonalized.filter(isSafeItem);
+          }
+          personalizedData = mappedPersonalized.slice(0, 3);
         } catch (e) {
           console.warn(e);
         }
