@@ -540,22 +540,22 @@ export async function renderHomePage({ container }) {
           </button>
           <div class="studio-row-scroll content-row-scroll">
             <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Disney%2B_logo.svg/512px-Disney%2B_logo.svg.png" alt="Disney+" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/disneyplus/disneyplus-ar21.svg" alt="Disney+" />
             </div>
             <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/HBO_Max_Logo.svg/512px-HBO_Max_Logo.svg.png" alt="HBO Max" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/hbomax/hbomax-ar21.svg" alt="HBO Max" />
             </div>
             <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/512px-Netflix_2015_logo.svg.png" alt="Netflix" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
             </div>
             <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Amazon_Prime_Video_logo.svg/512px-Amazon_Prime_Video_logo.svg.png" alt="Prime Video" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/amazon_prime/amazon_prime-ar21.svg" alt="Prime Video" />
             </div>
             <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Paramount%2B_logo.svg/512px-Paramount%2B_logo.svg.png" alt="Paramount+" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/paramountplus/paramountplus-ar21.svg" alt="Paramount+" />
             </div>
             <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
-              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Marvel-Studios_Logo.svg/512px-Marvel-Studios_Logo.svg.png" alt="Marvel" />
+              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/marvel/marvel-ar21.svg" alt="Marvel" />
             </div>
           </div>
           <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
