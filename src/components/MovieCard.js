@@ -331,12 +331,28 @@ export function attachCardClicks(container) {
           if (previewCard) previewCard.classList.add('active');
         }, 10);
 
-        // Fade in iframe after 1800ms once initial YouTube controls have loaded & hidden
-        setTimeout(() => {
+        // Setup real-time YouTube PLAYING state detection via postMessage JS API
+        let ytListener = (e) => {
+          try {
+            const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+            const isPlaying = (data && (data.event === 'onStateChange' && data.info === 1)) || 
+                              (data && (data.event === 'infoDelivery' && data.info?.playerState === 1));
+            if (isPlaying) {
+              const iframe = previewCard?.querySelector('.preview-iframe');
+              if (iframe) {
+                iframe.classList.add('playing');
+              }
+            }
+          } catch (err) {}
+        };
+        window.addEventListener('message', ytListener);
+
+        // Fail-safe fallback timer (in case of network handshake drops)
+        const fallbackTimer = setTimeout(() => {
           if (previewCard) {
             previewCard.querySelector('.preview-iframe')?.classList.add('playing');
           }
-        }, 1800);
+        }, 2200);
 
         // Fetch User and setup wishlist trigger state
         const user = getUser();
@@ -422,6 +438,8 @@ export function attachCardClicks(container) {
 
         // Dismiss handlers
         const destroyPreview = () => {
+          window.removeEventListener('message', ytListener);
+          clearTimeout(fallbackTimer);
           if (!previewCard) return;
           const target = previewCard;
           previewCard = null;
