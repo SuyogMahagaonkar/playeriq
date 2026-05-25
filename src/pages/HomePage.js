@@ -1,4 +1,21 @@
-import { getLatestNetflix, getLatestPrime, getTop10Movies, getTop10Series, getMediaImages, isSafeItem, getTrendingAll, getBollywoodMovies, getSouthIndianMovies, getCinemaMovies } from '../services/api.js';
+import { 
+  getLatestNetflix, 
+  getLatestPrime, 
+  getTop10Movies, 
+  getTop10Series, 
+  getMediaImages, 
+  isSafeItem, 
+  getTrendingAll, 
+  getBollywoodMovies, 
+  getSouthIndianMovies, 
+  getCinemaMovies,
+  getHorrorMovies,
+  getRomanceMovies,
+  getSciFiMovies,
+  getKidsMovies,
+  getComedyMovies,
+  getAnimeMovies
+} from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
 import { createMovieCard } from '../components/MovieCard.js';
@@ -34,7 +51,22 @@ export async function renderHomePage({ container }) {
   }
 
   try {
-    const [trendingAllData, netflixData, primeData, top10MoviesData, top10SeriesData, bollywoodData, southIndianData, cinemaData] = await Promise.all([
+    const [
+      trendingAllData, 
+      netflixData, 
+      primeData, 
+      top10MoviesData, 
+      top10SeriesData, 
+      bollywoodData, 
+      southIndianData, 
+      cinemaData,
+      horrorData,
+      romanceData,
+      scifiData,
+      kidsData,
+      comedyData,
+      animeData
+    ] = await Promise.all([
       getTrendingAll().catch(() => ({ results: [] })),
       getLatestNetflix().catch(() => ({ results: [] })),
       getLatestPrime().catch(() => ({ results: [] })),
@@ -42,7 +74,13 @@ export async function renderHomePage({ container }) {
       getTop10Series().catch(() => ({ results: [] })),
       getBollywoodMovies().catch(() => ({ results: [] })),
       getSouthIndianMovies().catch(() => ({ results: [] })),
-      getCinemaMovies().catch(() => ({ results: [] }))
+      getCinemaMovies().catch(() => ({ results: [] })),
+      getHorrorMovies().catch(() => ({ results: [] })),
+      getRomanceMovies().catch(() => ({ results: [] })),
+      getSciFiMovies().catch(() => ({ results: [] })),
+      getKidsMovies().catch(() => ({ results: [] })),
+      getComedyMovies().catch(() => ({ results: [] })),
+      getAnimeMovies().catch(() => ({ results: [] }))
     ]);
     
     // Find banner section (using top trending blockbusters of the week from TMDB!)
@@ -490,6 +528,175 @@ export async function renderHomePage({ container }) {
       );
     }
 
+    // 8. Studios Brand Carousel HTML
+    const studiosHTML = `
+      <section class="content-row studios-section">
+        <div class="content-row-header" style="padding-left: 45px;">
+          <h2 class="content-row-title"><i data-lucide="clapperboard" class="search-section-icon" style="color:#ffae00;"></i> Featured Studios</h2>
+        </div>
+        <div class="content-row-container">
+          <button class="content-row-arrow content-row-arrow-left" aria-label="Scroll left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="studio-row-scroll content-row-scroll">
+            <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Disney%2B_logo.svg/512px-Disney%2B_logo.svg.png" alt="Disney+" />
+            </div>
+            <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/HBO_Max_Logo.svg/512px-HBO_Max_Logo.svg.png" alt="HBO Max" />
+            </div>
+            <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/512px-Netflix_2015_logo.svg.png" alt="Netflix" />
+            </div>
+            <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Amazon_Prime_Video_logo.svg/512px-Amazon_Prime_Video_logo.svg.png" alt="Prime Video" />
+            </div>
+            <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Paramount%2B_logo.svg/512px-Paramount%2B_logo.svg.png" alt="Paramount+" />
+            </div>
+            <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
+              <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Marvel-Studios_Logo.svg/512px-Marvel-Studios_Logo.svg.png" alt="Marvel" />
+            </div>
+          </div>
+          <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </section>
+    `;
+
+    // 9. Horror Row
+    const mappedHorror = (horrorData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let horrorHTML = '';
+    if (mappedHorror.length > 0) {
+      horrorHTML = createContentRow(
+        `<i data-lucide="skull" class="search-section-icon" style="color:#a855f7;"></i> Horror Hits`,
+        mappedHorror,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 10. Romance Row
+    const mappedRomance = (romanceData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let romanceHTML = '';
+    if (mappedRomance.length > 0) {
+      romanceHTML = createContentRow(
+        `<i data-lucide="heart" class="search-section-icon" style="color:#ff0055;"></i> Romance & Love`,
+        mappedRomance,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 11. Sci-Fi Row
+    const mappedSciFi = (scifiData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let scifiHTML = '';
+    if (mappedSciFi.length > 0) {
+      scifiHTML = createContentRow(
+        `<i data-lucide="orbit" class="search-section-icon" style="color:#00e5ff;"></i> Sci-Fi & Fantasy`,
+        mappedSciFi,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 12. Kids Row
+    const mappedKids = (kidsData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let kidsHTML = '';
+    if (mappedKids.length > 0) {
+      kidsHTML = createContentRow(
+        `<i data-lucide="smile" class="search-section-icon" style="color:#ffc107;"></i> Family & Kids`,
+        mappedKids,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 13. Comedy Row
+    const mappedComedy = (comedyData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let comedyHTML = '';
+    if (mappedComedy.length > 0) {
+      comedyHTML = createContentRow(
+        `<i data-lucide="laugh" class="search-section-icon" style="color:#4caf50;"></i> Comedy Zone`,
+        mappedComedy,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
+    // 14. Anime Row
+    const mappedAnime = (animeData.results || []).slice(0, 15).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: 'movie'
+    }));
+    let animeHTML = '';
+    if (mappedAnime.length > 0) {
+      animeHTML = createContentRow(
+        `<i data-lucide="sparkles" class="search-section-icon" style="color:#ff7600;"></i> Anime Chronicles`,
+        mappedAnime,
+        'mixed',
+        null,
+        'portrait'
+      );
+    }
+
     const top10ToggleHTML = `
       <div class="top10-mobile-toggle" style="display: none;">
         <div class="top10-toggle-pills">
@@ -500,7 +707,8 @@ export async function renderHomePage({ container }) {
       </div>
     `;
 
-    container.innerHTML = heroHTML + continueWatchingHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + createFooter();
+    // Assembly including Featured Studios brand cards row, original shelves, and newly added TMDB genre carousels!
+    container.innerHTML = heroHTML + continueWatchingHTML + studiosHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + horrorHTML + romanceHTML + scifiHTML + kidsHTML + comedyHTML + animeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + createFooter();
 
     // Inject outline top 10 style
     const top10Style = document.createElement('style');
@@ -549,6 +757,14 @@ export async function renderHomePage({ container }) {
 
     // Wire up Top 10 clicks
     container.querySelectorAll('.top10-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const route = card.dataset.route;
+        if (route) window.location.hash = route;
+      });
+    });
+
+    // Wire up Studio clicks
+    container.querySelectorAll('.studio-card').forEach(card => {
       card.addEventListener('click', () => {
         const route = card.dataset.route;
         if (route) window.location.hash = route;

@@ -516,3 +516,137 @@ export async function getCinemaMovies(page = 1) {
   }
   return data;
 }
+
+// ========================================
+// TMDB Genre Discover Services
+// ========================================
+
+export async function getHorrorMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=27&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Horror movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getRomanceMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=10749&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Romance movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getSciFiMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=878&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Sci-Fi movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getKidsMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=10751&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Family/Kids movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getComedyMovies(page = 1) {
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=35&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Comedy movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+export async function getAnimeMovies(page = 1) {
+  // TMDB Genre 16 is Animation, Japanese original language is specific to Japanese Anime!
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=${page}`);
+  if (!res.ok) throw new Error('Failed to fetch Anime movies');
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+
+// ========================================
+// TMDB Studios Discover Service
+// ========================================
+
+export async function getStudioContent(studioName, page = 1) {
+  const isSafe = isSafeSearchOn();
+  let urlMovies = '';
+  let urlTv = '';
+  
+  const cleanName = studioName.toLowerCase().replace(/[^a-z0-9+]/g, '');
+  
+  if (cleanName.includes('disney')) {
+    // Watch providers: 122 (Disney+ Hotstar IN) and 337 (Disney+ US)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=122|337&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=122|337&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('hbo')) {
+    // TV network 49 (HBO), Production company 3268 (HBO Films)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=3268|9993&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_networks=49&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('netflix')) {
+    // Watch provider 8 (Netflix IN)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('prime')) {
+    // Watch provider 119 (Amazon Prime IN)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('paramount')) {
+    // Paramount Pictures company ID: 4, CBS network ID: 1025
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=4|34&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_networks=1025&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('marvel')) {
+    // Marvel Studios production company ID: 420
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
+  } else {
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
+  }
+
+  const [moviesRes, tvRes] = await Promise.all([
+    fetch(urlMovies),
+    fetch(urlTv)
+  ]);
+  
+  const [movies, tvs] = await Promise.all([
+    moviesRes.ok ? moviesRes.json() : { results: [] },
+    tvRes.ok ? tvRes.json() : { results: [] }
+  ]);
+  
+  let mixed = [];
+  const max = Math.max((movies.results || []).length, (tvs.results || []).length);
+  for (let i = 0; i < max; i++) {
+    if (movies.results?.[i]) {
+      mixed.push({ ...movies.results[i], media_type: 'movie' });
+    }
+    if (tvs.results?.[i]) {
+      mixed.push({ ...tvs.results[i], media_type: 'tv' });
+    }
+  }
+
+  if (isSafe) {
+    mixed = mixed.filter(isSafeItem);
+  }
+
+  return { results: mixed };
+}
+

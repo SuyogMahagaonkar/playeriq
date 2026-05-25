@@ -2,7 +2,19 @@
 // PlayerIQ — Dynamic Category Page
 // ========================================
 
-import { getMovieBoxHome, searchMovieBox, getLatestNetflix, getLatestPrime } from '../services/api.js';
+import { 
+  getMovieBoxHome, 
+  searchMovieBox, 
+  getLatestNetflix, 
+  getLatestPrime,
+  getHorrorMovies,
+  getRomanceMovies,
+  getSciFiMovies,
+  getKidsMovies,
+  getComedyMovies,
+  getAnimeMovies,
+  getStudioContent
+} from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
 
@@ -65,6 +77,22 @@ export async function renderCategoryPage({ container, query }) {
   const cleanTitle = cleanStringForMatching(categoryTitle);
   const isNetflix = cleanTitle === 'latest from netflix' || cleanTitle === 'netflix';
   const isPrime = cleanTitle === 'latest from prime' || cleanTitle === 'latest from prime video' || cleanTitle === 'prime';
+  
+  // Genres matching
+  const isHorror = cleanTitle.includes('horror');
+  const isRomance = cleanTitle.includes('romance') || cleanTitle.includes('romantic');
+  const isSciFi = cleanTitle.includes('sci-fi') || cleanTitle.includes('scifi') || cleanTitle.includes('science fiction');
+  const isKids = cleanTitle.includes('kids') || cleanTitle.includes('family') || cleanTitle.includes('children');
+  const isComedy = cleanTitle.includes('comedy');
+  const isAnime = cleanTitle.includes('anime') || cleanTitle.includes('animation');
+
+  // Studios matching
+  const isDisney = cleanTitle.includes('disney');
+  const isHbo = cleanTitle.includes('hbo');
+  const isParamount = cleanTitle.includes('paramount');
+  const isMarvel = cleanTitle.includes('marvel');
+
+  const isLiveProvider = isNetflix || isPrime || isHorror || isRomance || isSciFi || isKids || isComedy || isAnime || isDisney || isHbo || isParamount || isMarvel;
 
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
@@ -111,7 +139,35 @@ export async function renderCategoryPage({ container, query }) {
   }
 
   const fetchTMDBPage = async (page) => {
-    const data = isNetflix ? await getLatestNetflix(page) : await getLatestPrime(page);
+    let data;
+    if (isNetflix) {
+      data = await getLatestNetflix(page);
+    } else if (isPrime) {
+      data = await getLatestPrime(page);
+    } else if (isHorror) {
+      data = await getHorrorMovies(page);
+    } else if (isRomance) {
+      data = await getRomanceMovies(page);
+    } else if (isSciFi) {
+      data = await getSciFiMovies(page);
+    } else if (isKids) {
+      data = await getKidsMovies(page);
+    } else if (isComedy) {
+      data = await getComedyMovies(page);
+    } else if (isAnime) {
+      data = await getAnimeMovies(page);
+    } else if (isDisney) {
+      data = await getStudioContent('Disney+', page);
+    } else if (isHbo) {
+      data = await getStudioContent('HBO Max', page);
+    } else if (isParamount) {
+      data = await getStudioContent('Paramount+', page);
+    } else if (isMarvel) {
+      data = await getStudioContent('Marvel', page);
+    } else {
+      data = { results: [] };
+    }
+
     return (data.results || []).map(item => ({
       id: item.id,
       title: item.title || item.name,
@@ -120,13 +176,13 @@ export async function renderCategoryPage({ container, query }) {
       backdrop_path: item.backdrop_path,
       vote_average: item.vote_average,
       release_date: item.release_date || item.first_air_date,
-      media_type: item.media_type
+      media_type: item.media_type || 'movie'
     }));
   };
 
   try {
-    if (isNetflix || isPrime) {
-      console.log(`[CategoryPage] Fetching page 1 of live ${isNetflix ? 'Netflix' : 'Prime'} catalog...`);
+    if (isLiveProvider) {
+      console.log(`[CategoryPage] Fetching page 1 of live ${categoryTitle} catalog...`);
       const pageItems = await fetchTMDBPage(1);
       allItems = [...pageItems];
     } else {
@@ -163,10 +219,10 @@ export async function renderCategoryPage({ container, query }) {
     }
 
     filteredItems = [...allItems];
-    renderGrid(isNetflix || isPrime);
+    renderGrid(isLiveProvider);
 
-    // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category (Skipped for Netlix/Prime since they use live APIs!) ----
-    if (!isNetflix && !isPrime) {
+    // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category (Skipped for live providers!) ----
+    if (!isLiveProvider) {
       const enrichmentKeyword = getEnrichmentQuery(categoryTitle);
       if (enrichmentKeyword) {
         searchMovieBox(enrichmentKeyword).then(data => {
@@ -214,18 +270,18 @@ export async function renderCategoryPage({ container, query }) {
         filteredItems = [...allItems];
       }
       currentPage = 1;
-      renderGrid(isNetflix || isPrime);
+      renderGrid(isLiveProvider);
     });
 
     container.querySelector('#category-load-more-btn')?.addEventListener('click', async (e) => {
-      if (isNetflix || isPrime) {
+      if (isLiveProvider) {
         const btn = e.currentTarget;
         btn.disabled = true;
         btn.innerHTML = 'Loading more...';
         
         try {
           tmdbPage++;
-          console.log(`[CategoryPage] Fetching page ${tmdbPage} of live ${isNetflix ? 'Netflix' : 'Prime'} catalog...`);
+          console.log(`[CategoryPage] Fetching page ${tmdbPage} of live ${categoryTitle} catalog...`);
           const nextItems = await fetchTMDBPage(tmdbPage);
           if (nextItems.length > 0) {
             // Deduplicate

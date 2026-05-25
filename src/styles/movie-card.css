@@ -489,3 +489,144 @@
     display: none !important;
   }
 }
+
+/* ========================================
+   PlayerIQ — Luxury Studios Brand Cards
+   ======================================== */
+
+.studio-row-scroll {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-xl) var(--space-lg);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+}
+
+.studio-row-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.studio-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 210px;
+  height: 118px; /* High-fidelity cinematic 16:9 aspect ratio */
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+/* Base transparent PNG/SVG logo settings */
+.studio-logo {
+  width: 70%;
+  height: 65%;
+  object-fit: contain;
+  z-index: 2;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+}
+
+/* Subtle brand gradient gloss overlays */
+.studio-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 80%);
+  opacity: 0.8;
+  z-index: 1;
+  transition: opacity 0.4s;
+}
+
+/* Interactive Hover Transitions */
+.studio-card:hover {
+  transform: translateY(-8px) scale(1.04) rotateX(2deg);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.studio-card:hover .studio-logo {
+  transform: translateZ(20px) scale(1.08);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+}
+
+.studio-card:hover::before {
+  opacity: 1;
+}
+
+/* Disney+ Theming */
+.studio-disney {
+  background: linear-gradient(135deg, #0e1e40 0%, #070e26 100%);
+}
+.studio-disney:hover {
+  box-shadow: 0 15px 35px rgba(0, 110, 255, 0.32), 0 0 15px rgba(0, 110, 255, 0.15);
+}
+
+/* HBO Max Theming */
+.studio-hbo {
+  background: linear-gradient(135deg, #3d0066 0%, #170033 100%);
+}
+.studio-hbo:hover {
+  box-shadow: 0 15px 35px rgba(175, 0, 255, 0.32), 0 0 15px rgba(175, 0, 255, 0.15);
+}
+
+/* Netflix Theming */
+.studio-netflix {
+  background: linear-gradient(135deg, #1f0505 0%, #0d0101 100%);
+}
+.studio-netflix:hover {
+  box-shadow: 0 15px 35px rgba(229, 9, 20, 0.32), 0 0 15px rgba(229, 9, 20, 0.15);
+}
+
+/* Prime Video Theming */
+.studio-prime {
+  background: linear-gradient(135deg, #021a30 0%, #010c17 100%);
+}
+.studio-prime:hover {
+  box-shadow: 0 15px 35px rgba(0, 168, 225, 0.32), 0 0 15px rgba(0, 168, 225, 0.15);
+}
+
+/* Paramount+ Theming */
+.studio-paramount {
+  background: linear-gradient(135deg, #0b2f61 0%, #03142e 100%);
+}
+.studio-paramount:hover {
+  box-shadow: 0 15px 35px rgba(0, 100, 255, 0.32), 0 0 15px rgba(0, 100, 255, 0.15);
+}
+
+/* Marvel Theming */
+.studio-marvel {
+  background: linear-gradient(135deg, #4d0006 0%, #210002 100%);
+}
+.studio-marvel:hover {
+  box-shadow: 0 15px 35px rgba(240, 20, 30, 0.32), 0 0 15px rgba(240, 20, 30, 0.15);
+}
+
+/* Mobile responsive widths for Brand Cards */
+@media (max-width: 767px) {
+  .studio-card {
+    width: 140px;
+    height: 78px;
+    border-radius: 8px;
+  }
+  .studio-card:hover {
+    transform: none !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+  }
+}
+
