@@ -545,3 +545,19 @@
     margin-right: var(--space-xs);
   }
 }
+
+/* ---- Discover Pages Custom Spotlight Banner Adjustments (Movies / TV) ---- */
+.discover-spotlight {
+  height: 380px !important;
+  margin-bottom: var(--space-lg) !important;
+}
+
+.discover-spotlight .spotlight-backdrop {
+  object-position: center 20% !important;
+}
+
+@media (max-width: 767px) {
+  .discover-spotlight {
+    height: auto !important;
+  }
+}

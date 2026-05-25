@@ -1,15 +1,16 @@
 // ========================================
-// PlayerIQ — Movies Page (MovieBox Native)
+// PlayerIQ — Movies Page (Cinematic Discover)
 // ========================================
 
-import { searchMovieBox } from '../services/api.js';
+import { searchMovieBox, getMediaImages, img } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
+import { navigate } from '../services/router.js';
 
 let currentQuery = '';
 let isLoading = false;
 
-// Predefined categories for MovieBox since it lacks a native discover endpoint
+// Predefined categories for MovieBox
 const CATEGORIES = [
   { id: 'hindi', name: 'Hindi Dubbed' },
   { id: 'action', name: 'Action' },
@@ -35,10 +36,13 @@ export async function renderMoviesPage({ container, query }) {
           <button class="genre-pill ${currentQuery === g.id ? 'active' : ''}" data-query="${g.id}">${g.name}</button>
         `).join('')}
       </div>
-      <div class="movie-grid stagger-children" id="movie-grid"></div>
-      <div class="load-more-trigger" id="load-more" style="display: none;">
-        <div class="load-more-spinner"></div>
+      
+      <!-- Dynamic Category Spotlight Banner -->
+      <div id="category-spotlight">
+        <div class="load-more-trigger"><div class="load-more-spinner"></div></div>
       </div>
+      
+      <div class="movie-grid stagger-children" id="movie-grid"></div>
     </div>
     ${createFooter()}
   `;
@@ -63,8 +67,13 @@ export async function renderMoviesPage({ container, query }) {
 async function loadMovies(container) {
   if (isLoading) return;
   isLoading = true;
+  
+  const spotlightEl = document.getElementById('category-spotlight');
   const grid = document.getElementById('movie-grid');
   
+  if (spotlightEl && !spotlightEl.innerHTML) {
+    spotlightEl.innerHTML = '<div class="load-more-trigger"><div class="load-more-spinner"></div></div>';
+  }
   if (grid && !grid.innerHTML) {
     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Searching MovieBox...</div>';
   }
@@ -73,13 +82,91 @@ async function loadMovies(container) {
     // Search MovieBox for the category keyword, filter to movies only (type=1)
     const data = await searchMovieBox(currentQuery, '1');
     
-    if (!grid) return;
+    if (!spotlightEl || !grid) return;
 
     if (!data.results || data.results.length === 0) {
+      spotlightEl.innerHTML = '';
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No movies found.</div>';
     } else {
-      const cards = data.results.map(m => {
-        // Map MovieBox search result to common format
+      const topItem = data.results[0];
+      const itemsForGrid = data.results.slice(1);
+      
+      // Parallelize TMDB logo and metadata enrichments
+      const topId = `mb_${topItem.subject_id || topItem.id || topItem.subjectId}`;
+      const topTitle = topItem.title;
+      
+      const imagesData = await getMediaImages(topId, 'movie', topTitle).catch(() => null);
+      
+      let logoHTML = `<h1 class="spotlight-title">${topTitle}</h1>`;
+      if (imagesData && imagesData.logos && imagesData.logos.length > 0) {
+        const enLogo = imagesData.logos.find(l => l.iso_639_1 === 'en');
+        const hiLogo = imagesData.logos.find(l => l.iso_639_1 === 'hi');
+        const bestLogo = enLogo || hiLogo || imagesData.logos[0];
+        if (bestLogo) {
+          logoHTML = `
+            <div class="spotlight-logo-container">
+              <img class="spotlight-logo-img" src="https://image.tmdb.org/t/p/w500${bestLogo.file_path}" alt="${topTitle} Logo" />
+            </div>
+          `;
+        }
+      }
+
+      const rating = topItem.imdbRate ? parseFloat(topItem.imdbRate).toFixed(1) : '—';
+      const year = (topItem.releaseDate || topItem.release_date || topItem.year || '').slice(0, 4);
+      const overview = topItem.description || 'Watch the popular movie release now.';
+      const spotlightRoute = `/movie/${topId}`;
+      const playRoute = `/watch/movie/${topId}`;
+      const backdropUrl = topItem.cover?.url || topItem.cover_url || topItem.poster_path || '';
+
+      // Spotlight Hero HTML (Featured Movie)
+      const spotlightHTML = `
+        <div class="ranking-spotlight discover-spotlight" data-route="${spotlightRoute}">
+          <img class="spotlight-backdrop" src="${img.backdrop(backdropUrl)}" alt="${topTitle} Backdrop" loading="eager" />
+          <div class="spotlight-gradient-left"></div>
+          <div class="spotlight-gradient-bottom"></div>
+          
+          <div class="spotlight-content">
+            <div class="spotlight-card">
+              <div class="spotlight-badge">
+                <i data-lucide="sparkles" style="width:12px;height:12px;margin-right:4px"></i>
+                Featured Movie
+              </div>
+              ${logoHTML}
+              <div class="spotlight-meta">
+                <span class="spotlight-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  ${rating}
+                </span>
+                <span class="spotlight-dot"></span>
+                <span>${year}</span>
+                <span class="spotlight-dot"></span>
+                <span>Movie</span>
+              </div>
+              <p class="spotlight-overview">${overview}</p>
+              <div class="spotlight-actions">
+                <button class="hero-btn hero-btn-primary" data-action="play" data-route="${playRoute}">
+                  <i data-lucide="play" style="width:16px;height:16px"></i>
+                  Watch Now
+                </button>
+                <button class="hero-btn hero-btn-secondary" data-action="details" data-route="${spotlightRoute}">
+                  <i data-lucide="info" style="width:16px;height:16px"></i>
+                  More Info
+                </button>
+              </div>
+            </div>
+            
+            ${backdropUrl 
+              ? `<div class="spotlight-poster-wrapper"><img class="spotlight-poster" src="${img.poster(backdropUrl)}" alt="${topTitle} Poster" loading="eager" /></div>` 
+              : ''
+            }
+          </div>
+        </div>
+      `;
+
+      spotlightEl.innerHTML = spotlightHTML;
+
+      // Render remaining movies in the grid
+      const cards = itemsForGrid.map(m => {
         const mapped = {
           id: `mb_${m.subject_id || m.id || m.subjectId}`,
           title: m.title,
@@ -92,6 +179,21 @@ async function loadMovies(container) {
       
       grid.innerHTML = cards;
       attachCardClicks(grid);
+
+      // Clicks for spotlight
+      spotlightEl.querySelectorAll('[data-route]').forEach(card => {
+        card.addEventListener('click', (e) => {
+          const actionBtn = e.target.closest('[data-action]');
+          if (actionBtn) {
+            e.stopPropagation();
+            navigate(actionBtn.dataset.route);
+            return;
+          }
+          navigate(card.dataset.route);
+        });
+      });
+
+      if (window.lucide) window.lucide.createIcons();
     }
   } catch (err) {
     console.error('Movies load error:', err);
