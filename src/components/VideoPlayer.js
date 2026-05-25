@@ -18,11 +18,22 @@ import Hls from 'hls.js';
  * @param {Object} options - { onProgress, onFatalError, onEnded, startTime, existingVideo }
  * @returns {{ destroy: Function }} cleanup handle
  */
-export function createVideoPlayer(container, streamData, { onProgress = null, onFatalError = null, onEnded = null, startTime = 0, existingVideo = null } = {}) {
+export function createVideoPlayer(container, streamData, {
+  onProgress = null,
+  onFatalError = null,
+  onEnded = null,
+  startTime = 0,
+  existingVideo = null,
+  episodes = [],
+  currentSeason = 1,
+  currentEpisode = 1,
+  goToEpisode = null
+} = {}) {
   let hls = null;
   let controlsTimeout = null;
   let isDragging = false;
   let playInterval = null;
+  let isEpisodesVisible = false; // Tracks if Episodes Overlay is open
 
   const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
   const isSkipRecapsEnabled = localStorage.getItem('piq_skip_recaps') === 'true';
@@ -266,6 +277,25 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
           <div class="vp-dialog-footer">
             <button class="vp-dialog-cancel-btn" id="vp-dialog-cancel-btn">CANCEL</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Episodes List Overlay -->
+      <div id="vp-episodes-overlay" class="vp-episodes-overlay hidden">
+        <div class="vp-episodes-header">
+          <h3 class="vp-episodes-overlay-title">Episodes</h3>
+          <button class="vp-episodes-close-btn" id="vp-episodes-close-btn" aria-label="Close Episodes list">✕</button>
+        </div>
+        <div class="vp-episodes-carousel-wrapper">
+          <button class="vp-episodes-arrow left" id="vp-episodes-arrow-left" aria-label="Scroll left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="vp-episodes-carousel" id="vp-episodes-carousel">
+            <!-- Cards rendered dynamically -->
+          </div>
+          <button class="vp-episodes-arrow right" id="vp-episodes-arrow-right" aria-label="Scroll right">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -577,18 +607,153 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       }
     }
 
-    // Episodes / Related option: exits fullscreen and scrolls to mobile section
+    function renderEpisodeCards() {
+      const carousel = document.getElementById('vp-episodes-carousel');
+      if (!carousel || !episodes || episodes.length === 0) return;
+
+      carousel.innerHTML = episodes.map(ep => {
+        const isCurrent = ep.episode_number === currentEpisode;
+        
+        let thumbUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="60" viewBox="0 0 100 60"%3E%3Crect width="100%" height="100%" fill="%23141418"/%3E%3Ccircle cx="50" cy="30" r="10" fill="%23a855f7" opacity="0.3"/%3E%3C/svg%3E';
+        if (ep.still_path) {
+          thumbUrl = `https://image.tmdb.org/t/p/w300${ep.still_path}`;
+        } else if (streamData.backdrop) {
+          thumbUrl = `https://image.tmdb.org/t/p/w300${streamData.backdrop}`;
+        } else if (streamData.poster) {
+          thumbUrl = `https://image.tmdb.org/t/p/w300${streamData.poster}`;
+        }
+
+        const titleText = ep.name || `Episode ${ep.episode_number}`;
+        const runtimeText = ep.runtime ? `${ep.runtime} min` : '';
+
+        const progressPct = ep.progress || 0;
+        const progressBarHTML = progressPct > 0 ? `
+          <div class="vp-episode-progress-wrap">
+            <div class="vp-episode-progress-fill" style="width: ${progressPct}%;"></div>
+          </div>
+        ` : '';
+
+        return `
+          <div class="vp-episode-card ${isCurrent ? 'active' : ''}" 
+               data-episode="${ep.episode_number}" 
+               data-season="${currentSeason}"
+               tabindex="0"
+               role="button"
+               aria-label="Episode ${ep.episode_number}: ${titleText}. ${runtimeText}">
+            <div class="vp-episode-thumb-wrapper">
+              <img class="vp-episode-thumb" src="${thumbUrl}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\x22http://www.w3.org/2000/svg\x22 width=\x22100\x22 height=\x2260\x22 viewBox=\x220 0 100 60\x22%3E%3Crect width=\x22100%25\x22 height=\x22100%25\x22 fill=\x22%23141418\x22/%3E%3C/svg%3E'" />
+              ${runtimeText ? `<span class="vp-episode-duration">${runtimeText}</span>` : ''}
+              ${progressBarHTML}
+            </div>
+            <div class="vp-episode-details">
+              <div class="vp-episode-meta">
+                <span class="vp-episode-num">E${ep.episode_number}</span>
+                <span class="vp-episode-title-text">${titleText}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      carousel.querySelectorAll('.vp-episode-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const epNum = parseInt(card.dataset.episode);
+          const sNum = parseInt(card.dataset.season);
+          if (goToEpisode) {
+            isEpisodesVisible = false;
+            toggleEpisodesOverlay(false);
+            goToEpisode(sNum, epNum);
+          }
+        });
+      });
+    }
+
+    function toggleEpisodesOverlay(visible) {
+      const overlay = document.getElementById('vp-episodes-overlay');
+      if (!overlay) return;
+
+      if (visible) {
+        // Hide other custom picker dialogs if they are open
+        closeCustomPicker();
+        
+        overlay.classList.remove('hidden');
+        overlay.classList.add('vp-visible');
+        optEpisodes.classList.add('selected');
+        
+        renderEpisodeCards();
+
+        // Scroll active episode into view
+        const activeCard = overlay.querySelector('.vp-episode-card.active');
+        if (activeCard) {
+          setTimeout(() => {
+            activeCard.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+          }, 150);
+        }
+
+        clearTimeout(controlsTimeout);
+      } else {
+        overlay.classList.remove('vp-visible');
+        overlay.classList.add('hidden');
+        optEpisodes.classList.remove('selected');
+        showControls();
+      }
+    }
+
+    // Episodes / Related option toggle
     if (optEpisodes) {
       optEpisodes.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-        setTimeout(() => {
-          const epSection = isTvShow
-            ? (document.querySelector('.mobile-player-episodes-section') || document.querySelector('.mobile-episodes-list') || document.querySelector('#mobile-episodes-list'))
-            : (document.querySelector('.mobile-player-section') || document.querySelector('.mobile-player-episodes-section'));
-          if (epSection) epSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 200);
+        if (isTvShow && episodes && episodes.length > 0) {
+          isEpisodesVisible = !isEpisodesVisible;
+          toggleEpisodesOverlay(isEpisodesVisible);
+        } else {
+          // Fallback Related items behavior for movies
+          if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+          setTimeout(() => {
+            const epSection = document.querySelector('.mobile-player-section') || document.querySelector('.mobile-player-episodes-section') || document.querySelector('.player-related');
+            if (epSection) epSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 200);
+        }
       });
+    }
+
+    // Close button overlay click
+    const epCloseBtn = document.getElementById('vp-episodes-close-btn');
+    if (epCloseBtn) {
+      epCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        isEpisodesVisible = false;
+        toggleEpisodesOverlay(false);
+      });
+    }
+
+    // Carousel arrows scroll hooks
+    const epArrowLeft = document.getElementById('vp-episodes-arrow-left');
+    const epArrowRight = document.getElementById('vp-episodes-arrow-right');
+    const epCarousel = document.getElementById('vp-episodes-carousel');
+
+    if (epArrowLeft && epArrowRight && epCarousel) {
+      epArrowLeft.addEventListener('click', (e) => {
+        e.stopPropagation();
+        epCarousel.scrollBy({ left: -320, behavior: 'smooth' });
+      });
+
+      epArrowRight.addEventListener('click', (e) => {
+        e.stopPropagation();
+        epCarousel.scrollBy({ left: 320, behavior: 'smooth' });
+      });
+
+      const updateArrows = () => {
+        const scrollLeft = epCarousel.scrollLeft;
+        const maxScroll = epCarousel.scrollWidth - epCarousel.clientWidth;
+        epArrowLeft.style.opacity = scrollLeft > 10 ? '1' : '0';
+        epArrowLeft.style.pointerEvents = scrollLeft > 10 ? 'auto' : 'none';
+        epArrowRight.style.opacity = scrollLeft < maxScroll - 10 ? '1' : '0';
+        epArrowRight.style.pointerEvents = scrollLeft < maxScroll - 10 ? 'auto' : 'none';
+      };
+
+      epCarousel.addEventListener('scroll', updateArrows);
+      setTimeout(updateArrows, 300);
     }
 
     // Sync vertical brightness slider automatically on filter mutation
@@ -1057,6 +1222,14 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
       const pct = (cur / dur) * 100;
       progressPlayed.style.width = pct + '%';
       progressInput.value = Math.round((cur / dur) * 1000);
+
+      // Real-time active episode card progress sync
+      if (isEpisodesVisible) {
+        const activeProgress = document.querySelector('.vp-episode-card.active .vp-episode-progress-fill');
+        if (activeProgress) {
+          activeProgress.style.width = pct + '%';
+        }
+      }
     }
     
     // Throttle progress reporting to avoid spamming localStorage
@@ -1097,7 +1270,7 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   }
 
   function hideControls() {
-    if (video.paused) return;
+    if (video.paused || isEpisodesVisible) return;
     controls.classList.remove('vp-visible');
     player.style.cursor = 'none';
     // Also fade the floating buttons — but keep lock btn visible (dimly) when locked
@@ -1853,6 +2026,47 @@ export function createVideoPlayer(container, streamData, { onProgress = null, on
   // Keyboard shortcuts
   function onKeyDown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+    if (isEpisodesVisible) {
+      if (e.key === 'Escape') {
+        isEpisodesVisible = false;
+        toggleEpisodesOverlay(false);
+        e.preventDefault();
+        return;
+      }
+      
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const carousel = document.getElementById('vp-episodes-carousel');
+        if (carousel) {
+          const cards = Array.from(carousel.querySelectorAll('.vp-episode-card'));
+          if (cards.length > 0) {
+            let activeIndex = cards.indexOf(document.activeElement);
+            if (activeIndex === -1) {
+              const currentActive = carousel.querySelector('.vp-episode-card.active');
+              if (currentActive) {
+                currentActive.focus();
+              } else {
+                cards[0].focus();
+              }
+              e.preventDefault();
+              return;
+            }
+            
+            if (e.key === 'ArrowRight' && activeIndex < cards.length - 1) {
+              cards[activeIndex + 1].focus();
+              cards[activeIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              e.preventDefault();
+            } else if (e.key === 'ArrowLeft' && activeIndex > 0) {
+              cards[activeIndex - 1].focus();
+              cards[activeIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              e.preventDefault();
+            }
+          }
+        }
+        return;
+      }
+    }
+
     switch (e.key) {
       case ' ':
       case 'k':

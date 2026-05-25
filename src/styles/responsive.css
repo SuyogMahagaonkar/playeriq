@@ -3793,6 +3793,7 @@
   }
 }
 
+@media (max-width: 768px) {
   /* ==========================================================================
      🎬 PREMIUM NETFLIX MOBILE PLAYER INTERFACE REDESIGN (≤768px ONLY)
      ========================================================================== */
@@ -4448,5 +4449,17 @@
   .mobile-player-container .vp-dialog-cancel-btn:active {
     background-color: rgba(168, 85, 247, 0.1) !important;
   }
+
+  /* Visual selected highlight state for the Episodes button */
+  .mobile-player-container .vp-mobile-opt.selected {
+    color: var(--accent, #A855F7) !important;
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.4) !important;
+  }
+
+  .mobile-player-container .vp-mobile-opt.selected svg {
+    stroke: var(--accent, #A855F7) !important;
+    filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.5)) !important;
+  }
+}
 
 

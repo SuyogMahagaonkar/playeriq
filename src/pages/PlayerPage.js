@@ -216,6 +216,28 @@ let tmdbRuntimeSeconds = null; // TMDB runtime in seconds — used as duration f
 let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runtime in seconds
 let episodeDetails = new Map(); // key: `S${season}E${ep}` — episode metadata (still_path, name, overview)
 let totalEpisodes = 0;
+let currentSeasonEpisodes = []; // Cached episodes list for in-player navigation
+
+async function cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes) {
+  try {
+    const history = await getWatchHistory().catch(() => []);
+    currentSeasonEpisodes = episodes.map(ep => {
+      const match = history.find(item => 
+        String(item.id) === String(tvId) && 
+        item.type === 'tv' && 
+        Number(item.season) === Number(seasonNumber) && 
+        Number(item.episode) === Number(ep.episode_number)
+      );
+      return {
+        ...ep,
+        progress: match && match.duration > 0 ? (match.currentTime / match.duration) * 100 : 0
+      };
+    });
+  } catch (err) {
+    console.warn('[cacheSeasonEpisodesWithProgress] failed:', err);
+    currentSeasonEpisodes = episodes;
+  }
+}
 
 function getEmbedUrl(tmdbId, isTV, season = 1, episode = 1, imdbId = null) {
   const source = SOURCES[currentSourceIndex] || SOURCES[0];
@@ -308,7 +330,7 @@ async function getSavedPlaybackTime(id, isTV, season, episode) {
 }
 
 // ---- Player Loader (Custom + Fallback) ----
-async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null) {
+async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null, goToEpisode = null) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
 
@@ -504,7 +526,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             console.warn('[Player] Offline player error callback');
           },
           onEnded,
-          startTime
+          startTime,
+          episodes: currentSeasonEpisodes,
+          currentSeason: season,
+          currentEpisode: episode,
+          goToEpisode
         }
       );
     };
@@ -689,7 +715,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
               loadIframeFallback();
             },
             onEnded,
-            startTime
+            startTime,
+            episodes: currentSeasonEpisodes,
+            currentSeason: season,
+            currentEpisode: episode,
+            goToEpisode
           }
         );
 
@@ -1273,9 +1303,9 @@ export async function renderPlayerPage({ params, container }) {
         episode_overview: epOverview
       });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     } else {
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     }
 
     // ---- Helper functions for episode navigation ----
@@ -1320,7 +1350,7 @@ export async function renderPlayerPage({ params, container }) {
         episode_overview: epOverview
       });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
       updateNowPlaying(currentSeason, currentEpisode);
     }
 
@@ -1583,7 +1613,7 @@ export async function renderPlayerPage({ params, container }) {
       // Replay button
       overlay.querySelector('.rec-replay-btn').addEventListener('click', () => {
         overlay.remove();
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
       });
     }
 
@@ -1609,7 +1639,7 @@ export async function renderPlayerPage({ params, container }) {
     document.getElementById('source-select')?.addEventListener('change', (e) => {
       currentSourceIndex = parseInt(e.target.value);
       localStorage.setItem('piq_source', currentSourceIndex);
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     });
 
     // Mode selector
@@ -1622,7 +1652,7 @@ export async function renderPlayerPage({ params, container }) {
         sourceSelect.style.display = currentPlayerMode === 'custom' ? 'none' : 'inline-block';
       }
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     });
 
     // TV season/episode handling
@@ -1634,7 +1664,7 @@ export async function renderPlayerPage({ params, container }) {
         currentEpisode = 1;
         // Update total episodes from the actual loaded season
         totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
         updateNowPlaying(currentSeason, currentEpisode);
       });
     }
@@ -1761,6 +1791,8 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
         overview: ep.overview || ''
       });
     });
+
+    await cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes);
 
     // Set tmdbRuntimeSeconds to the active episode's runtime right away
     const activeEpRuntime = episodeRuntimes.get(`S${seasonNumber}E${activeEpisode}`);
@@ -2339,6 +2371,8 @@ async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data
         overview: ep.overview || ''
       });
     });
+
+    await cacheSeasonEpisodesWithProgress(tvId, activeSeason, episodes);
 
     const activeEpRuntime = episodeRuntimes.get(`S${activeSeason}E${activeEpisode}`);
     if (activeEpRuntime) tmdbRuntimeSeconds = activeEpRuntime;
@@ -2992,11 +3026,15 @@ async function renderMobileLayout({
           onFatalError: () => {
             activePlayer.destroy();
             activePlayer = null;
-            loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+            loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
           },
           onEnded: handlePlaybackEnded,
           startTime: 0,
-          existingVideo: activeVideo
+          existingVideo: activeVideo,
+          episodes: currentSeasonEpisodes,
+          currentSeason,
+          currentEpisode,
+          goToEpisode
         }
       );
 
@@ -3040,7 +3078,7 @@ async function renderMobileLayout({
   }
 
   function startPlayback(seekTime = 0) {
-    loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode);
+    loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
   }
 
   function nextEpisode() {
