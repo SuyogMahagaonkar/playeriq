@@ -754,7 +754,7 @@ export async function renderSettingsPage({ container }) {
                 </div>
 
                 <!-- Cache Purge utility -->
-                <div class="settings-section">
+                <div class="settings-section settings-danger-card">
                   <div class="settings-section-title">Local Cache Optimizer</div>
                   
                   <div class="settings-row">
@@ -812,7 +812,7 @@ export async function renderSettingsPage({ container }) {
 
               <!-- Tab: Account -->
               <div class="settings-tab-panel" id="panel-account">
-                <div class="settings-section">
+                <div class="settings-section settings-danger-card">
                   <div class="settings-section-title">Account Safety & Session</div>
                   
                   <div class="settings-row">
