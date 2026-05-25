@@ -708,7 +708,7 @@ export async function renderHomePage({ container }) {
     `;
 
     // Assembly including Featured Studios brand cards row, original shelves, and newly added TMDB genre carousels!
-    container.innerHTML = heroHTML + continueWatchingHTML + studiosHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + horrorHTML + romanceHTML + scifiHTML + kidsHTML + comedyHTML + animeHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + createFooter();
+    container.innerHTML = heroHTML + continueWatchingHTML + studiosHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + horrorHTML + romanceHTML + scifiHTML + kidsHTML + comedyHTML + animeHTML + createFooter();
 
     // Inject outline top 10 style
     const top10Style = document.createElement('style');
