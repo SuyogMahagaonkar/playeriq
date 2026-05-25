@@ -148,8 +148,9 @@ export function attachCardClicks(container) {
     // ---- Hotstar-Style Desktop Hover Expander ----
     let previewCard = null;
     let isHovered = false;
+    let hoverTimer = null;
 
-    const handleMouseEnter = async () => {
+    const handleMouseEnter = () => {
       if (window.innerWidth <= 991) return; // Touch device responsive fallback
       
       // Do not trigger the dynamic hover expander preview popup for Continue Watching cards
@@ -157,39 +158,47 @@ export function attachCardClicks(container) {
         return;
       }
       
-      const route = card.dataset.route || '';
-      let type = '';
-      let id = '';
-      
-      if (route.includes('/watch/movie/')) {
-        type = 'movie';
-        id = route.split('/watch/movie/')[1]?.split('?')[0]?.replace('mb_', '');
-      } else if (route.includes('/watch/tv/')) {
-        type = 'tv';
-        id = route.split('/watch/tv/')[1]?.split('?')[0]?.replace('mb_', '');
-      } else if (route.includes('/movie/')) {
-        type = 'movie';
-        id = route.split('/movie/')[1]?.split('?')[0]?.replace('mb_', '');
-      } else if (route.includes('/tv/')) {
-        type = 'tv';
-        id = route.split('/tv/')[1]?.split('?')[0]?.replace('mb_', '');
-      }
-
-      if (!type || !id) return;
-
-      const initialHash = window.location.hash;
       isHovered = true;
-      // Fetch details from TMDB dynamically
-      let tmdbData = null;
-      try {
-        const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
-        if (res.ok) tmdbData = await res.json();
-      } catch (e) {
-        console.warn('Failed to fetch TMDB hover preview details', e);
-      }
+      
+      if (hoverTimer) clearTimeout(hoverTimer);
+      
+      // Set a premium 400ms debounce hover delay so rapid carousel scrolling does not trigger previews
+      hoverTimer = setTimeout(async () => {
+        if (!isHovered) return;
 
-      // Check if mouse has already left, route changed, or card was removed during the network request!
-      if (!isHovered || !card.isConnected || window.location.hash !== initialHash) return;
+        const route = card.dataset.route || '';
+        let type = '';
+        let id = '';
+        
+        if (route.includes('/watch/movie/')) {
+          type = 'movie';
+          id = route.split('/watch/movie/')[1]?.split('?')[0]?.replace('mb_', '');
+        } else if (route.includes('/watch/tv/')) {
+          type = 'tv';
+          id = route.split('/watch/tv/')[1]?.split('?')[0]?.replace('mb_', '');
+        } else if (route.includes('/movie/')) {
+          type = 'movie';
+          id = route.split('/movie/')[1]?.split('?')[0]?.replace('mb_', '');
+        } else if (route.includes('/tv/')) {
+          type = 'tv';
+          id = route.split('/tv/')[1]?.split('?')[0]?.replace('mb_', '');
+        }
+
+        if (!type || !id) return;
+
+        const initialHash = window.location.hash;
+        
+        // Fetch details from TMDB dynamically
+        let tmdbData = null;
+        try {
+          const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
+          if (res.ok) tmdbData = await res.json();
+        } catch (e) {
+          console.warn('Failed to fetch TMDB hover preview details', e);
+        }
+
+        // Check if mouse has already left, route changed, or card was removed during the network request!
+        if (!isHovered || !card.isConnected || window.location.hash !== initialHash) return;
 
       // Prevent duplicate overlays
       const existing = document.querySelector('.hover-preview-card');
@@ -485,10 +494,15 @@ export function attachCardClicks(container) {
 
         window.addEventListener('hashchange', destroyPreview);
         previewCard.addEventListener('mouseleave', destroyPreview);
+      }, 400);
     };
 
     const handleMouseLeave = () => {
       isHovered = false;
+      if (hoverTimer) {
+        clearTimeout(hoverTimer);
+        hoverTimer = null;
+      }
     };
 
     card.addEventListener('mouseenter', handleMouseEnter);
