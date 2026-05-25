@@ -342,12 +342,12 @@ export function attachCardClicks(container) {
               if (iframe && !iframe.classList.contains('playing') && !iframe.dataset.fadeTimerStarted) {
                 iframe.dataset.fadeTimerStarted = 'true';
                 
-                // Play silently in background for 2.2 seconds so YouTube's loading/skip/title overlays automatically slide out of sight
+                // Play silently in background for 3.0 seconds so YouTube's loading/skip/title overlays automatically slide out of sight
                 setTimeout(() => {
                   if (previewCard && iframe) {
                     iframe.classList.add('playing');
                   }
-                }, 2200);
+                }, 3000);
               }
             }
           } catch (err) {}
@@ -362,7 +362,7 @@ export function attachCardClicks(container) {
               iframe.classList.add('playing');
             }
           }
-        }, 4500);
+        }, 5000);
 
         // Fetch User and setup wishlist trigger state
         const user = getUser();
