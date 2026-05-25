@@ -543,6 +543,10 @@
   pointer-events: none;
 }
 
+.studio-logo-white {
+  filter: brightness(0) invert(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) !important;
+}
+
 /* Subtle brand gradient gloss overlays */
 .studio-card::before {
   content: '';
@@ -563,6 +567,10 @@
 .studio-card:hover .studio-logo {
   transform: translateZ(20px) scale(1.08);
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+}
+
+.studio-card:hover .studio-logo-white {
+  filter: brightness(0) invert(1) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) !important;
 }
 
 .studio-card:hover::before {

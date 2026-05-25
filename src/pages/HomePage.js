@@ -540,19 +540,19 @@ export async function renderHomePage({ container }) {
           </button>
           <div class="studio-row-scroll content-row-scroll">
             <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-              <img class="studio-logo" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />
+              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />
             </div>
             <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
-              <img class="studio-logo" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
+              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
             </div>
             <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
               <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
             </div>
             <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
-              <img class="studio-logo" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
+              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
             </div>
             <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
-              <img class="studio-logo" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
+              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
             </div>
             <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
               <img class="studio-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel" />
