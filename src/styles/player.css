@@ -677,3 +677,391 @@
     margin: 8px 10px !important;
   }
 }
+
+/* ==========================================================================
+   💎 ULTRA-PREMIUM DESKTOP OVERLAYS & EPISODE CARDS OVERHAUL (MIN-WIDTH: 992px)
+   ========================================================================== */
+@media (min-width: 992px) {
+  /* --- Dynamic Ambient Backdrop Glow --- */
+  .player-ambient-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center center;
+    filter: blur(100px) opacity(0.24) saturate(1.8);
+    pointer-events: none;
+    transition: background-image 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(1.1); /* Prevent blurred edges */
+  }
+
+  .player-page {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* --- Frosted Glassmorphism Overhauls --- */
+  .player-top-bar {
+    background: rgba(10, 10, 15, 0.72) !important;
+    backdrop-filter: blur(24px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.2) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .player-episodes-panel {
+    background: rgba(8, 8, 14, 0.68) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    max-height: calc(100vh - 58px) !important;
+  }
+
+  .player-episodes-header {
+    background: rgba(0, 0, 0, 0.25) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .player-info {
+    background: linear-gradient(180deg, rgba(8, 8, 14, 0.4) 0%, rgba(5, 5, 8, 0.9) 100%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  /* --- Premium Logo & Brand Injection --- */
+  .player-logo-container {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .player-logo-img {
+    max-width: 320px;
+    max-height: 110px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.7));
+    transition: transform 0.4s ease;
+  }
+
+  .player-logo-img:hover {
+    transform: scale(1.02);
+  }
+
+  /* --- High-Fidelity Badging --- */
+  .badge-premium-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .badge-premium {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  .badge-premium.badge-accent {
+    background: rgba(147, 51, 234, 0.15);
+    border-color: rgba(147, 51, 234, 0.4);
+    color: #c084fc;
+    box-shadow: 0 0 12px rgba(147, 51, 234, 0.15);
+  }
+
+  .badge-premium.badge-gold {
+    background: rgba(234, 179, 8, 0.1);
+    border-color: rgba(234, 179, 8, 0.35);
+    color: #fef08a;
+  }
+
+  /* --- Netflix-style Episode Cards --- */
+  .player-episodes-list {
+    padding: 12px !important;
+    gap: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .player-episode-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+  }
+
+  .player-episode-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .player-episode-card.active {
+    background: rgba(147, 51, 234, 0.06);
+    border-color: rgba(147, 51, 234, 0.35);
+    box-shadow: 0 0 25px rgba(147, 51, 234, 0.12);
+  }
+
+  /* Episode Thumbnail */
+  .player-episode-thumb-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .player-episode-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .player-episode-card:hover .player-episode-thumb {
+    transform: scale(1.06);
+  }
+
+  /* Play Icon Overlay */
+  .player-episode-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .player-episode-card:hover .player-episode-overlay {
+    opacity: 1;
+  }
+
+  .player-episode-play-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(229, 9, 20, 0.5);
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .player-episode-card:hover .player-episode-play-icon {
+    transform: scale(1);
+  }
+
+  /* Overlay Badges */
+  .player-episode-number-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(10, 10, 15, 0.75);
+    backdrop-filter: blur(4px);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .player-episode-duration-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(10, 10, 15, 0.75);
+    backdrop-filter: blur(4px);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Interactive Progress Bar at card bottom */
+  .card-progress-bar-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    z-index: 2;
+  }
+
+  .card-progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    transition: width 0.3s ease;
+  }
+
+  /* Episode Details Area */
+  .player-episode-details {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .player-episode-title-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player-episode-card.active .player-episode-title-name {
+    color: #c084fc; /* brand purple accent */
+  }
+
+  .player-episode-synopsis {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    opacity: 0.85;
+    transition: color 0.3s;
+  }
+
+  .player-episode-card:hover .player-episode-synopsis {
+    color: var(--text-secondary);
+  }
+
+  /* Glowing active ring overlay */
+  .player-episode-glow-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(147, 51, 234, 0.6);
+    border-radius: 10px;
+    pointer-events: none;
+    animation: neonPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes neonPulse {
+    0%, 100% {
+      opacity: 0.8;
+      box-shadow: inset 0 0 10px rgba(147, 51, 234, 0.3);
+    }
+    50% {
+      opacity: 1;
+      box-shadow: inset 0 0 18px rgba(147, 51, 234, 0.6);
+    }
+  }
+
+  /* Active text status banner */
+  .player-episode-active-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(147, 51, 234, 0.85);
+    backdrop-filter: blur(4px);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 8px rgba(147, 51, 234, 0.4);
+  }
+
+  /* --- Sidebar Pagination Controls --- */
+  .player-episodes-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(5, 5, 8, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .pag-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .pag-btn:hover:not(:disabled) {
+    background: rgba(147, 51, 234, 0.15);
+    border-color: rgba(147, 51, 234, 0.4);
+    color: #c084fc;
+    transform: scale(1.05);
+  }
+
+  .pag-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .pag-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .pag-info {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.3px;
+  }
+
+  /* --- Transition Animations --- */
+  .slide-in-transition {
+    animation: epSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes epSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Cinema Theater Mode details placement spacing */
+  .player-page.theater-mode .player-info {
+    padding: var(--space-lg) var(--space-2xl) !important;
+  }
+}

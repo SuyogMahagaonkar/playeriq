@@ -2,7 +2,7 @@
 // PlayerIQ — Player Page (Cinema Mode)
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img, NODE_PROXY } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, getMediaImages, img, NODE_PROXY } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { navigate } from '../services/router.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
@@ -217,6 +217,8 @@ let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runt
 let episodeDetails = new Map(); // key: `S${season}E${ep}` — episode metadata (still_path, name, overview)
 let totalEpisodes = 0;
 let currentSeasonEpisodes = []; // Cached episodes list for in-player navigation
+let currentEpisodesPage = 1;
+const EPISODES_PER_PAGE = 10;
 
 async function cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes) {
   try {
@@ -1077,6 +1079,21 @@ export async function renderPlayerPage({ params, container }) {
     const similar = data.similar?.results?.slice(0, 12) || [];
     const poster_path = data.poster_path;
 
+    // Fetch official English logo image
+    let logoUrl = null;
+    try {
+      const images = await getMediaImages(id, type, title);
+      if (images && images.logos?.length) {
+        // Find best English logo or any logo
+        const logo = images.logos.find(l => l.iso_639_1 === 'en') || images.logos[0];
+        if (logo) {
+          logoUrl = `https://image.tmdb.org/t/p/w500${logo.file_path}`;
+        }
+      }
+    } catch (logoErr) {
+      console.warn('[PlayerPage] Failed to fetch official logo:', logoErr);
+    }
+
     // Store TMDB runtime in seconds for the video player duration fallback
     // Movies: data.runtime is in minutes. TV: episode_run_time is average per-episode.
     if (!isTV && data.runtime) {
@@ -1141,11 +1158,13 @@ export async function renderPlayerPage({ params, container }) {
               <div class="player-loading-spinner"></div>
             </div>
           </div>
+          <div class="player-episodes-pagination" id="player-episodes-pagination"></div>
         </div>
       `;
     }
 
     container.innerHTML = `
+      <div class="player-ambient-bg" id="player-ambient-bg"></div>
       <div class="player-page animate-fade-in">
         <div class="player-top-bar">
           <button class="player-back" id="player-back">
@@ -1179,16 +1198,24 @@ export async function renderPlayerPage({ params, container }) {
             </div>
 
             <div class="player-info">
-              <h1 class="player-title">${title}</h1>
-              <div class="player-meta">
-                <span>⭐ ${rating}</span>
-                ${year ? `<span>•</span><span>${year}</span>` : ''}
-                ${runtime ? `<span>•</span><span>${runtime}</span>` : ''}
-                <span>•</span>
-                <span>${isTV ? 'TV Series' : 'Movie'}</span>
-                ${genres ? `<span>•</span><span>${genres}</span>` : ''}
-                ${isTV ? `<span>•</span><span class="player-meta-episode">S${currentSeason} E${currentEpisode}</span>` : ''}
+              ${logoUrl ? `
+                <div class="player-logo-container">
+                  <img class="player-logo-img" src="${logoUrl}" alt="${title}" />
+                </div>
+              ` : `
+                <h1 class="player-title">${title}</h1>
+              `}
+              
+              <div class="badge-premium-container">
+                <span class="badge-premium badge-accent">⭐ IMDB ${rating}</span>
+                <span class="badge-premium badge-gold">${isTV ? 'TV Series' : 'Movie'}</span>
+                ${year ? `<span class="badge-premium">${year}</span>` : ''}
+                ${runtime ? `<span class="badge-premium">${runtime}</span>` : ''}
+                <span class="badge-premium badge-accent">1080p FHD</span>
+                <span class="badge-premium">Dolby 5.1</span>
+                <span class="badge-premium badge-gold">Vision</span>
               </div>
+
               <div class="player-ep-details-container" style="margin-top: 12px; display: ${isTV ? 'block' : 'none'};">
                 <h3 class="player-ep-title" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px;"></h3>
                 <p class="player-ep-overview" style="color: var(--text-dim); line-height: 1.5; font-size: 0.95rem;"></p>
@@ -1217,6 +1244,12 @@ export async function renderPlayerPage({ params, container }) {
         ` : ''}
       </div>
     `;
+
+    // Set initial ambient background glow (Movie: backdrop path, TV: will update to active episode's still during loadPlayerEpisodes)
+    const ambientBg = container.querySelector('#player-ambient-bg');
+    if (ambientBg && data.backdrop_path) {
+      ambientBg.style.backgroundImage = `url(${img.backdrop(data.backdrop_path)})`;
+    }
 
     // ---- Load the embed ----
     const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
@@ -1266,6 +1299,18 @@ export async function renderPlayerPage({ params, container }) {
         if (seriesOverviewEl) {
           seriesOverviewEl.style.display = 'block';
           seriesOverviewEl.style.marginTop = '12px';
+        }
+      }
+
+      // 3. Update ambient background glow
+      const ambientBg = container.querySelector('#player-ambient-bg');
+      if (ambientBg) {
+        let activeStill = data.backdrop_path;
+        if (details && details.still_path) {
+          activeStill = details.still_path;
+        }
+        if (activeStill) {
+          ambientBg.style.backgroundImage = `url(${img.backdrop(activeStill)})`;
         }
       }
     }
@@ -1769,19 +1814,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
       return 0;
     }
 
-    listEl.innerHTML = episodes.map(ep => `
-      <div class="player-episode-item ${ep.episode_number === activeEpisode ? 'active' : ''}" 
-           data-episode="${ep.episode_number}" data-season="${seasonNumber}">
-        <div class="player-episode-num">${ep.episode_number}</div>
-        <div class="player-episode-info">
-          <div class="player-episode-name">${ep.name || `Episode ${ep.episode_number}`}</div>
-          <div class="player-episode-runtime">${ep.runtime ? `${ep.runtime} min` : ''}</div>
-        </div>
-        ${ep.episode_number === activeEpisode ? '<div class="player-episode-playing">▶ Now Playing</div>' : ''}
-      </div>
-    `).join('');
-
-    // Store per-episode runtimes and metadata details
+    // Store per-episode runtimes and details
     episodes.forEach(ep => {
       if (ep.runtime) {
         episodeRuntimes.set(`S${seasonNumber}E${ep.episode_number}`, ep.runtime * 60);
@@ -1799,39 +1832,120 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
     const activeEpRuntime = episodeRuntimes.get(`S${seasonNumber}E${activeEpisode}`);
     if (activeEpRuntime) tmdbRuntimeSeconds = activeEpRuntime;
 
-    // Episode click handlers
-    listEl.querySelectorAll('.player-episode-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const epNum = parseInt(item.dataset.episode);
-        const sNum = parseInt(item.dataset.season);
+    const totalPages = Math.ceil(currentSeasonEpisodes.length / EPISODES_PER_PAGE);
 
-        if (onEpisodeClick) {
-          onEpisodeClick(sNum, epNum);
-        } else {
-          // Update runtime BEFORE loadPlayer so the player gets the right duration
-          const epRuntime = episodeRuntimes.get(`S${sNum}E${epNum}`);
-          if (epRuntime) tmdbRuntimeSeconds = epRuntime;
-
-          // Load the episode
-          loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath, onEnded);
-
-          // Update active state
-          listEl.querySelectorAll('.player-episode-item').forEach(el => {
-            el.classList.remove('active');
-            const playingTag = el.querySelector('.player-episode-playing');
-            if (playingTag) playingTag.remove();
-          });
-          item.classList.add('active');
-          item.insertAdjacentHTML('beforeend', '<div class="player-episode-playing">▶ Now Playing</div>');
-
-          updateNowPlaying(sNum, epNum);
+    function renderPage(page) {
+      currentEpisodesPage = Math.max(1, Math.min(totalPages, page));
+      
+      const startIndex = (currentEpisodesPage - 1) * EPISODES_PER_PAGE;
+      const pageEpisodes = currentSeasonEpisodes.slice(startIndex, startIndex + EPISODES_PER_PAGE);
+      
+      // Map and render episode cards
+      listEl.innerHTML = pageEpisodes.map(ep => {
+        const epNum = ep.episode_number;
+        const isCurrent = epNum === activeEpisode;
+        
+        let progressHTML = '';
+        if (ep.progress && ep.progress > 0) {
+          progressHTML = `
+            <div class="card-progress-bar-container">
+              <div class="card-progress-bar-fill" style="width: ${Math.min(100, ep.progress)}%;"></div>
+            </div>
+          `;
         }
+        
+        const thumbUrl = ep.still_path 
+          ? img.still(ep.still_path) 
+          : (backdropPath ? img.backdrop(backdropPath) : (posterPath ? img.poster(posterPath) : ''));
+          
+        return `
+          <div class="player-episode-card ${isCurrent ? 'active' : ''} slide-in-transition" 
+               data-episode="${epNum}" data-season="${seasonNumber}">
+            <div class="player-episode-thumb-wrapper">
+              ${thumbUrl ? `<img class="player-episode-thumb" src="${thumbUrl}" alt="${ep.name || `Episode ${epNum}`}" loading="lazy" />` : ''}
+              <div class="player-episode-overlay">
+                <div class="player-episode-play-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 19 12 5 20 5 4"></polygon></svg>
+                </div>
+              </div>
+              <span class="player-episode-number-badge">E${epNum}</span>
+              ${ep.runtime ? `<span class="player-episode-duration-badge">${ep.runtime} min</span>` : ''}
+              ${progressHTML}
+            </div>
+            <div class="player-episode-details">
+              <div class="player-episode-title-name">${ep.name || `Episode ${epNum}`}</div>
+              <div class="player-episode-synopsis">${ep.overview || 'No description available for this episode.'}</div>
+            </div>
+            ${isCurrent ? `
+              <div class="player-episode-glow-ring"></div>
+              <div class="player-episode-active-status">Playing</div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+      
+      // Render Pagination Panel Footer Controls
+      const paginationEl = document.getElementById('player-episodes-pagination');
+      if (paginationEl) {
+        paginationEl.innerHTML = `
+          <button class="pag-btn prev-btn" ${currentEpisodesPage === 1 ? 'disabled' : ''} aria-label="Previous Page">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <span class="pag-info">Page ${currentEpisodesPage} of ${totalPages}</span>
+          <button class="pag-btn next-btn" ${currentEpisodesPage === totalPages ? 'disabled' : ''} aria-label="Next Page">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        `;
+        
+        paginationEl.querySelector('.prev-btn')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          renderPage(currentEpisodesPage - 1);
+        });
+        
+        paginationEl.querySelector('.next-btn')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          renderPage(currentEpisodesPage + 1);
+        });
+      }
+      
+      // Bind click triggers for cards
+      listEl.querySelectorAll('.player-episode-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const epNum = parseInt(card.dataset.episode);
+          const sNum = parseInt(card.dataset.season);
+          
+          if (onEpisodeClick) {
+            onEpisodeClick(sNum, epNum);
+          } else {
+            const epRuntime = episodeRuntimes.get(`S${sNum}E${epNum}`);
+            if (epRuntime) tmdbRuntimeSeconds = epRuntime;
+            
+            loadPlayer(tvId, true, sNum, epNum, title, null, posterPath, backdropPath, onEnded);
+            
+            listEl.querySelectorAll('.player-episode-card').forEach(el => {
+              el.classList.remove('active');
+              el.querySelector('.player-episode-glow-ring')?.remove();
+              el.querySelector('.player-episode-active-status')?.remove();
+            });
+            card.classList.add('active');
+            card.insertAdjacentHTML('beforeend', `
+              <div class="player-episode-glow-ring"></div>
+              <div class="player-episode-active-status">Playing</div>
+            `);
+            
+            updateNowPlaying(sNum, epNum);
+          }
+        });
       });
-    });
 
-    // Scroll active episode into view
-    const activeEl = listEl.querySelector('.player-episode-item.active');
-    if (activeEl) activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // Smooth scroll playing card into viewport
+      const activeEl = listEl.querySelector('.player-episode-card.active');
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    // Auto-focus currentEpisodesPage based on activeEpisode position
+    const activePage = Math.ceil(activeEpisode / EPISODES_PER_PAGE);
+    renderPage(activePage);
 
     return episodes.length;
 
