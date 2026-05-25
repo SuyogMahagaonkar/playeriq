@@ -88,15 +88,8 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
     }
         <div class="movie-card-gradient"></div>
         ${deleteBtn}
-        ${rating > 0 ? `
-          <div class="movie-card-rating ${ratingClass}">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            ${rating.toFixed(1)}
-          </div>
-        ` : ''}
         ${hindiBadge}
         ${movieBoxBadge}
-        ${progressData ? '' : '<div class="movie-card-quality">HD</div>'}
         ${progressHTML}
       </div>
     </div>
@@ -240,6 +233,7 @@ export function attachCardClicks(container) {
         const rawYear = tmdbData?.release_date || tmdbData?.first_air_date || '';
         const year = rawYear.slice(0, 4) || '2026';
         const lang = tmdbData?.original_language?.toUpperCase() || 'EN';
+        const rating = tmdbData?.vote_average || item?.vote_average || 0;
         
         let ageRating = 'U/A 13+';
         if (type === 'movie') {
@@ -352,6 +346,13 @@ export function attachCardClicks(container) {
               ${lang ? `
                 <span class="preview-dot">•</span>
                 <span class="preview-lang">${lang}</span>
+              ` : ''}
+              ${rating > 0 ? `
+                <span class="preview-dot">•</span>
+                <span class="preview-rating" style="color:#22c55e; font-weight:700; display:inline-flex; align-items:center; gap:2.5px;">
+                  <svg viewBox="0 0 24 24" fill="currentColor" style="width:11px; height:11px; color:#ffb300; display:inline-block; vertical-align:middle; margin-bottom:1px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  ${rating.toFixed(1)}
+                </span>
               ` : ''}
             </div>
             <div class="preview-desc">${overview}</div>
