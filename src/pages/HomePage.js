@@ -14,7 +14,8 @@ import {
   getSciFiMovies,
   getKidsMovies,
   getComedyMovies,
-  getAnimeMovies
+  getAnimeMovies,
+  filterAvailableItems
 } from '../services/api.js';
 import { createHeroBanner, initHeroBanner } from '../components/HeroBanner.js';
 import { createContentRow, createSkeletonRow, initContentRows } from '../components/ContentRow.js';
@@ -274,17 +275,48 @@ export async function renderHomePage({ container }) {
       );
     }
 
+    // Map raw TMDB responses to standard structure before filtering
+    const mapToStandard = (results, defaultMediaType) => {
+      return (results || []).map(item => ({
+        id: item.id,
+        title: item.title || item.name,
+        name: item.title || item.name,
+        poster_path: item.poster_path,
+        backdrop_path: item.backdrop_path,
+        vote_average: item.vote_average,
+        release_date: item.release_date || item.first_air_date,
+        media_type: item.media_type || defaultMediaType
+      }));
+    };
+
+    // Filter all TMDB shelves in parallel to keep only MovieBox-playable titles
+    const [
+      mappedNetflix,
+      mappedPrime,
+      mappedCinema,
+      mappedBollywood,
+      mappedSouthIndian,
+      mappedHorror,
+      mappedRomance,
+      mappedSciFi,
+      mappedKids,
+      mappedComedy,
+      mappedAnime
+    ] = await Promise.all([
+      filterAvailableItems(mapToStandard(netflixData.results, 'mixed'), 'mixed').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(primeData.results, 'mixed'), 'mixed').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(cinemaData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(bollywoodData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(southIndianData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(horrorData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(romanceData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(scifiData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(kidsData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(comedyData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
+      filterAvailableItems(mapToStandard(animeData.results, 'movie'), 'movie').then(res => res.slice(0, 15))
+    ]);
+
     // 1. Netflix Row
-    const mappedNetflix = (netflixData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: item.media_type
-    }));
     let netflixHTML = '';
     if (mappedNetflix.length > 0) {
       netflixHTML = createContentRow(
@@ -298,16 +330,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 2. Prime Video Row
-    const mappedPrime = (primeData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: item.media_type
-    }));
     let primeHTML = '';
     if (mappedPrime.length > 0) {
       primeHTML = createContentRow(
@@ -463,16 +485,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 5. Cinema Row
-    const mappedCinema = (cinemaData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let cinemaHTML = '';
     if (mappedCinema.length > 0) {
       cinemaHTML = createContentRow(
@@ -485,16 +497,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 6. Bollywood Row
-    const mappedBollywood = (bollywoodData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let bollywoodHTML = '';
     if (mappedBollywood.length > 0) {
       bollywoodHTML = createContentRow(
@@ -507,16 +509,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 7. South Indian Row
-    const mappedSouthIndian = (southIndianData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let southIndianHTML = '';
     if (mappedSouthIndian.length > 0) {
       southIndianHTML = createContentRow(
@@ -566,16 +558,6 @@ export async function renderHomePage({ container }) {
     `;
 
     // 9. Horror Row
-    const mappedHorror = (horrorData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let horrorHTML = '';
     if (mappedHorror.length > 0) {
       horrorHTML = createContentRow(
@@ -588,16 +570,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 10. Romance Row
-    const mappedRomance = (romanceData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let romanceHTML = '';
     if (mappedRomance.length > 0) {
       romanceHTML = createContentRow(
@@ -610,16 +582,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 11. Sci-Fi Row
-    const mappedSciFi = (scifiData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let scifiHTML = '';
     if (mappedSciFi.length > 0) {
       scifiHTML = createContentRow(
@@ -632,16 +594,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 12. Kids Row
-    const mappedKids = (kidsData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let kidsHTML = '';
     if (mappedKids.length > 0) {
       kidsHTML = createContentRow(
@@ -654,16 +606,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 13. Comedy Row
-    const mappedComedy = (comedyData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let comedyHTML = '';
     if (mappedComedy.length > 0) {
       comedyHTML = createContentRow(
@@ -676,16 +618,6 @@ export async function renderHomePage({ container }) {
     }
 
     // 14. Anime Row
-    const mappedAnime = (animeData.results || []).slice(0, 15).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      vote_average: item.vote_average,
-      release_date: item.release_date || item.first_air_date,
-      media_type: 'movie'
-    }));
     let animeHTML = '';
     if (mappedAnime.length > 0) {
       animeHTML = createContentRow(

@@ -650,3 +650,115 @@ export async function getStudioContent(studioName, page = 1) {
   return { results: mixed };
 }
 
+// ========================================
+// TMDB to MovieBox Stream Resolvers & Matchers
+// ========================================
+
+const MATCH_CACHE_KEY = 'piq_tmdb_mb_matches';
+
+function getMatchCache() {
+  try {
+    return JSON.parse(localStorage.getItem(MATCH_CACHE_KEY) || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveMatchCache(cache) {
+  try {
+    localStorage.setItem(MATCH_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {}
+}
+
+function cleanTitleForMatch(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/\[.*?\]/g, '') // remove brackets
+    .replace(/\(.*?\)/g, '') // remove parentheses
+    .replace(/[^a-z0-9]/g, '') // remove non-alphanumeric
+    .trim();
+}
+
+export async function findMovieBoxMatch(title, year, type) {
+  const cleanTitle = (title || '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+  const cacheKey = `${type}_${cleanTitleForMatch(cleanTitle)}_${year || ''}`;
+  const cache = getMatchCache();
+  
+  if (cache[cacheKey] !== undefined) {
+    return cache[cacheKey];
+  }
+
+  try {
+    const mbType = type === 'tv' ? '2' : '1';
+    let searchQueries = [cleanTitle];
+    if (year) {
+      searchQueries.unshift(`${cleanTitle} ${year}`);
+    }
+    
+    for (const q of searchQueries) {
+      const searchRes = await searchMovieBox(q, mbType);
+      const results = searchRes.results || [];
+      const cleanedTarget = cleanTitleForMatch(cleanTitle);
+      
+      for (const item of results) {
+        const cleanedItem = cleanTitleForMatch(item.title);
+        const itemYear = (item.releaseDate || item.release_date || item.year || '').slice(0, 4);
+        const yearMatches = !year || !itemYear || year === itemYear;
+        
+        if (yearMatches && (cleanedTarget === cleanedItem || cleanedTarget.includes(cleanedItem) || cleanedItem.includes(cleanedTarget))) {
+          cache[cacheKey] = item;
+          saveMatchCache(cache);
+          return item;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[findMovieBoxMatch] failed for ${title}:`, err);
+  }
+  
+  // Cache negative result
+  cache[cacheKey] = null;
+  saveMatchCache(cache);
+  return null;
+}
+
+export async function filterAvailableItems(items, type) {
+  if (!items || !items.length) return [];
+  const matches = await Promise.all(items.map(async (item) => {
+    const title = item.title || item.name;
+    const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+    const itemType = type === 'mixed' ? (item.media_type || (item.first_air_date ? 'tv' : 'movie')) : type;
+    const match = await findMovieBoxMatch(title, year, itemType);
+    if (match) {
+      return {
+        ...item,
+        subject_id: match.subject_id || match.id || match.subjectId,
+        is_hindi: match.title?.toLowerCase().includes('hindi') || false,
+        media_type: itemType
+      };
+    }
+    return null;
+  }));
+  return matches.filter(Boolean);
+}
+
+export async function discoverTmdbContent(mediaType, { genre, language, page = 1 }) {
+  const apiKey = '8e4ad9e56e31ab079517b5be6965b477';
+  let url = `https://api.themoviedb.org/3/discover/${mediaType}?api_key=${apiKey}&sort_by=popularity.desc&page=${page}`;
+  
+  if (genre) {
+    url += `&with_genres=${genre}`;
+  }
+  if (language) {
+    url += `&with_original_language=${language}`;
+  }
+  
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TMDB discover failed: ${res.status}`);
+  let data = await res.json();
+  if (isSafeSearchOn() && data.results) {
+    data.results = data.results.filter(isSafeItem);
+  }
+  return data;
+}
+

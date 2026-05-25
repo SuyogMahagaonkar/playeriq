@@ -13,7 +13,8 @@ import {
   getKidsMovies,
   getComedyMovies,
   getAnimeMovies,
-  getStudioContent
+  getStudioContent,
+  filterAvailableItems
 } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
@@ -168,7 +169,7 @@ export async function renderCategoryPage({ container, query }) {
       data = { results: [] };
     }
 
-    return (data.results || []).map(item => ({
+    const rawList = (data.results || []).map(item => ({
       id: item.id,
       title: item.title || item.name,
       name: item.title || item.name,
@@ -178,6 +179,8 @@ export async function renderCategoryPage({ container, query }) {
       release_date: item.release_date || item.first_air_date,
       media_type: item.media_type || 'movie'
     }));
+
+    return await filterAvailableItems(rawList, 'mixed');
   };
 
   try {

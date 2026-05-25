@@ -2,7 +2,7 @@
 // PlayerIQ — TV Shows Page (Cinematic Discover)
 // ========================================
 
-import { searchMovieBox, getMediaImages, img } from '../services/api.js';
+import { discoverTmdbContent, filterAvailableItems, getMediaImages, img } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
 import { navigate } from '../services/router.js';
@@ -78,20 +78,54 @@ async function loadTVShows(container) {
   }
 
   try {
-    // Search MovieBox for the category keyword, filter to TV only (type=2)
-    const data = await searchMovieBox(currentQuery, '2');
+    // Map currentQuery (genre/category) to TMDB discover arguments
+    let discoverOptions = {};
+    if (currentQuery === 'hindi') {
+      discoverOptions = { language: 'hi' };
+    } else if (currentQuery === 'korean') {
+      discoverOptions = { language: 'ko' };
+    } else if (currentQuery === 'action') {
+      discoverOptions = { genre: '10759' };
+    } else if (currentQuery === 'comedy') {
+      discoverOptions = { genre: 35 };
+    } else if (currentQuery === 'sci-fi') {
+      discoverOptions = { genre: '10765' };
+    } else if (currentQuery === 'drama') {
+      discoverOptions = { genre: 18 };
+    } else if (currentQuery === 'anime') {
+      discoverOptions = { genre: 16, language: 'ja' };
+    }
+
+    // Fetch from TMDB
+    const tmdbData = await discoverTmdbContent('tv', discoverOptions);
+    const tmdbResults = tmdbData.results || [];
+
+    // Map TMDB structure
+    const rawList = tmdbResults.map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      overview: item.overview,
+      media_type: 'tv'
+    }));
+
+    // Filter by MovieBox match
+    const matchedItems = await filterAvailableItems(rawList, 'tv');
     
     if (!spotlightEl || !grid) return;
 
-    if (!data.results || data.results.length === 0) {
+    if (matchedItems.length === 0) {
       spotlightEl.innerHTML = '';
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No TV shows found.</div>';
     } else {
-      const topItem = data.results[0];
-      const itemsForGrid = data.results.slice(1);
+      const topItem = matchedItems[0];
+      const itemsForGrid = matchedItems.slice(1);
       
-      // Parallelize TMDB logo and metadata enrichments
-      const topId = `mb_${topItem.subject_id || topItem.id || topItem.subjectId}`;
+      const topId = topItem.id;
       const topTitle = topItem.title;
       
       const imagesData = await getMediaImages(topId, 'tv', topTitle).catch(() => null);
@@ -110,12 +144,12 @@ async function loadTVShows(container) {
         }
       }
 
-      const rating = topItem.imdbRate ? parseFloat(topItem.imdbRate).toFixed(1) : '—';
-      const year = (topItem.releaseDate || topItem.release_date || topItem.year || '').slice(0, 4);
-      const overview = topItem.description || 'Watch the popular series release now.';
+      const rating = topItem.vote_average ? parseFloat(topItem.vote_average).toFixed(1) : '—';
+      const year = (topItem.release_date || '').slice(0, 4);
+      const overview = topItem.overview || 'Watch the popular series release now.';
       const spotlightRoute = `/tv/${topId}`;
       const playRoute = `/watch/tv/${topId}`;
-      const backdropUrl = topItem.cover?.url || topItem.cover_url || topItem.poster_path || '';
+      const backdropUrl = topItem.backdrop_path || topItem.poster_path || '';
 
       // Spotlight Hero HTML (Featured TV Show)
       const spotlightHTML = `
@@ -167,11 +201,11 @@ async function loadTVShows(container) {
       // Render remaining TV series in the grid
       const cards = itemsForGrid.map(m => {
         const mapped = {
-          id: `mb_${m.subject_id || m.id || m.subjectId}`,
+          id: m.id,
           title: m.title,
-          poster_path: m.cover?.url || m.cover_url || m.poster_path,
-          vote_average: m.imdbRate || m.rating || null,
-          release_date: m.releaseDate || m.release_date || m.year,
+          poster_path: m.poster_path,
+          vote_average: m.vote_average,
+          release_date: m.release_date,
         };
         return createMovieCard(mapped, 'tv');
       }).join('');

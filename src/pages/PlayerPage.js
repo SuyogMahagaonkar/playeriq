@@ -2,7 +2,7 @@
 // PlayerIQ — Player Page (Cinema Mode)
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, getMediaImages, img, NODE_PROXY } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, getMediaImages, img, NODE_PROXY, findMovieBoxMatch } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { navigate } from '../services/router.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
@@ -1003,6 +1003,7 @@ export async function renderPlayerPage({ params, container }) {
 
   let data;
   isOfflinePlayback = false;
+  let activeId = id;
 
   // If launched from Downloads page, immediately use offline mode
   if (sessionStorage.getItem('piq_force_offline') === '1') {
@@ -1071,6 +1072,38 @@ export async function renderPlayerPage({ params, container }) {
       }
     }
 
+    // Dynamic background TMDB-to-MovieBox match resolver
+    if (!String(id).startsWith('mb_') && navigator.onLine) {
+      const loadingTextEl = document.getElementById('player-loading-text');
+      if (loadingTextEl) {
+        loadingTextEl.textContent = 'Resolving stream from MovieBox...';
+      }
+      const title = data.title || data.name;
+      const year = (data.release_date || data.first_air_date || '').slice(0, 4);
+      try {
+        const mbMatch = await findMovieBoxMatch(title, year, type);
+        if (mbMatch) {
+          activeId = `mb_${mbMatch.subject_id || mbMatch.id || mbMatch.subjectId}`;
+          console.log(`[PlayerPage] Resolved TMDB ID ${id} ("${title}") to MovieBox ID ${activeId}`);
+        }
+      } catch (err) {
+        console.warn('[PlayerPage] Matching failed:', err);
+      }
+    }
+
+    // Re-check completed downloads list with the newly resolved activeId
+    if (activeId !== id) {
+      if (isTV) {
+        const prefix = `tv_${activeId}_`;
+        const activeMatch = downloads.find(x => x.id.startsWith(prefix) && x.status === 'COMPLETED');
+        if (activeMatch) match = activeMatch;
+      } else {
+        const matchId = `movie_${activeId}`;
+        const activeMatch = downloads.find(x => x.id === matchId && x.status === 'COMPLETED');
+        if (activeMatch) match = activeMatch;
+      }
+    }
+
     const imdbId = data.imdb_id || data.external_ids?.imdb_id || id;
     const title = data.title || data.name;
     const year = (data.release_date || data.first_air_date || '').slice(0, 4);
@@ -1132,7 +1165,7 @@ export async function renderPlayerPage({ params, container }) {
 
     // Save initial progress (Movies only — TV shows will save after metadata loads)
     if (!isTV) {
-      saveProgress({ id, title, type: 'movie', poster_path, season: currentSeason, episode: currentEpisode });
+      saveProgress({ id: activeId, title, type: 'movie', poster_path, season: currentSeason, episode: currentEpisode });
     }
 
     // Build seasons sidebar for TV
@@ -1319,7 +1352,7 @@ export async function renderPlayerPage({ params, container }) {
     // For TV: load episode list FIRST so episodeRuntimes is populated
     // before loadPlayer runs, giving the player the correct episode duration.
     if (isTV) {
-      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
+      const loadedEpCount = await loadPlayerEpisodes(activeId, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
 
       // Update DOM with initially loaded episode details
@@ -1338,7 +1371,7 @@ export async function renderPlayerPage({ params, container }) {
         epOverview = details.overview;
       }
       saveProgress({
-        id,
+        id: activeId,
         title,
         type: 'tv',
         poster_path: data.poster_path,
@@ -1350,9 +1383,9 @@ export async function renderPlayerPage({ params, container }) {
         episode_overview: epOverview
       });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     } else {
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
     }
 
     // ---- Helper functions for episode navigation ----
@@ -1361,7 +1394,7 @@ export async function renderPlayerPage({ params, container }) {
       currentEpisode = episode;
 
       // Load episodes first to ensure metadata is refreshed/cached
-      const loadedEpCount = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
+      const loadedEpCount = await loadPlayerEpisodes(activeId, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
       if (loadedEpCount > 0) totalEpisodes = loadedEpCount;
 
       // Update DOM episode information dynamically
@@ -1385,7 +1418,7 @@ export async function renderPlayerPage({ params, container }) {
 
       // Save TV progress with high-res episode screenshot and description
       saveProgress({
-        id,
+        id: activeId,
         title,
         type: 'tv',
         poster_path: data.poster_path,
@@ -1397,7 +1430,7 @@ export async function renderPlayerPage({ params, container }) {
         episode_overview: epOverview
       });
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
       updateNowPlaying(currentSeason, currentEpisode);
     }
 
