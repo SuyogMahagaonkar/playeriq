@@ -339,8 +339,15 @@ export function attachCardClicks(container) {
                               (data && (data.event === 'infoDelivery' && data.info?.playerState === 1));
             if (isPlaying) {
               const iframe = previewCard?.querySelector('.preview-iframe');
-              if (iframe) {
-                iframe.classList.add('playing');
+              if (iframe && !iframe.classList.contains('playing') && !iframe.dataset.fadeTimerStarted) {
+                iframe.dataset.fadeTimerStarted = 'true';
+                
+                // Play silently in background for 2.2 seconds so YouTube's loading/skip/title overlays automatically slide out of sight
+                setTimeout(() => {
+                  if (previewCard && iframe) {
+                    iframe.classList.add('playing');
+                  }
+                }, 2200);
               }
             }
           } catch (err) {}
@@ -350,9 +357,12 @@ export function attachCardClicks(container) {
         // Fail-safe fallback timer (in case of network handshake drops)
         const fallbackTimer = setTimeout(() => {
           if (previewCard) {
-            previewCard.querySelector('.preview-iframe')?.classList.add('playing');
+            const iframe = previewCard.querySelector('.preview-iframe');
+            if (iframe && !iframe.classList.contains('playing')) {
+              iframe.classList.add('playing');
+            }
           }
-        }, 2200);
+        }, 4500);
 
         // Fetch User and setup wishlist trigger state
         const user = getUser();
