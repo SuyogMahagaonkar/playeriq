@@ -611,12 +611,12 @@
 }
 
 .studio-marvel .studio-logo {
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  filter: brightness(0) invert(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)) !important;
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.4s ease;
 }
 
 .studio-marvel:hover .studio-logo {
-  filter: drop-shadow(0 0 12px rgba(237, 29, 36, 0.7)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) !important;
+  filter: brightness(0) invert(1) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) !important;
 }
 
 /* Mobile responsive widths for Brand Cards */

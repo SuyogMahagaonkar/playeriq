@@ -174,17 +174,17 @@ export async function renderCategoryPage({ container, query }) {
   // Pre-determine brand room logo for instantaneous rendering
   let initialLogoHtml = '';
   if (isHbo) {
-    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_Max_Logo.svg/1200px-HBO_Max_Logo.svg.png" alt="HBO Max" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" style="filter: brightness(0) invert(1); max-height: 70px; object-fit: contain;" />`;
   } else if (isDisney) {
-    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="max-height: 80px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isNetflix) {
-    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/1920px-Netflix_2015_logo.svg.png" alt="Netflix" style="max-height: 60px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="filter: brightness(0) invert(1); max-height: 60px; object-fit: contain;" />`;
   } else if (isPrime) {
-    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Amazon_Prime_Video_logo.svg/1200px-Amazon_Prime_Video_logo.svg.png" alt="Amazon Prime Video" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Amazon Prime Video" style="filter: brightness(0) invert(1); max-height: 70px; object-fit: contain;" />`;
   } else if (isParamount) {
-    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Paramount_Plus_logo.svg/1200px-Paramount_Plus_logo.svg.png" alt="Paramount+" style="max-height: 80px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isMarvel) {
-    initialLogoHtml = `<img class="category-hero-logo-marvel" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Marvel_Logo.svg/1200px-Marvel_Logo.svg.png" alt="Marvel Studios" style="max-height: 60px; object-fit: contain;" />`;
+    initialLogoHtml = `<img class="category-hero-logo-marvel" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" style="filter: brightness(0) invert(1); max-height: 60px; object-fit: contain;" />`;
   }
 
   const roomTitleHtml = initialLogoHtml 
