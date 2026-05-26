@@ -76,24 +76,28 @@ export async function renderCategoryPage({ container, query }) {
   tmdbPage = 1;
 
   const cleanTitle = cleanStringForMatching(categoryTitle);
-  const isNetflix = cleanTitle.includes('netflix');
-  const isPrime = cleanTitle.includes('prime') || cleanTitle.includes('amazon');
+  const lowerTitle = categoryTitle.toLowerCase();
+  
+  const isNetflix = cleanTitle.includes('netflix') || lowerTitle.includes('netflix');
+  const isPrime = cleanTitle.includes('prime') || cleanTitle.includes('amazon') || lowerTitle.includes('prime') || lowerTitle.includes('amazon');
   
   // Genres matching
-  const isHorror = cleanTitle.includes('horror');
-  const isRomance = cleanTitle.includes('romance') || cleanTitle.includes('romantic');
-  const isSciFi = cleanTitle.includes('sci-fi') || cleanTitle.includes('scifi') || cleanTitle.includes('science fiction');
-  const isKids = cleanTitle.includes('kids') || cleanTitle.includes('family') || cleanTitle.includes('children');
-  const isComedy = cleanTitle.includes('comedy');
-  const isAnime = cleanTitle.includes('anime') || cleanTitle.includes('animation');
+  const isHorror = cleanTitle.includes('horror') || lowerTitle.includes('horror');
+  const isRomance = cleanTitle.includes('romance') || cleanTitle.includes('romantic') || lowerTitle.includes('romance') || lowerTitle.includes('romantic');
+  const isSciFi = cleanTitle.includes('sci-fi') || cleanTitle.includes('scifi') || cleanTitle.includes('science fiction') || lowerTitle.includes('sci-fi') || lowerTitle.includes('scifi') || lowerTitle.includes('science fiction');
+  const isKids = cleanTitle.includes('kids') || cleanTitle.includes('family') || cleanTitle.includes('children') || lowerTitle.includes('kids') || lowerTitle.includes('family') || lowerTitle.includes('children');
+  const isComedy = cleanTitle.includes('comedy') || lowerTitle.includes('comedy');
+  const isAnime = cleanTitle.includes('anime') || cleanTitle.includes('animation') || lowerTitle.includes('anime') || lowerTitle.includes('animation');
 
   // Studios matching
-  const isDisney = cleanTitle.includes('disney');
-  const isHbo = cleanTitle.includes('hbo') || cleanTitle.includes('hbo max');
-  const isParamount = cleanTitle.includes('paramount') || cleanTitle.includes('paramount+');
-  const isMarvel = cleanTitle.includes('marvel');
+  const isDisney = cleanTitle.includes('disney') || lowerTitle.includes('disney');
+  const isHbo = cleanTitle.includes('hbo') || cleanTitle.includes('hbo max') || lowerTitle.includes('hbo') || lowerTitle.includes('hbo max');
+  const isParamount = cleanTitle.includes('paramount') || cleanTitle.includes('paramount+') || lowerTitle.includes('paramount') || lowerTitle.includes('paramount+');
+  const isMarvel = cleanTitle.includes('marvel') || lowerTitle.includes('marvel');
 
   const isLiveProvider = isNetflix || isPrime || isHorror || isRomance || isSciFi || isKids || isComedy || isAnime || isDisney || isHbo || isParamount || isMarvel;
+
+  console.log(`[CategoryPage] Diagnostic: categoryTitle="${categoryTitle}", cleanTitle="${cleanTitle}", isDisney=${isDisney}, isPrime=${isPrime}, isLiveProvider=${isLiveProvider}`);
 
   // Premium dynamic theme configurations based on the catalog type
   let bannerBg = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
