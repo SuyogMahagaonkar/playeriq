@@ -14,7 +14,6 @@ import {
   getComedyMovies,
   getAnimeMovies,
   getStudioContent,
-  filterAvailableItems,
   img
 } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
@@ -437,9 +436,9 @@ export async function renderCategoryPage({ container, query }) {
       release_date: item.release_date || item.first_air_date,
       media_type: item.media_type || 'movie',
       overview: item.overview || ''
-    }));
+    })).filter(item => item.title && item.poster_path); // only keep items with poster
 
-    return await filterAvailableItems(rawList, 'mixed');
+    return rawList;
   };
 
   try {
