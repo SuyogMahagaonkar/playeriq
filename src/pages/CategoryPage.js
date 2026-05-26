@@ -228,17 +228,17 @@ export async function renderCategoryPage({ container, query }) {
   } else if (isMarvel) {
     initialLogoHtml = `<img class="category-hero-logo-marvel" src="/marvel-logo-white.svg" alt="Marvel Studios" style="max-height: 60px; object-fit: contain;" />`;
   } else if (isDC) {
-    initialLogoHtml = `<img src="/dc-logo-white.svg" alt="DC Studios" style="max-height: 80px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/dc-studios-tmdb.png" alt="DC Studios" style="filter: brightness(0) invert(1); max-height: 75px; object-fit: contain;" />`;
   } else if (isWarnerBros) {
-    initialLogoHtml = `<img src="/wb-logo-white.svg" alt="Warner Bros" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/wb-tmdb.png" alt="Warner Bros" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isUniversal) {
-    initialLogoHtml = `<img src="/universal-logo-white.svg" alt="Universal Pictures" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/universal-tmdb.png" alt="Universal Pictures" style="filter: brightness(0) invert(1); max-height: 75px; object-fit: contain;" />`;
   } else if (isSony) {
-    initialLogoHtml = `<img src="/sony-logo-white.svg" alt="Sony Pictures" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/sony-tmdb.png" alt="Sony Pictures" style="filter: brightness(0) invert(1); max-height: 65px; object-fit: contain;" />`;
   } else if (isAppleTV) {
-    initialLogoHtml = `<img src="/appletv-logo-white.svg" alt="Apple TV+" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/appletv-tmdb.png" alt="Apple TV+" style="filter: brightness(0) invert(1); max-height: 70px; object-fit: contain;" />`;
   } else if (isDreamWorks) {
-    initialLogoHtml = `<img src="/dreamworks-logo-white.svg" alt="DreamWorks" style="max-height: 70px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/dreamworks-tmdb.png" alt="DreamWorks" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   }
 
   const roomTitleHtml = initialLogoHtml 

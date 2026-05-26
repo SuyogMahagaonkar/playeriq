@@ -65,22 +65,22 @@ export async function renderHomePage({ container }) {
                 <img class="studio-logo" src="/marvel-logo-white.svg" alt="Marvel" />
               </div>
               <div class="studio-card studio-dc" data-route="/category?title=DC%20Studios">
-                <img class="studio-logo" src="/dc-logo-white.svg" alt="DC Studios" />
+                <img class="studio-logo studio-logo-white" src="/dc-studios-tmdb.png" alt="DC Studios" />
               </div>
               <div class="studio-card studio-wb" data-route="/category?title=Warner%20Bros">
-                <img class="studio-logo" src="/wb-logo-white.svg" alt="Warner Bros" />
+                <img class="studio-logo studio-logo-white" src="/wb-tmdb.png" alt="Warner Bros" />
               </div>
               <div class="studio-card studio-universal" data-route="/category?title=Universal%20Pictures">
-                <img class="studio-logo" src="/universal-logo-white.svg" alt="Universal Pictures" />
+                <img class="studio-logo studio-logo-white" src="/universal-tmdb.png" alt="Universal Pictures" />
               </div>
               <div class="studio-card studio-sony" data-route="/category?title=Sony%20Pictures">
-                <img class="studio-logo" src="/sony-logo-white.svg" alt="Sony Pictures" />
+                <img class="studio-logo studio-logo-white" src="/sony-tmdb.png" alt="Sony Pictures" />
               </div>
               <div class="studio-card studio-appletv" data-route="/category?title=Apple%20TV%2B">
-                <img class="studio-logo" src="/appletv-logo-white.svg" alt="Apple TV+" />
+                <img class="studio-logo studio-logo-white" src="/appletv-tmdb.png" alt="Apple TV+" />
               </div>
               <div class="studio-card studio-dreamworks" data-route="/category?title=DreamWorks">
-                <img class="studio-logo" src="/dreamworks-logo-white.svg" alt="DreamWorks" />
+                <img class="studio-logo studio-logo-white" src="/dreamworks-tmdb.png" alt="DreamWorks" />
               </div>
             </div>
             <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
