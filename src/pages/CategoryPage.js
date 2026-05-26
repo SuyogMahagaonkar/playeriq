@@ -240,7 +240,7 @@ export async function renderCategoryPage({ container, query }) {
     } else if (isDisney) {
       logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />`;
     } else if (isNetflix) {
-      logoHtml = `<img class="category-hero-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="height: 60px;" />`;
+      logoHtml = `<img class="category-hero-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />`;
     } else if (isPrime) {
       logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Amazon Prime Video" />`;
     } else if (isParamount) {
@@ -249,7 +249,10 @@ export async function renderCategoryPage({ container, query }) {
       logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
     }
 
-    const titleHtml = logoHtml ? logoHtml : `<h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>`;
+    const brandRowHtml = logoHtml 
+      ? `<div class="category-hero-brand-row">${logoHtml}${brandBadge}</div>`
+      : brandBadge;
+
     const releaseYear = (heroItem.release_date || '').slice(0, 4) || new Date().getFullYear();
     const mediaTypeLabel = (heroItem.media_type || 'movie').toUpperCase() === 'TV' ? 'TV Show' : 'Movie';
     const voteAverage = heroItem.vote_average ? parseFloat(heroItem.vote_average).toFixed(1) : 'N/A';
@@ -263,8 +266,8 @@ export async function renderCategoryPage({ container, query }) {
       <div class="category-hero-billboard" style="background-image: url('${backdropUrl || posterUrl}');">
         <div class="category-hero-mask"></div>
         <div class="category-hero-content">
-          ${brandBadge}
-          ${titleHtml}
+          ${brandRowHtml}
+          <h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>
           
           <div class="category-hero-metadata">
             <span class="category-hero-rating">★ ${voteAverage}</span>

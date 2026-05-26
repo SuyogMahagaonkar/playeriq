@@ -107,6 +107,14 @@
   animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.category-hero-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
 .category-hero-brand-badge {
   display: inline-block;
   padding: 6px 14px;
@@ -115,16 +123,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: var(--space-md);
   backdrop-filter: blur(10px);
 }
 
 .category-hero-logo {
-  max-height: 85px;
-  max-width: 280px;
+  max-height: 38px;
+  max-width: 160px;
   object-fit: contain;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 4px 15px rgba(0,0,0,0.6));
+  filter: brightness(0) invert(1) drop-shadow(0 2px 10px rgba(255,255,255,0.2));
   animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
