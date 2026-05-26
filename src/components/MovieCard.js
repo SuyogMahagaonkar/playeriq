@@ -415,7 +415,8 @@ export function attachCardClicks(container) {
         const watchlistIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
         const watchlistCheckedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
 
-        const titleHTML = `<div class="preview-title">${title}</div>`;
+        // Hide text title if the premium transparent image logo is already displayed overlaying the trailer/backdrop
+        const titleHTML = logoUrl ? '' : `<div class="preview-title">${title}</div>`;
 
         previewCard.innerHTML = `
           ${trailerHTML}
@@ -547,6 +548,7 @@ export function attachCardClicks(container) {
         });
 
         const volumeBtn = previewCard.querySelector('.preview-volume-btn');
+        const iframe = previewCard.querySelector('.preview-iframe');
         if (volumeBtn && iframe) {
           let muted = true;
           volumeBtn.addEventListener('click', (e) => {
