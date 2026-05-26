@@ -24,88 +24,147 @@ import { createFooter } from '../components/Footer.js';
 import { getWatchHistory, removeFromHistory as removeProgress } from '../services/auth.js';
 
 export async function renderHomePage({ container }) {
-  if (window.innerWidth <= 767) {
-    container.innerHTML = `
-      <div class="skeleton-page">
-        <div class="skeleton-hero">
-          <div class="skeleton-hero-badge"></div>
-          <div class="skeleton-hero-title"></div>
-          <div class="skeleton-hero-meta"></div>
-          <div class="skeleton-hero-overview"></div>
-          <div class="skeleton-hero-actions">
-            <div class="skeleton-hero-btn"></div>
-            <div class="skeleton-hero-btn"></div>
+  // 1. Render complete skeletons instantly (zero network latency block!)
+  container.innerHTML = `
+    <div class="homepage-container animate-fade-in">
+      <!-- Hero Banner Mount -->
+      <div id="hero-banner-container">
+        <div style="height:600px;background:var(--bg-secondary);animation:shimmer 2s infinite;background-size:200% 100%;background-image:linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);"></div>
+      </div>
+      
+      <!-- Continue Watching Row Mount -->
+      <div id="continue-watching-row-container"></div>
+      
+      <!-- Featured Studios Brand Row (Static UI - rendered instantly!) -->
+      <div id="featured-studios-row-container">
+        <section class="content-row studios-section">
+          <div class="content-row-header" style="padding-left: 45px;">
+            <h2 class="content-row-title"><i data-lucide="clapperboard" class="search-section-icon" style="color:#ffae00;"></i> Featured Studios</h2>
           </div>
-        </div>
-        <div class="skeleton-row-container">
-          ${createSkeletonRow('Latest from Netflix', '', 'portrait')}
-          ${createSkeletonRow('Latest from Prime Video', '', 'portrait')}
-          ${createSkeletonRow('Trending Movies', '', 'landscape')}
+          <div class="content-row-container">
+            <button class="content-row-arrow content-row-arrow-left" aria-label="Scroll left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="studio-row-scroll content-row-scroll">
+              <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
+                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />
+              </div>
+              <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
+                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
+              </div>
+              <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
+                <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
+              </div>
+              <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
+                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
+              </div>
+              <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
+                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
+              </div>
+              <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
+                <img class="studio-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel" />
+              </div>
+            </div>
+            <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Top 10 Mobile Toggle -->
+      <div id="top10-mobile-toggle-container">
+        <div class="top10-mobile-toggle" style="display: none;">
+          <div class="top10-toggle-pills">
+            <button class="top10-toggle-pill active" data-target="movies">Movies</button>
+            <button class="top10-toggle-pill" data-target="shows">Shows</button>
+          </div>
+          <a href="#/ranking" class="top10-mobile-see-all">See All <i data-lucide="chevron-right" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i></a>
         </div>
       </div>
-    `;
-  } else {
-    // Show base skeleton for hero
-    container.innerHTML = `
-      <div style="height:600px;background:var(--bg-secondary);animation:shimmer 2s infinite;background-size:200% 100%;background-image:linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);"></div>
-    `;
-  }
+      
+      <!-- Top 10 Mounts -->
+      <div id="top10-movies-container"></div>
+      <div id="top10-series-container"></div>
+
+      <!-- Discover Shelves Mounts (Pre-rendered as skeletons to preserve visual layout!) -->
+      <div id="netflix-row-container">${createSkeletonRow('Latest from Netflix', '', 'portrait')}</div>
+      <div id="prime-row-container">${createSkeletonRow('Latest from Prime Video', '', 'portrait')}</div>
+      <div id="cinema-row-container">${createSkeletonRow('Cinema Hits', '', 'portrait')}</div>
+      <div id="bollywood-row-container">${createSkeletonRow('Bollywood Classics', '', 'portrait')}</div>
+      <div id="south-indian-row-container">${createSkeletonRow('South Indian Action', '', 'portrait')}</div>
+      <div id="horror-row-container">${createSkeletonRow('Horror Hits', '', 'portrait')}</div>
+      <div id="romance-row-container">${createSkeletonRow('Romance & Love', '', 'portrait')}</div>
+      <div id="scifi-row-container">${createSkeletonRow('Sci-Fi & Fantasy', '', 'portrait')}</div>
+      <div id="kids-row-container">${createSkeletonRow('Family & Kids', '', 'portrait')}</div>
+      <div id="comedy-row-container">${createSkeletonRow('Comedy Zone', '', 'portrait')}</div>
+      <div id="anime-row-container">${createSkeletonRow('Anime Chronicles', '', 'portrait')}</div>
+
+      <!-- Footer Mount -->
+      <div id="footer-mount-container">${createFooter()}</div>
+    </div>
+  `;
+
+  // Inject outline top 10 style
+  const top10Style = document.createElement('style');
+  top10Style.innerHTML = `
+    .top10-card:hover .top10-number {
+      -webkit-text-stroke: 4px #ff0055 !important;
+      color: rgba(255, 0, 85, 0.1) !important;
+      filter: drop-shadow(0 0 15px rgba(255, 0, 85, 0.6)) !important;
+    }
+  `;
+  container.appendChild(top10Style);
+
+  let cleanupHero = () => {};
+  const activeObservers = [];
+
+  // Helper map raw TMDB results to standard schema
+  const mapToStandard = (results, defaultMediaType) => {
+    return (results || []).map(item => ({
+      id: item.id,
+      title: item.title || item.name,
+      name: item.title || item.name,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date || item.first_air_date,
+      media_type: item.media_type || defaultMediaType
+    }));
+  };
+
+  // Delete event handler for Continue Watching
+  const deleteHandler = (e) => {
+    const id = e.detail.id;
+    if (id) {
+      removeProgress(id);
+      container.removeEventListener('delete-progress', deleteHandler);
+      renderHomePage({ container });
+    }
+  };
+  container.addEventListener('delete-progress', deleteHandler);
 
   try {
-    const [
-      trendingAllData, 
-      netflixData, 
-      primeData, 
-      top10MoviesData, 
-      top10SeriesData, 
-      bollywoodData, 
-      southIndianData, 
-      cinemaData,
-      horrorData,
-      romanceData,
-      scifiData,
-      kidsData,
-      comedyData,
-      animeData
-    ] = await Promise.all([
+    // ========================================
+    // STAGE 1: Immediate Viewport Hydration (<500ms)
+    // ========================================
+    
+    // 1. Fetch & Hydrate Above-The-Fold viewports
+    const [trendingAllData, top10MoviesData, top10SeriesData, watchHistoryData] = await Promise.all([
       getTrendingAll().catch(() => ({ results: [] })),
-      getLatestNetflix().catch(() => ({ results: [] })),
-      getLatestPrime().catch(() => ({ results: [] })),
       getTop10Movies().catch(() => ({ results: [] })),
       getTop10Series().catch(() => ({ results: [] })),
-      getBollywoodMovies().catch(() => ({ results: [] })),
-      getSouthIndianMovies().catch(() => ({ results: [] })),
-      getCinemaMovies().catch(() => ({ results: [] })),
-      getHorrorMovies().catch(() => ({ results: [] })),
-      getRomanceMovies().catch(() => ({ results: [] })),
-      getSciFiMovies().catch(() => ({ results: [] })),
-      getKidsMovies().catch(() => ({ results: [] })),
-      getComedyMovies().catch(() => ({ results: [] })),
-      getAnimeMovies().catch(() => ({ results: [] }))
+      getWatchHistory().catch(() => [])
     ]);
-    
-    // Find banner section (using top trending blockbusters of the week from TMDB!)
+
+    // 2. Hydrate Hero Spotlight Banner
     const banners = (trendingAllData.results || []).slice(0, 10);
-    
-    // Convert banners to TMDB-like structure for the hero banner component
     const addedTitles = new Set();
     const finalHeroItemsBase = [];
     
-    const trendingItemsBase = banners.map(b => ({
-      id: b.id,
-      title: b.title || b.name,
-      name: b.title || b.name,
-      backdrop_path: b.backdrop_path,
-      poster_path: b.poster_path,
-      overview: b.overview || '',
-      media_type: b.media_type || 'movie'
-    }));
-
-    // Check if a candidate title is a duplicate of any already added titles (handles suffix brackets and substring overlaps!)
     const isDuplicateTitle = (candidateTitle) => {
       const cleanCandidate = (candidateTitle || '').replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
       if (!cleanCandidate) return true;
-      
       for (const added of addedTitles) {
         if (added === cleanCandidate || added.includes(cleanCandidate) || cleanCandidate.includes(added)) {
           return true;
@@ -114,83 +173,34 @@ export async function renderHomePage({ container }) {
       return false;
     };
 
-    // Add up to 6 unique trending items from banners
-    for (const item of trendingItemsBase) {
-      if (finalHeroItemsBase.length >= 6) break;
-      if (!isDuplicateTitle(item.title)) {
-        const cleanNorm = item.title.replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-        addedTitles.add(cleanNorm);
-        finalHeroItemsBase.push(item);
+    // Filter unique banners
+    banners.forEach(b => {
+      if (finalHeroItemsBase.length >= 6) return;
+      const title = b.title || b.name;
+      if (!isDuplicateTitle(title)) {
+        addedTitles.add(title.replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim());
+        finalHeroItemsBase.push({
+          id: b.id,
+          title: title,
+          name: title,
+          backdrop_path: b.backdrop_path,
+          poster_path: b.poster_path,
+          overview: b.overview || '',
+          media_type: b.media_type || 'movie'
+        });
       }
-    }
+    });
 
-    // Mix in 4 unique items from Netflix & Prime Video
-    const netflixItems = (netflixData.results || []).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      backdrop_path: item.backdrop_path,
-      poster_path: item.poster_path,
-      overview: item.overview || '',
-      media_type: item.media_type || 'movie'
-    }));
-
-    const primeItems = (primeData.results || []).map(item => ({
-      id: item.id,
-      title: item.title || item.name,
-      name: item.title || item.name,
-      backdrop_path: item.backdrop_path,
-      poster_path: item.poster_path,
-      overview: item.overview || '',
-      media_type: item.media_type || 'movie'
-    }));
-
-    let netflixIdx = 0;
-    let primeIdx = 0;
-    let turn = 0; // 0 for Netflix, 1 for Prime
-    const totalExtraNeeded = 4;
-    let extraAdded = 0;
-
-    while (extraAdded < totalExtraNeeded && (netflixIdx < netflixItems.length || primeIdx < primeItems.length)) {
-      let candidate = null;
-      if (turn === 0 && netflixIdx < netflixItems.length) {
-        candidate = netflixItems[netflixIdx++];
-        turn = 1; // switch turn
-      } else if (turn === 1 && primeIdx < primeItems.length) {
-        candidate = primeItems[primeIdx++];
-        turn = 0; // switch turn
-      } else if (netflixIdx < netflixItems.length) {
-        candidate = netflixItems[netflixIdx++];
-      } else if (primeIdx < primeItems.length) {
-        candidate = primeItems[primeIdx++];
-      }
-
-      if (candidate && candidate.backdrop_path) {
-        if (!isDuplicateTitle(candidate.title)) {
-          const cleanNorm = candidate.title.replace(/\[.*?\]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-          addedTitles.add(cleanNorm);
-          finalHeroItemsBase.push(candidate);
-          extraAdded++;
-        }
-      }
-    }
-
-    // Fetch TMDB images and details in parallel for the hero banner items!
     const heroItems = await Promise.all(finalHeroItemsBase.map(async (item) => {
       try {
         const cleanTitle = item.title.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
         const searchRes = await fetch(`https://api.themoviedb.org/3/search/${item.media_type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
-        
         if (searchRes.ok) {
           const searchData = await searchRes.json();
           const tmdbMatch = searchData.results?.[0];
-          
           if (tmdbMatch) {
-            // Fetch images collection using the matched TMDB ID
             const imagesRes = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${tmdbMatch.id}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,hi,null`);
             const imagesData = imagesRes.ok ? await imagesRes.json() : null;
-            
-            // Merge TMDB metadata (vote_average, release_date/first_air_date, overview, backdrop, poster)
             return {
               ...item,
               vote_average: tmdbMatch.vote_average || item.vote_average,
@@ -204,14 +214,18 @@ export async function renderHomePage({ container }) {
           }
         }
       } catch (e) {
-        console.warn('Failed to load TMDB details for hero item', item.title, e);
+        console.warn('Hero banner details fetch failed', e);
       }
       return item;
     }));
 
-    const heroHTML = createHeroBanner(heroItems);
+    const heroMount = container.querySelector('#hero-banner-container');
+    if (heroMount) {
+      heroMount.innerHTML = createHeroBanner(heroItems);
+      cleanupHero = initHeroBanner();
+    }
 
-    // Continue Watching
+    // 3. Hydrate Continue Watching
     const getMillis = (timestamp) => {
       if (!timestamp) return 0;
       if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
@@ -221,8 +235,7 @@ export async function renderHomePage({ container }) {
       return isNaN(parsed) ? 0 : parsed;
     };
 
-    const history = await getWatchHistory();
-    let continueWatchingItems = history.filter(item => {
+    let continueWatchingItems = watchHistoryData.filter(item => {
       if (item.watched) return false;
       const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
       if (item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300))) return false;
@@ -234,7 +247,6 @@ export async function renderHomePage({ container }) {
       continueWatchingItems = continueWatchingItems.filter(isSafeItem);
     }
 
-    // Collapse multiple episodes of the same show into exactly one card (latest active episode)
     const tvLatestEpisodes = {};
     const finalContinueWatching = [];
 
@@ -254,12 +266,11 @@ export async function renderHomePage({ container }) {
       finalContinueWatching.push(tvLatestEpisodes[showId]);
     });
 
-    // Sort final list chronologically (most recently watched first)
     finalContinueWatching.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
     continueWatchingItems = finalContinueWatching;
 
-    let continueWatchingHTML = '';
-    if (continueWatchingItems && continueWatchingItems.length > 0) {
+    const continueWatchingMount = container.querySelector('#continue-watching-row-container');
+    if (continueWatchingMount && continueWatchingItems.length > 0) {
       const historyCards = continueWatchingItems.map(item => {
         const route = item.type === 'tv' 
           ? `/watch/tv/${item.id}?s=${item.season}&e=${item.episode}` 
@@ -268,84 +279,17 @@ export async function renderHomePage({ container }) {
         return createMovieCard(item, item.type, route, subtitle, item, true, 'landscape');
       }).join('');
 
-      continueWatchingHTML = createContentRow(
+      continueWatchingMount.innerHTML = createContentRow(
         '<i data-lucide="play-circle"></i> Continue Watching', 
         historyCards, 
         'custom'
       );
     }
 
-    // Map raw TMDB responses to standard structure before filtering
-    const mapToStandard = (results, defaultMediaType) => {
-      return (results || []).map(item => ({
-        id: item.id,
-        title: item.title || item.name,
-        name: item.title || item.name,
-        poster_path: item.poster_path,
-        backdrop_path: item.backdrop_path,
-        vote_average: item.vote_average,
-        release_date: item.release_date || item.first_air_date,
-        media_type: item.media_type || defaultMediaType
-      }));
-    };
-
-    // Filter all TMDB shelves in parallel to keep only MovieBox-playable titles
-    const [
-      mappedNetflix,
-      mappedPrime,
-      mappedCinema,
-      mappedBollywood,
-      mappedSouthIndian,
-      mappedHorror,
-      mappedRomance,
-      mappedSciFi,
-      mappedKids,
-      mappedComedy,
-      mappedAnime
-    ] = await Promise.all([
-      filterAvailableItems(mapToStandard(netflixData.results, 'mixed'), 'mixed').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(primeData.results, 'mixed'), 'mixed').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(cinemaData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(bollywoodData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(southIndianData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(horrorData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(romanceData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(scifiData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(kidsData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(comedyData.results, 'movie'), 'movie').then(res => res.slice(0, 15)),
-      filterAvailableItems(mapToStandard(animeData.results, 'movie'), 'movie').then(res => res.slice(0, 15))
-    ]);
-
-    // 1. Netflix Row
-    let netflixHTML = '';
-    if (mappedNetflix.length > 0) {
-      netflixHTML = createContentRow(
-        `<i data-lucide="tv" class="search-section-icon" style="color:#e50914;"></i> Latest from Netflix`,
-        mappedNetflix,
-        'mixed',
-        null,
-        'portrait',
-        true
-      );
-    }
-
-    // 2. Prime Video Row
-    let primeHTML = '';
-    if (mappedPrime.length > 0) {
-      primeHTML = createContentRow(
-        `<i data-lucide="film" class="search-section-icon" style="color:#00a8e1;"></i> Latest from Prime`,
-        mappedPrime,
-        'mixed',
-        null,
-        'portrait',
-        true
-      );
-    }
-
-    // 3. Top 10 Movies Row
-    let top10MoviesHTML = '';
+    // 4. Hydrate Top 10 Movies Row
     const topMovies = top10MoviesData.results || [];
-    if (topMovies.length > 0) {
+    const topMoviesMount = container.querySelector('#top10-movies-container');
+    if (topMoviesMount && topMovies.length > 0) {
       const topMoviesCards = topMovies.map((item, index) => {
         const route = `/movie/${item.id}`;
         const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
@@ -398,7 +342,7 @@ export async function renderHomePage({ container }) {
         `;
       }).join('');
 
-      top10MoviesHTML = `
+      topMoviesMount.innerHTML = `
         <section class="content-row top10-movies-section">
           <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#ff0055;"></i> Top 10 Movies Today</h2>
@@ -413,10 +357,10 @@ export async function renderHomePage({ container }) {
       `;
     }
 
-    // 4. Top 10 Series Row
-    let top10SeriesHTML = '';
+    // 5. Hydrate Top 10 Series Row
     const topSeries = top10SeriesData.results || [];
-    if (topSeries.length > 0) {
+    const topSeriesMount = container.querySelector('#top10-series-container');
+    if (topSeriesMount && topSeries.length > 0) {
       const topSeriesCards = topSeries.map((item, index) => {
         const route = `/tv/${item.id}`;
         const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'data:image/svg+xml,...';
@@ -469,7 +413,7 @@ export async function renderHomePage({ container }) {
         `;
       }).join('');
 
-      top10SeriesHTML = `
+      topSeriesMount.innerHTML = `
         <section class="content-row top10-shows-section">
           <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
             <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#00a8e1;"></i> Top 10 Shows Today</h2>
@@ -484,183 +428,18 @@ export async function renderHomePage({ container }) {
       `;
     }
 
-    // 5. Cinema Row
-    let cinemaHTML = '';
-    if (mappedCinema.length > 0) {
-      cinemaHTML = createContentRow(
-        `<i data-lucide="film" class="search-section-icon" style="color:#ffae00;"></i> 🔥 Cinema`,
-        mappedCinema,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 6. Bollywood Row
-    let bollywoodHTML = '';
-    if (mappedBollywood.length > 0) {
-      bollywoodHTML = createContentRow(
-        `<i data-lucide="tv" class="search-section-icon" style="color:#a855f7;"></i> Bollywood`,
-        mappedBollywood,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 7. South Indian Row
-    let southIndianHTML = '';
-    if (mappedSouthIndian.length > 0) {
-      southIndianHTML = createContentRow(
-        `<i data-lucide="video" class="search-section-icon" style="color:#00ff88;"></i> South Indian`,
-        mappedSouthIndian,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 8. Studios Brand Carousel HTML
-    const studiosHTML = `
-      <section class="content-row studios-section">
-        <div class="content-row-header" style="padding-left: 45px;">
-          <h2 class="content-row-title"><i data-lucide="clapperboard" class="search-section-icon" style="color:#ffae00;"></i> Featured Studios</h2>
-        </div>
-        <div class="content-row-container">
-          <button class="content-row-arrow content-row-arrow-left" aria-label="Scroll left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <div class="studio-row-scroll content-row-scroll">
-            <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />
-            </div>
-            <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
-              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
-            </div>
-            <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
-              <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
-            </div>
-            <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
-              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
-            </div>
-            <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
-              <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
-            </div>
-            <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
-              <img class="studio-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel" />
-            </div>
-          </div>
-          <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      </section>
-    `;
-
-    // 9. Horror Row
-    let horrorHTML = '';
-    if (mappedHorror.length > 0) {
-      horrorHTML = createContentRow(
-        `<i data-lucide="skull" class="search-section-icon" style="color:#a855f7;"></i> Horror Hits`,
-        mappedHorror,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 10. Romance Row
-    let romanceHTML = '';
-    if (mappedRomance.length > 0) {
-      romanceHTML = createContentRow(
-        `<i data-lucide="heart" class="search-section-icon" style="color:#ff0055;"></i> Romance & Love`,
-        mappedRomance,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 11. Sci-Fi Row
-    let scifiHTML = '';
-    if (mappedSciFi.length > 0) {
-      scifiHTML = createContentRow(
-        `<i data-lucide="orbit" class="search-section-icon" style="color:#00e5ff;"></i> Sci-Fi & Fantasy`,
-        mappedSciFi,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 12. Kids Row
-    let kidsHTML = '';
-    if (mappedKids.length > 0) {
-      kidsHTML = createContentRow(
-        `<i data-lucide="smile" class="search-section-icon" style="color:#ffc107;"></i> Family & Kids`,
-        mappedKids,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 13. Comedy Row
-    let comedyHTML = '';
-    if (mappedComedy.length > 0) {
-      comedyHTML = createContentRow(
-        `<i data-lucide="laugh" class="search-section-icon" style="color:#4caf50;"></i> Comedy Zone`,
-        mappedComedy,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    // 14. Anime Row
-    let animeHTML = '';
-    if (mappedAnime.length > 0) {
-      animeHTML = createContentRow(
-        `<i data-lucide="sparkles" class="search-section-icon" style="color:#ff7600;"></i> Anime Chronicles`,
-        mappedAnime,
-        'mixed',
-        null,
-        'portrait'
-      );
-    }
-
-    const top10ToggleHTML = `
-      <div class="top10-mobile-toggle" style="display: none;">
-        <div class="top10-toggle-pills">
-          <button class="top10-toggle-pill active" data-target="movies">Movies</button>
-          <button class="top10-toggle-pill" data-target="shows">Shows</button>
-        </div>
-        <a href="#/ranking" class="top10-mobile-see-all">See All <i data-lucide="chevron-right" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i></a>
-      </div>
-    `;
-
-    // Assembly including Featured Studios brand cards row, original shelves, and newly added TMDB genre carousels!
-    container.innerHTML = heroHTML + continueWatchingHTML + studiosHTML + top10ToggleHTML + top10MoviesHTML + top10SeriesHTML + cinemaHTML + bollywoodHTML + southIndianHTML + netflixHTML + primeHTML + horrorHTML + romanceHTML + scifiHTML + kidsHTML + comedyHTML + animeHTML + createFooter();
-
-    // Inject outline top 10 style
-    const top10Style = document.createElement('style');
-    top10Style.innerHTML = `
-      .top10-card:hover .top10-number {
-        -webkit-text-stroke: 4px #ff0055 !important;
-        color: rgba(255, 0, 85, 0.1) !important;
-        filter: drop-shadow(0 0 15px rgba(255, 0, 85, 0.6)) !important;
-      }
-    `;
-    container.appendChild(top10Style);
-
-    // Initialize interactivity
-    const cleanupHero = initHeroBanner();
+    // Initialize top rows interactivity
     initContentRows(container);
     if (window.lucide) window.lucide.createIcons();
 
-    // Wire up Top 10 Mobile Toggle
-    const togglePills = container.querySelectorAll('.top10-toggle-pill');
-    if (togglePills.length > 0) {
+    // Wire up Mobile top 10 pills toggling
+    const toggleMount = container.querySelector('.top10-mobile-toggle');
+    if (toggleMount) {
+      if (window.innerWidth <= 768) {
+        toggleMount.style.display = 'flex';
+      }
+      
+      const togglePills = container.querySelectorAll('.top10-toggle-pill');
       const moviesSection = container.querySelector('.top10-movies-section');
       const showsSection = container.querySelector('.top10-shows-section');
 
@@ -680,22 +459,13 @@ export async function renderHomePage({ container }) {
         });
       });
 
-      // Default initial state for mobile view: show movies, hide shows
       if (window.innerWidth <= 768) {
         if (moviesSection) moviesSection.style.setProperty('display', 'block', 'important');
         if (showsSection) showsSection.style.setProperty('display', 'none', 'important');
       }
     }
 
-    // Wire up Top 10 clicks
-    container.querySelectorAll('.top10-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const route = card.dataset.route;
-        if (route) window.location.hash = route;
-      });
-    });
-
-    // Wire up Studio clicks
+    // Wire up static Studio card clicks
     container.querySelectorAll('.studio-card').forEach(card => {
       card.addEventListener('click', () => {
         const route = card.dataset.route;
@@ -703,29 +473,85 @@ export async function renderHomePage({ container }) {
       });
     });
 
-    // Handle delete events for Continue Watching
-    const deleteHandler = (e) => {
-      const id = e.detail.id;
-      if (id) {
-        removeProgress(id);
-        container.removeEventListener('delete-progress', deleteHandler);
-        renderHomePage({ container });
-      }
-    };
-    container.addEventListener('delete-progress', deleteHandler);
+    // Wire up static Top 10 clicks
+    container.querySelectorAll('.top10-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const route = card.dataset.route;
+        if (route) window.location.hash = route;
+      });
+    });
 
+    // ========================================
+    // STAGE 2: Progressive Lazy Hydration
+    // ========================================
+    
+    // Lazy hydration helper utilizing IntersectionObserver
+    const lazyHydrateRow = (rowId, apiFn, title, iconHtml, defaultMediaType) => {
+      const rowContainer = container.querySelector(`#${rowId}`);
+      if (!rowContainer) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(async (entry) => {
+          if (entry.isIntersecting) {
+            observer.disconnect(); // Fire once!
+            try {
+              const data = await apiFn();
+              const mapped = await filterAvailableItems(mapToStandard(data.results, defaultMediaType), defaultMediaType).then(res => res.slice(0, 15));
+              
+              if (mapped.length > 0) {
+                rowContainer.innerHTML = createContentRow(
+                  `${iconHtml} ${title}`,
+                  mapped,
+                  'mixed',
+                  null,
+                  'portrait',
+                  true
+                );
+                // Hydrate event listeners
+                initContentRows(rowContainer);
+                if (window.lucide) window.lucide.createIcons();
+              } else {
+                rowContainer.style.display = 'none'; // collapse shelf if no streams matched
+              }
+            } catch (err) {
+              console.warn(`[LazyLoader] Row failed to load: ${title}`, err);
+              rowContainer.style.display = 'none';
+            }
+          }
+        });
+      }, { rootMargin: '250px 0px' }); // Trigger when 250px away from viewport
+
+      observer.observe(rowContainer);
+      activeObservers.push(observer);
+    };
+
+    // Hydrate discovering rows dynamically as they enter the viewport!
+    lazyHydrateRow('netflix-row-container', getLatestNetflix, 'Latest from Netflix', '<i data-lucide="tv" class="search-section-icon" style="color:#e50914;"></i>', 'mixed');
+    lazyHydrateRow('prime-row-container', getLatestPrime, 'Latest from Prime', '<i data-lucide="film" class="search-section-icon" style="color:#00a8e1;"></i>', 'mixed');
+    lazyHydrateRow('cinema-row-container', getCinemaMovies, 'Cinema Hits', '<i data-lucide="film" class="search-section-icon" style="color:#ffae00;"></i>', 'movie');
+    lazyHydrateRow('bollywood-row-container', getBollywoodMovies, 'Bollywood', '<i data-lucide="tv" class="search-section-icon" style="color:#a855f7;"></i>', 'movie');
+    lazyHydrateRow('south-indian-row-container', getSouthIndianMovies, 'South Indian Action', '<i data-lucide="video" class="search-section-icon" style="color:#00ff88;"></i>', 'movie');
+    lazyHydrateRow('horror-row-container', getHorrorMovies, 'Horror Hits', '<i data-lucide="skull" class="search-section-icon" style="color:#a855f7;"></i>', 'movie');
+    lazyHydrateRow('romance-row-container', getRomanceMovies, 'Romance & Love', '<i data-lucide="heart" class="search-section-icon" style="color:#ff0055;"></i>', 'movie');
+    lazyHydrateRow('scifi-row-container', getSciFiMovies, 'Sci-Fi & Fantasy', '<i data-lucide="orbit" class="search-section-icon" style="color:#00e5ff;"></i>', 'movie');
+    lazyHydrateRow('kids-row-container', getKidsMovies, 'Family & Kids', '<i data-lucide="smile" class="search-section-icon" style="color:#ffc107;"></i>', 'movie');
+    lazyHydrateRow('comedy-row-container', getComedyMovies, 'Comedy Zone', '<i data-lucide="laugh" class="search-section-icon" style="color:#4caf50;"></i>', 'movie');
+    lazyHydrateRow('anime-row-container', getAnimeMovies, 'Anime Chronicles', '<i data-lucide="sparkles" class="search-section-icon" style="color:#ff7600;"></i>', 'movie');
+
+    // Return combined lifecycle cleanup handler
     return () => {
       cleanupHero();
+      activeObservers.forEach(obs => obs.disconnect());
       container.removeEventListener('delete-progress', deleteHandler);
     };
 
   } catch (err) {
-    console.error('Home page error:', err);
+    console.error('Home page loader fatal error:', err);
     container.innerHTML = `
       <div class="empty-state">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <div class="empty-state-title">Something went wrong</div>
-        <div class="empty-state-text">Failed to load content from MovieBox. Please check your connection and try again.</div>
+        <div class="empty-state-text">Failed to connect to MovieBox API gateway. Please refresh your browser.</div>
       </div>
     `;
   }
