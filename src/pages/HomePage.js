@@ -62,7 +62,7 @@ export async function renderHomePage({ container }) {
                 <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
               </div>
               <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
-                <img class="studio-logo" src="https://www.citypng.com/public/uploads/preview/marvel-white-logo-hd-png-701751694711747cwpsongacz.png" alt="Marvel" />
+                <img class="studio-logo" src="/marvel-white-logo.png" alt="Marvel" style="mix-blend-mode: screen; max-width: 72%; max-height: 52%;" />
               </div>
             </div>
             <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">

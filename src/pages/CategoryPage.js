@@ -184,7 +184,7 @@ export async function renderCategoryPage({ container, query }) {
   } else if (isParamount) {
     initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isMarvel) {
-    initialLogoHtml = `<img class="category-hero-logo-marvel" src="https://www.citypng.com/public/uploads/preview/marvel-white-logo-hd-png-701751694711747cwpsongacz.png" alt="Marvel Studios" style="max-height: 60px; object-fit: contain;" />`;
+    initialLogoHtml = `<img class="category-hero-logo-marvel" src="/marvel-white-logo.png" alt="Marvel Studios" style="mix-blend-mode: screen; max-height: 60px; object-fit: contain;" />`;
   }
 
   const roomTitleHtml = initialLogoHtml 
