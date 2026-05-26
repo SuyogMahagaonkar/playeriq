@@ -68,7 +68,7 @@ export async function renderHomePage({ container }) {
                 <img class="studio-logo studio-logo-white" src="/dc-studios-tmdb.png" alt="DC Studios" />
               </div>
               <div class="studio-card studio-wb" data-route="/category?title=Warner%20Bros">
-                <img class="studio-logo studio-logo-white" src="/wb-tmdb.png" alt="Warner Bros" />
+                <img class="studio-logo studio-logo-white" src="/wb-official.svg" alt="Warner Bros" />
               </div>
               <div class="studio-card studio-universal" data-route="/category?title=Universal%20Pictures">
                 <img class="studio-logo studio-logo-white" src="/universal-tmdb.png" alt="Universal Pictures" />

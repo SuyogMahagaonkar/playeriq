@@ -230,7 +230,7 @@ export async function renderCategoryPage({ container, query }) {
   } else if (isDC) {
     initialLogoHtml = `<img src="/dc-studios-tmdb.png" alt="DC Studios" style="filter: brightness(0) invert(1); max-height: 75px; object-fit: contain;" />`;
   } else if (isWarnerBros) {
-    initialLogoHtml = `<img src="/wb-tmdb.png" alt="Warner Bros" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
+    initialLogoHtml = `<img src="/wb-official.svg" alt="Warner Bros" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isUniversal) {
     initialLogoHtml = `<img src="/universal-tmdb.png" alt="Universal Pictures" style="filter: brightness(0) invert(1); max-height: 75px; object-fit: contain;" />`;
   } else if (isSony) {
