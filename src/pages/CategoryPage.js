@@ -76,8 +76,8 @@ export async function renderCategoryPage({ container, query }) {
   tmdbPage = 1;
 
   const cleanTitle = cleanStringForMatching(categoryTitle);
-  const isNetflix = cleanTitle === 'latest from netflix' || cleanTitle === 'netflix';
-  const isPrime = cleanTitle === 'latest from prime' || cleanTitle === 'latest from prime video' || cleanTitle === 'prime';
+  const isNetflix = cleanTitle === 'latest from netflix' || cleanTitle === 'netflix' || cleanTitle === 'netflix originals' || cleanTitle === 'netflix original';
+  const isPrime = cleanTitle === 'latest from prime' || cleanTitle === 'latest from prime video' || cleanTitle === 'prime' || cleanTitle === 'amazon prime video' || cleanTitle === 'amazon prime' || cleanTitle === 'prime video';
   
   // Genres matching
   const isHorror = cleanTitle.includes('horror');
@@ -89,21 +89,102 @@ export async function renderCategoryPage({ container, query }) {
 
   // Studios matching
   const isDisney = cleanTitle.includes('disney');
-  const isHbo = cleanTitle.includes('hbo');
-  const isParamount = cleanTitle.includes('paramount');
+  const isHbo = cleanTitle.includes('hbo') || cleanTitle.includes('hbo max');
+  const isParamount = cleanTitle.includes('paramount') || cleanTitle.includes('paramount+');
   const isMarvel = cleanTitle.includes('marvel');
 
   const isLiveProvider = isNetflix || isPrime || isHorror || isRomance || isSciFi || isKids || isComedy || isAnime || isDisney || isHbo || isParamount || isMarvel;
 
+  // Premium dynamic theme configurations based on the catalog type
+  let bannerBg = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+  let accentColor = '#a855f7';
+  let shadowColor = 'rgba(168, 85, 247, 0.3)';
+  let brandBadge = `<span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #a855f7; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Premium Selection</span>`;
+  let bannerIcon = '🍿';
+
+  if (isNetflix) {
+    bannerBg = 'linear-gradient(135deg, rgba(229, 9, 20, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#e50914';
+    shadowColor = 'rgba(229, 9, 20, 0.35)';
+    brandBadge = `<span style="background: rgba(229, 9, 20, 0.15); border: 1px solid rgba(229, 9, 20, 0.4); color: #e50914; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Netflix Originals</span>`;
+    bannerIcon = '🎬';
+  } else if (isPrime) {
+    bannerBg = 'linear-gradient(135deg, rgba(0, 168, 225, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#00a8e1';
+    shadowColor = 'rgba(0, 168, 225, 0.35)';
+    brandBadge = `<span style="background: rgba(0, 168, 225, 0.15); border: 1px solid rgba(0, 168, 225, 0.4); color: #00a8e1; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Amazon Prime Video</span>`;
+    bannerIcon = '💙';
+  } else if (isDisney) {
+    bannerBg = 'linear-gradient(135deg, rgba(0, 102, 204, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#0066cc';
+    shadowColor = 'rgba(0, 102, 204, 0.35)';
+    brandBadge = `<span style="background: rgba(0, 102, 204, 0.15); border: 1px solid rgba(0, 102, 204, 0.4); color: #0066cc; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Disney+ Exclusive</span>`;
+    bannerIcon = '✨';
+  } else if (isHbo) {
+    bannerBg = 'linear-gradient(135deg, rgba(153, 51, 255, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#9933ff';
+    shadowColor = 'rgba(153, 51, 255, 0.35)';
+    brandBadge = `<span style="background: rgba(153, 51, 255, 0.15); border: 1px solid rgba(153, 51, 255, 0.4); color: #9933ff; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">HBO Max Originals</span>`;
+    bannerIcon = '👑';
+  } else if (isParamount) {
+    bannerBg = 'linear-gradient(135deg, rgba(0, 102, 255, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#0066ff';
+    shadowColor = 'rgba(0, 102, 255, 0.35)';
+    brandBadge = `<span style="background: rgba(0, 102, 255, 0.15); border: 1px solid rgba(0, 102, 255, 0.4); color: #0066ff; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Paramount+ Original</span>`;
+    bannerIcon = '🏔️';
+  } else if (isMarvel) {
+    bannerBg = 'linear-gradient(135deg, rgba(237, 29, 36, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#ed1d24';
+    shadowColor = 'rgba(237, 29, 36, 0.35)';
+    brandBadge = `<span style="background: rgba(237, 29, 36, 0.15); border: 1px solid rgba(237, 29, 36, 0.4); color: #ed1d24; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Marvel Studios</span>`;
+    bannerIcon = '🛡️';
+  } else if (isHorror) {
+    bannerIcon = '👻';
+    brandBadge = `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Horror & Thriller</span>`;
+    accentColor = '#ef4444';
+    shadowColor = 'rgba(239, 68, 68, 0.3)';
+  } else if (isRomance) {
+    bannerIcon = '💖';
+    brandBadge = `<span style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Romance Selection</span>`;
+    accentColor = '#ec4899';
+    shadowColor = 'rgba(236, 72, 153, 0.3)';
+  } else if (isSciFi) {
+    bannerIcon = '🚀';
+    brandBadge = `<span style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Sci-Fi & Fantasy</span>`;
+    accentColor = '#10b981';
+    shadowColor = 'rgba(16, 185, 129, 0.3)';
+  } else if (isComedy) {
+    bannerIcon = '😂';
+    brandBadge = `<span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Comedy Catalog</span>`;
+    accentColor = '#f59e0b';
+    shadowColor = 'rgba(245, 158, 11, 0.3)';
+  } else if (isAnime) {
+    bannerIcon = '🌸';
+    brandBadge = `<span style="background: rgba(251, 113, 133, 0.15); border: 1px solid rgba(251, 113, 133, 0.4); color: #fb7185; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Anime Classics</span>`;
+    accentColor = '#fb7185';
+    shadowColor = 'rgba(251, 113, 133, 0.3)';
+  }
+
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
-      <div class="movie-grid-header" style="background: linear-gradient(135deg, rgba(255, 0, 85, 0.08) 0%, rgba(20,20,25,0) 100%); padding: 30px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px;">
-        <h1 class="movie-grid-title" style="margin: 0 0 8px 0; font-size: 2.2rem; background: linear-gradient(90deg, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${categoryTitle}</h1>
-        <p style="color: var(--text-dim); margin: 0 0 20px 0;">Browse and search all releases inside the "${categoryTitle}" catalog.</p>
+      <div class="movie-grid-header" style="background: ${bannerBg}; padding: 40px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.08); margin-bottom: 35px; box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,255,255,0.02); display: flex; flex-direction: column; position: relative; overflow: hidden;">
+        <!-- Backdrop glowing light effect -->
+        <div style="position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: ${accentColor}; opacity: 0.15; filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
+        
+        <div>
+          ${brandBadge}
+          <h1 class="movie-grid-title" style="margin: 0 0 10px 0; font-size: 2.5rem; font-weight: 800; font-family: var(--font-display); letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; background: linear-gradient(90deg, #fff 40%, rgba(255,255,255,0.7) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            <span>${bannerIcon}</span>
+            <span>${categoryTitle}</span>
+          </h1>
+          <p style="color: var(--text-secondary); margin: 0 0 24px 0; font-size: var(--text-md); line-height: 1.5; max-width: 600px; font-family: var(--font-body); letter-spacing: 0.01em;">
+            Browse and search all releases inside the premium <strong>${categoryTitle}</strong> library. Immerse yourself in our handpicked collection of high-fidelity streams.
+          </p>
+        </div>
         
         <!-- Search bar inside category -->
         <div class="search-input-wrapper" style="position: relative; max-width: 480px;">
-          <input type="text" id="category-search-input" placeholder="Search within ${categoryTitle}..." style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: #fff; font-size: 15px; outline: none; transition: all 0.2s;" />
+          <input type="text" id="category-search-input" placeholder="Search within ${categoryTitle}..." style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 30px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 15px; outline: none; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);" />
           <svg style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
       </div>
@@ -126,9 +207,9 @@ export async function renderCategoryPage({ container, query }) {
   const styleEl = document.createElement('style');
   styleEl.innerHTML = `
     #category-search-input:focus {
-      border-color: #ff0055 !important;
-      background: rgba(255,0,85,0.04) !important;
-      box-shadow: 0 0 15px rgba(255,0,85,0.15) !important;
+      border-color: ${accentColor} !important;
+      background: rgba(0,0,0,0.6) !important;
+      box-shadow: 0 0 20px ${shadowColor} !important;
     }
   `;
   container.appendChild(styleEl);
