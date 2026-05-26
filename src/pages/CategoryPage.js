@@ -14,10 +14,13 @@ import {
   getComedyMovies,
   getAnimeMovies,
   getStudioContent,
-  filterAvailableItems
+  filterAvailableItems,
+  img
 } from '../services/api.js';
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
+import { getUser } from '../services/auth.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 
 let allItems = [];
 let filteredItems = [];
@@ -103,93 +106,92 @@ export async function renderCategoryPage({ container, query }) {
   let bannerBg = 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
   let accentColor = '#a855f7';
   let shadowColor = 'rgba(168, 85, 247, 0.3)';
-  let brandBadge = `<span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #a855f7; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Premium Selection</span>`;
+  let brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(168, 85, 247, 0.18); border: 1px solid rgba(168, 85, 247, 0.45); color: #a855f7;">Premium Selection</span>`;
   let bannerIcon = '🍿';
 
   if (isNetflix) {
     bannerBg = 'linear-gradient(135deg, rgba(229, 9, 20, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#e50914';
     shadowColor = 'rgba(229, 9, 20, 0.35)';
-    brandBadge = `<span style="background: rgba(229, 9, 20, 0.15); border: 1px solid rgba(229, 9, 20, 0.4); color: #e50914; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Netflix Originals</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(229, 9, 20, 0.18); border: 1px solid rgba(229, 9, 20, 0.45); color: #e50914;">Netflix Originals</span>`;
     bannerIcon = '🎬';
   } else if (isPrime) {
     bannerBg = 'linear-gradient(135deg, rgba(0, 168, 225, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#00a8e1';
     shadowColor = 'rgba(0, 168, 225, 0.35)';
-    brandBadge = `<span style="background: rgba(0, 168, 225, 0.15); border: 1px solid rgba(0, 168, 225, 0.4); color: #00a8e1; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Amazon Prime Video</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 168, 225, 0.18); border: 1px solid rgba(0, 168, 225, 0.45); color: #00a8e1;">Amazon Prime Video</span>`;
     bannerIcon = '💙';
   } else if (isDisney) {
     bannerBg = 'linear-gradient(135deg, rgba(0, 102, 204, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#0066cc';
     shadowColor = 'rgba(0, 102, 204, 0.35)';
-    brandBadge = `<span style="background: rgba(0, 102, 204, 0.15); border: 1px solid rgba(0, 102, 204, 0.4); color: #0066cc; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Disney+ Exclusive</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 102, 204, 0.18); border: 1px solid rgba(0, 102, 204, 0.45); color: #0066cc;">Disney+ Exclusive</span>`;
     bannerIcon = '✨';
   } else if (isHbo) {
     bannerBg = 'linear-gradient(135deg, rgba(153, 51, 255, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#9933ff';
     shadowColor = 'rgba(153, 51, 255, 0.35)';
-    brandBadge = `<span style="background: rgba(153, 51, 255, 0.15); border: 1px solid rgba(153, 51, 255, 0.4); color: #9933ff; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">HBO Max Originals</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(153, 51, 255, 0.18); border: 1px solid rgba(153, 51, 255, 0.45); color: #9933ff;">HBO Max Originals</span>`;
     bannerIcon = '👑';
   } else if (isParamount) {
     bannerBg = 'linear-gradient(135deg, rgba(0, 102, 255, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#0066ff';
     shadowColor = 'rgba(0, 102, 255, 0.35)';
-    brandBadge = `<span style="background: rgba(0, 102, 255, 0.15); border: 1px solid rgba(0, 102, 255, 0.4); color: #0066ff; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Paramount+ Original</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 102, 255, 0.18); border: 1px solid rgba(0, 102, 255, 0.45); color: #0066ff;">Paramount+ Original</span>`;
     bannerIcon = '🏔️';
   } else if (isMarvel) {
     bannerBg = 'linear-gradient(135deg, rgba(237, 29, 36, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
     accentColor = '#ed1d24';
     shadowColor = 'rgba(237, 29, 36, 0.35)';
-    brandBadge = `<span style="background: rgba(237, 29, 36, 0.15); border: 1px solid rgba(237, 29, 36, 0.4); color: #ed1d24; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Marvel Studios</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(237, 29, 36, 0.18); border: 1px solid rgba(237, 29, 36, 0.45); color: #ed1d24;">Marvel Studios</span>`;
     bannerIcon = '🛡️';
   } else if (isHorror) {
     bannerIcon = '👻';
-    brandBadge = `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Horror & Thriller</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.45); color: #ef4444;">Horror & Thriller</span>`;
     accentColor = '#ef4444';
     shadowColor = 'rgba(239, 68, 68, 0.3)';
   } else if (isRomance) {
     bannerIcon = '💖';
-    brandBadge = `<span style="background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Romance Selection</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(236, 72, 153, 0.18); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899;">Romance Selection</span>`;
     accentColor = '#ec4899';
     shadowColor = 'rgba(236, 72, 153, 0.3)';
   } else if (isSciFi) {
     bannerIcon = '🚀';
-    brandBadge = `<span style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Sci-Fi & Fantasy</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.45); color: #10b981;">Sci-Fi & Fantasy</span>`;
     accentColor = '#10b981';
     shadowColor = 'rgba(16, 185, 129, 0.3)';
   } else if (isComedy) {
     bannerIcon = '😂';
-    brandBadge = `<span style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Comedy Catalog</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.45); color: #f59e0b;">Comedy Catalog</span>`;
     accentColor = '#f59e0b';
     shadowColor = 'rgba(245, 158, 11, 0.3)';
   } else if (isAnime) {
     bannerIcon = '🌸';
-    brandBadge = `<span style="background: rgba(251, 113, 133, 0.15); border: 1px solid rgba(251, 113, 133, 0.4); color: #fb7185; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: inline-block;">Anime Classics</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(251, 113, 133, 0.18); border: 1px solid rgba(251, 113, 133, 0.45); color: #fb7185;">Anime Classics</span>`;
     accentColor = '#fb7185';
     shadowColor = 'rgba(251, 113, 133, 0.3)';
   }
 
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
-      <div class="movie-grid-header" style="background: ${bannerBg}; padding: 40px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.08); margin-bottom: 35px; box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,255,255,0.02); display: flex; flex-direction: column; position: relative; overflow: hidden;">
-        <!-- Backdrop glowing light effect -->
-        <div style="position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: ${accentColor}; opacity: 0.15; filter: blur(50px); border-radius: 50%; pointer-events: none;"></div>
-        
-        <div>
-          ${brandBadge}
-          <h1 class="movie-grid-title" style="margin: 0 0 10px 0; font-size: 2.5rem; font-weight: 800; font-family: var(--font-display); letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; background: linear-gradient(90deg, #fff 40%, rgba(255,255,255,0.7) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            <span>${bannerIcon}</span>
-            <span>${categoryTitle}</span>
-          </h1>
-          <p style="color: var(--text-secondary); margin: 0 0 24px 0; font-size: var(--text-md); line-height: 1.5; max-width: 600px; font-family: var(--font-body); letter-spacing: 0.01em;">
-            Browse and search all releases inside the premium <strong>${categoryTitle}</strong> library. Immerse yourself in our handpicked collection of high-fidelity streams.
-          </p>
+      <div id="category-hero-container">
+        <!-- Render a skeletal shimmering hero billboard initially -->
+        <div class="category-hero-billboard shimmer-bg" style="display: flex; flex-direction: column; justify-content: flex-end; padding: 45px var(--space-xl); height: 480px; position: relative;">
+          <div style="width: 250px; height: 40px; background: rgba(255,255,255,0.06); border-radius: 4px; margin-bottom: 20px;"></div>
+          <div style="width: 180px; height: 20px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 15px;"></div>
+          <div style="width: 90%; max-width: 500px; height: 60px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 25px;"></div>
+          <div style="display: flex; gap: 12px;">
+            <div style="width: 140px; height: 44px; background: rgba(255,255,255,0.06); border-radius: 30px;"></div>
+            <div style="width: 160px; height: 44px; background: rgba(255,255,255,0.06); border-radius: 30px;"></div>
+          </div>
         </div>
-        
-        <!-- Search bar inside category -->
-        <div class="search-input-wrapper" style="position: relative; max-width: 480px;">
-          <input type="text" id="category-search-input" placeholder="Search within ${categoryTitle}..." style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 30px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 15px; outline: none; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);" />
-          <svg style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+
+      <div class="category-search-pill-container" style="--shadowColor: ${shadowColor}; --accent: ${accentColor};">
+        <div class="category-results-count" id="category-results-count">Loading titles...</div>
+        <div class="category-search-pill-wrapper">
+          <input type="text" id="category-search-input" class="category-search-pill" placeholder="Search within ${categoryTitle}..." />
+          <svg class="category-search-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
       </div>
 
@@ -206,17 +208,156 @@ export async function renderCategoryPage({ container, query }) {
   `;
 
   const inputEl = container.querySelector('#category-search-input');
-  
-  // Style overrides for active hover focus state on category search input
-  const styleEl = document.createElement('style');
-  styleEl.innerHTML = `
-    #category-search-input:focus {
-      border-color: ${accentColor} !important;
-      background: rgba(0,0,0,0.6) !important;
-      box-shadow: 0 0 20px ${shadowColor} !important;
+
+  // Helper method to dynamically update the Cinematic Hero Spotlight
+  const updateHeroBillboard = async (heroItem) => {
+    const heroContainer = container.querySelector('#category-hero-container');
+    if (!heroContainer) return;
+
+    if (!heroItem) {
+      heroContainer.innerHTML = `
+        <div class="category-hero-billboard" style="background: ${bannerBg};">
+          <div class="category-hero-mask"></div>
+          <div class="category-hero-content">
+            ${brandBadge}
+            <h1 class="category-hero-title">${categoryTitle}</h1>
+            <p class="category-hero-synopsis">
+              Explore our premium curated collection of blockbusters, series, and handpicked favorites within <strong>${categoryTitle}</strong>.
+            </p>
+          </div>
+        </div>
+      `;
+      return;
     }
-  `;
-  container.appendChild(styleEl);
+
+    const backdropUrl = heroItem.backdrop_path ? img.backdrop(heroItem.backdrop_path, 'original') : '';
+    const posterUrl = heroItem.poster_path ? img.poster(heroItem.poster_path, 'w780') : '';
+
+    // Studio brand transparent logo mapping
+    let logoHtml = '';
+    if (isHbo) {
+      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />`;
+    } else if (isDisney) {
+      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />`;
+    } else if (isNetflix) {
+      logoHtml = `<img class="category-hero-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="height: 60px;" />`;
+    } else if (isPrime) {
+      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Amazon Prime Video" />`;
+    } else if (isParamount) {
+      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />`;
+    } else if (isMarvel) {
+      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
+    }
+
+    const titleHtml = logoHtml ? logoHtml : `<h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>`;
+    const releaseYear = (heroItem.release_date || '').slice(0, 4) || new Date().getFullYear();
+    const mediaTypeLabel = (heroItem.media_type || 'movie').toUpperCase() === 'TV' ? 'TV Show' : 'Movie';
+    const voteAverage = heroItem.vote_average ? parseFloat(heroItem.vote_average).toFixed(1) : 'N/A';
+
+    let synopsisText = heroItem.overview || '';
+    if (!synopsisText) {
+      synopsisText = `Experience the incredible release of ${heroItem.title || heroItem.name}, now streaming in high fidelity on PlayerIQ's premium ${categoryTitle} hub.`;
+    }
+
+    heroContainer.innerHTML = `
+      <div class="category-hero-billboard" style="background-image: url('${backdropUrl || posterUrl}');">
+        <div class="category-hero-mask"></div>
+        <div class="category-hero-content">
+          ${brandBadge}
+          ${titleHtml}
+          
+          <div class="category-hero-metadata">
+            <span class="category-hero-rating">★ ${voteAverage}</span>
+            <span class="category-hero-year">${releaseYear}</span>
+            <span class="category-hero-media-type">${mediaTypeLabel}</span>
+          </div>
+
+          <p class="category-hero-synopsis">${synopsisText}</p>
+
+          <div class="category-hero-actions">
+            <button class="category-hero-btn category-hero-btn-primary" id="hero-watch-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;"><path d="M8 5v14l11-7z"/></svg> Play Now
+            </button>
+            <button class="category-hero-btn category-hero-btn-secondary" id="hero-info-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> More Info
+            </button>
+            <button class="category-hero-btn category-hero-btn-secondary" id="hero-watchlist-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Watchlist
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Action clicks
+    const watchBtn = heroContainer.querySelector('#hero-watch-btn');
+    const infoBtn = heroContainer.querySelector('#hero-info-btn');
+    const watchlistBtn = heroContainer.querySelector('#hero-watchlist-btn');
+
+    const itemRouteType = heroItem.media_type || 'movie';
+    const itemId = heroItem.id;
+    const playRoute = `#/watch/${itemRouteType}/${itemId}`;
+    const infoRoute = `#/${itemRouteType}/${itemId}`;
+
+    watchBtn?.addEventListener('click', () => {
+      window.location.hash = playRoute;
+    });
+
+    infoBtn?.addEventListener('click', () => {
+      window.location.hash = infoRoute;
+    });
+
+    // Check & Handle Watchlist Toggle
+    const user = getUser();
+    if (user && watchlistBtn) {
+      try {
+        let isAdded = await isInWatchlist(user.uid, itemId);
+        const updateWatchlistButtonState = (added) => {
+          if (added) {
+            watchlistBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"/></svg> In Watchlist`;
+            watchlistBtn.classList.add('active');
+          } else {
+            watchlistBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Watchlist`;
+            watchlistBtn.classList.remove('active');
+          }
+        };
+
+        updateWatchlistButtonState(isAdded);
+
+        watchlistBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          watchlistBtn.disabled = true;
+          try {
+            if (isAdded) {
+              await removeFromWatchlist(user.uid, itemId);
+              isAdded = false;
+            } else {
+              await addToWatchlist(user.uid, {
+                id: itemId,
+                title: heroItem.title || heroItem.name,
+                type: itemRouteType,
+                poster_path: heroItem.poster_path,
+                backdrop_path: heroItem.backdrop_path,
+                vote_average: heroItem.vote_average
+              });
+              isAdded = true;
+            }
+            updateWatchlistButtonState(isAdded);
+          } catch (wlErr) {
+            console.error('[CategoryPage] Failed to toggle watchlist:', wlErr);
+          } finally {
+            watchlistBtn.disabled = false;
+          }
+        });
+      } catch (err) {
+        console.warn('[CategoryPage] Firestore check failed:', err);
+      }
+    } else {
+      watchlistBtn?.addEventListener('click', () => {
+        alert('Please log in to add items to your watchlist!');
+      });
+    }
+  };
 
   // Load category items from home API
   const grid = container.querySelector('#category-grid');
@@ -262,7 +403,8 @@ export async function renderCategoryPage({ container, query }) {
       backdrop_path: item.backdrop_path,
       vote_average: item.vote_average,
       release_date: item.release_date || item.first_air_date,
-      media_type: item.media_type || 'movie'
+      media_type: item.media_type || 'movie',
+      overview: item.overview || ''
     }));
 
     return await filterAvailableItems(rawList, 'mixed');
@@ -301,13 +443,18 @@ export async function renderCategoryPage({ container, query }) {
           backdrop_path: mbItem.cover?.url || mbItem.cover_url || mbItem.backdrop_path,
           vote_average: mbItem.imdbRate || mbItem.rating ? parseFloat(mbItem.imdbRate || mbItem.rating) : null,
           release_date: mbItem.releaseDate || mbItem.release_date,
-          media_type: mbItem.subjectType === 1 ? 'movie' : 'tv'
+          media_type: mbItem.subjectType === 1 ? 'movie' : 'tv',
+          overview: mbItem.description || mbItem.overview || ''
         }));
       }
     }
 
     filteredItems = [...allItems];
     renderGrid(isLiveProvider);
+
+    // Dynamic Cinematic Hero Spotlight Hydration
+    const heroItem = allItems.find(i => i.backdrop_path) || allItems[0];
+    await updateHeroBillboard(heroItem);
 
     // ---- BACKGROUND ENRICHMENT: Fetch MORE like this category (Skipped for live providers!) ----
     if (!isLiveProvider) {
@@ -323,7 +470,8 @@ export async function renderCategoryPage({ container, query }) {
               backdrop_path: m.backdrop_path || m.cover?.url || m.cover_url || m.poster_path,
               vote_average: m.imdbRate || m.rating || null,
               release_date: m.releaseDate || m.release_date || m.year,
-              media_type: m.media_type || (m.subjectType === 2 ? 'tv' : 'movie')
+              media_type: m.media_type || (m.subjectType === 2 ? 'tv' : 'movie'),
+              overview: m.description || m.overview || ''
             }));
 
             // Deduplicate items against already existing ones
@@ -341,6 +489,10 @@ export async function renderCategoryPage({ container, query }) {
                 filteredItems = [...allItems];
               }
               renderGrid(false);
+
+              // Hydrate hero billboard if it wasn't already set
+              const postHero = allItems.find(i => i.backdrop_path) || allItems[0];
+              updateHeroBillboard(postHero);
             }
           }
         }).catch(err => {
@@ -413,6 +565,11 @@ function renderGrid(isLiveProvider = false) {
   if (!grid) return;
 
   const totalItems = filteredItems.length;
+  const countEl = document.getElementById('category-results-count');
+  if (countEl) {
+    countEl.textContent = `${totalItems} ${totalItems === 1 ? 'title' : 'titles'} available`;
+  }
+
   const startIndex = 0;
   // If live provider, render the entire allItems (since pagination is done in backend request)
   const endIndex = isLiveProvider ? totalItems : currentPage * ITEMS_PER_PAGE;

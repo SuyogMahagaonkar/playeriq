@@ -69,3 +69,233 @@
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========================================
+   Cinematic Hero Billboard Styles
+   ======================================== */
+.category-hero-billboard {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: 24px;
+  overflow: hidden;
+  margin-bottom: 35px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  background-size: cover;
+  background-position: center 20%;
+  background-repeat: no-repeat;
+  transition: background-image 0.8s ease-in-out;
+  display: flex;
+  align-items: flex-end;
+}
+
+.category-hero-mask {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 75% 30%, transparent 10%, rgba(10, 10, 15, 0.65) 55%, #0a0a0f 100%),
+              linear-gradient(to top, #0a0a0f 0%, rgba(10, 10, 15, 0.4) 60%, transparent 100%);
+  z-index: 1;
+}
+
+.category-hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 45px var(--space-xl);
+  max-width: 680px;
+  width: 100%;
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.category-hero-brand-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-md);
+  backdrop-filter: blur(10px);
+}
+
+.category-hero-logo {
+  max-height: 85px;
+  max-width: 280px;
+  object-fit: contain;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 15px rgba(0,0,0,0.6));
+  animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.category-hero-title {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0 0 15px 0;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #fff 40%, rgba(255,255,255,0.75) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+.category-hero-metadata {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.category-hero-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffb800;
+}
+
+.category-hero-year, .category-hero-media-type {
+  background: rgba(255,255,255,0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.category-hero-synopsis {
+  font-size: 15px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 25px;
+  max-width: 580px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.category-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.category-hero-btn {
+  padding: 12px 26px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast) cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: none;
+}
+
+.category-hero-btn-primary {
+  background: #ffffff;
+  color: #0a0a0f;
+  box-shadow: 0 4px 15px rgba(255,255,255,0.25);
+}
+
+.category-hero-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255,255,255,0.35);
+}
+
+.category-hero-btn-secondary {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+}
+
+.category-hero-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Glassmorphic Search Pill Container */
+.category-search-pill-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 25px;
+  padding: 0 var(--space-xs);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.category-results-count {
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.category-search-pill-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+}
+
+.category-search-pill {
+  width: 100%;
+  padding: 10px 16px 10px 42px;
+  border-radius: 30px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  backdrop-filter: blur(20px);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.category-search-pill:focus {
+  border-color: var(--accent);
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 20px var(--shadowColor);
+}
+
+.category-search-pill-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* Shimmer Skeletal Loading Effects */
+.shimmer-bg {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer-load 1.5s infinite;
+}
+
+@keyframes shimmer-load {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
