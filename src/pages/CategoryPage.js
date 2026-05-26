@@ -172,8 +172,39 @@ export async function renderCategoryPage({ container, query }) {
     shadowColor = 'rgba(251, 113, 133, 0.3)';
   }
 
+  // Pre-determine brand room logo for instantaneous rendering
+  let initialLogoHtml = '';
+  if (isHbo) {
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />`;
+  } else if (isDisney) {
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />`;
+  } else if (isNetflix) {
+    initialLogoHtml = `<img src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />`;
+  } else if (isPrime) {
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Amazon Prime Video" />`;
+  } else if (isParamount) {
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />`;
+  } else if (isMarvel) {
+    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
+  }
+
+  const roomTitleHtml = initialLogoHtml 
+    ? initialLogoHtml 
+    : `<span class="category-brand-room-icon">${bannerIcon}</span><span class="category-brand-room-text-title">${categoryTitle}</span>`;
+
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
+      <!-- Glassmorphic Brand Room Header (Dual-Tier Row 1) -->
+      <div class="category-brand-room-header" style="--shadowColor: ${shadowColor}; --accent: ${accentColor};">
+        <div class="category-brand-room-left">
+          ${roomTitleHtml}
+        </div>
+        <div class="category-brand-room-right">
+          ${brandBadge}
+        </div>
+      </div>
+
+      <!-- Widescreen Cinematic Hero Billboard (Dual-Tier Row 2) -->
       <div id="category-hero-container">
         <!-- Render a skeletal shimmering hero billboard initially -->
         <div class="category-hero-billboard shimmer-bg" style="display: flex; flex-direction: column; justify-content: flex-end; padding: 45px var(--space-xl); height: 480px; position: relative;">
@@ -219,8 +250,8 @@ export async function renderCategoryPage({ container, query }) {
         <div class="category-hero-billboard" style="background: ${bannerBg};">
           <div class="category-hero-mask"></div>
           <div class="category-hero-content">
-            ${brandBadge}
-            <h1 class="category-hero-title">${categoryTitle}</h1>
+            <span class="category-hero-brand-badge" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff;">🔥 FEATURED SPOTLIGHT</span>
+            <h1 class="category-hero-title">${categoryTitle} Selection</h1>
             <p class="category-hero-synopsis">
               Explore our premium curated collection of blockbusters, series, and handpicked favorites within <strong>${categoryTitle}</strong>.
             </p>
@@ -232,26 +263,6 @@ export async function renderCategoryPage({ container, query }) {
 
     const backdropUrl = heroItem.backdrop_path ? img.backdrop(heroItem.backdrop_path, 'original') : '';
     const posterUrl = heroItem.poster_path ? img.poster(heroItem.poster_path, 'w780') : '';
-
-    // Studio brand transparent logo mapping
-    let logoHtml = '';
-    if (isHbo) {
-      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />`;
-    } else if (isDisney) {
-      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />`;
-    } else if (isNetflix) {
-      logoHtml = `<img class="category-hero-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />`;
-    } else if (isPrime) {
-      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Amazon Prime Video" />`;
-    } else if (isParamount) {
-      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />`;
-    } else if (isMarvel) {
-      logoHtml = `<img class="category-hero-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
-    }
-
-    const brandRowHtml = logoHtml 
-      ? `<div class="category-hero-brand-row">${logoHtml}${brandBadge}</div>`
-      : brandBadge;
 
     const releaseYear = (heroItem.release_date || '').slice(0, 4) || new Date().getFullYear();
     const mediaTypeLabel = (heroItem.media_type || 'movie').toUpperCase() === 'TV' ? 'TV Show' : 'Movie';
@@ -266,7 +277,7 @@ export async function renderCategoryPage({ container, query }) {
       <div class="category-hero-billboard" style="background-image: url('${backdropUrl || posterUrl}');">
         <div class="category-hero-mask"></div>
         <div class="category-hero-content">
-          ${brandRowHtml}
+          <span class="category-hero-brand-badge" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff;">🔥 FEATURED SPOTLIGHT</span>
           <h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>
           
           <div class="category-hero-metadata">
