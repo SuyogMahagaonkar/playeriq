@@ -476,6 +476,18 @@ export async function renderCategoryPage({ container, query }) {
       data = await getStudioContent('Paramount+', page);
     } else if (isMarvel) {
       data = await getStudioContent('Marvel', page);
+    } else if (isDC) {
+      data = await getStudioContent('DC Studios', page);
+    } else if (isWarnerBros) {
+      data = await getStudioContent('Warner Bros.', page);
+    } else if (isUniversal) {
+      data = await getStudioContent('Universal Pictures', page);
+    } else if (isSony) {
+      data = await getStudioContent('Sony Pictures', page);
+    } else if (isAppleTV) {
+      data = await getStudioContent('Apple TV+', page);
+    } else if (isDreamWorks) {
+      data = await getStudioContent('DreamWorks Animation', page);
     } else {
       data = { results: [] };
     }
