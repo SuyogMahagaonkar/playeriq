@@ -40,10 +40,23 @@ export function isSafeItem(item) {
   }
   genresStr = genresStr.toLowerCase();
 
+  // Extract additional metadata fields to filter recursively
+  const extraFields = [
+    item.studio || '',
+    item.provider || '',
+    item.providerName || '',
+    item.publisher || '',
+    item.creator || '',
+    item.author || '',
+    item.tag || '',
+    item.tags || '',
+    item.source || ''
+  ].map(s => String(s).toLowerCase());
+
   // 1. Explicit Genre Blocks
   const badGenres = ['erotica', 'adult', 'softcore', 'porn', 'sensual', '18+', 'vivamax', 'viva max', 'pinoy softcore', 'tagalog erotic', 'hentai', 'tl anime', 'anime 18+', 'adult anime'];
   for (const bg of badGenres) {
-    if (genresStr.includes(bg)) return false;
+    if (genresStr.includes(bg) || extraFields.some(ef => ef.includes(bg))) return false;
   }
 
   // 2. Exact Title Blocks
@@ -69,7 +82,7 @@ export function isSafeItem(item) {
     'uncut web series', 'unrated web series', 'teens love'
   ];
   for (const sub of badSubstrings) {
-    if (title.includes(sub) || overview.includes(sub) || genresStr.includes(sub)) {
+    if (title.includes(sub) || overview.includes(sub) || genresStr.includes(sub) || extraFields.some(ef => ef.includes(sub))) {
       return false;
     }
   }
@@ -309,6 +322,14 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
 };
 
 export async function searchMovieBox(query, type = 'all') {
+  if (isSafeSearchOn()) {
+    const qLower = (query || '').toLowerCase().trim();
+    const explicitTerms = ['ullu', 'kooku', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies', 'primeplay', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti', 'chikooflix', 'gupchup', 'altbalaji', 'vivamax', 'xxx', 'hentai', 'porn', 'adult', 'erotic', 'erotica', 'softcore', 'sensual', '18+'];
+    if (explicitTerms.some(term => qLower.includes(term))) {
+      console.warn(`[SafeSearch] Blocked explicit search query: "${query}"`);
+      return { results: [], query };
+    }
+  }
   const safeParam = isSafeSearchOn() ? '&safe=true' : '&safe=false';
   const url = `${NODE_PROXY}/api/moviebox/search?q=${encodeURIComponent(query)}&type=${type}${safeParam}`;
   const res = await fetch(url);
@@ -319,6 +340,7 @@ export async function searchMovieBox(query, type = 'all') {
   }
   return data;
 }
+
 
 export async function getLatestNetflix(page = 1) {
   const isSafe = isSafeSearchOn();

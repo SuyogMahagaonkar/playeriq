@@ -79,8 +79,21 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
   const cardWidth = cardLayout === 'landscape' ? '280px' : '180px';
   const layoutClass = cardLayout === 'landscape' ? 'landscape' : '';
 
+  const posterPath = item.poster_path || '';
+  const backdropPath = item.backdrop_path || '';
+  const ratingVal = item.vote_average || 0;
+  const releaseDate = item.release_date || item.first_air_date || item.year || '';
+
   return `
-    <div class="movie-card ${layoutClass}" data-route="${route}" style="width:${cardWidth}" role="button" tabindex="0" aria-label="${title}">
+    <div class="movie-card ${layoutClass}" 
+         data-route="${route}" 
+         data-title="${encodeURIComponent(title)}" 
+         data-poster="${posterPath}" 
+         data-backdrop="${backdropPath}" 
+         data-rating="${ratingVal}" 
+         data-release-date="${releaseDate}" 
+         data-media-type="${mediaType}"
+         style="width:${cardWidth}" role="button" tabindex="0" aria-label="${title}">
       <div class="movie-card-poster-wrapper">
         ${poster
       ? `<img class="movie-card-poster" src="${poster}" ${srcsetAttribute} ${sizesAttribute} alt="${title}" loading="lazy" />`
@@ -142,6 +155,25 @@ export function attachCardClicks(container) {
     let previewCard = null;
     let isHovered = false;
     let hoverTimer = null;
+    let ytListener = null;
+    let fallbackTimer = null;
+
+    const destroyPreview = () => {
+      window.removeEventListener('hashchange', destroyPreview);
+      if (ytListener) {
+        window.removeEventListener('message', ytListener);
+        ytListener = null;
+      }
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+      if (!previewCard) return;
+      const target = previewCard;
+      previewCard = null;
+      target.classList.remove('active');
+      setTimeout(() => target.remove(), 250);
+    };
 
     const handleMouseEnter = () => {
       if (window.innerWidth <= 991) return; // Touch device responsive fallback
@@ -193,15 +225,15 @@ export function attachCardClicks(container) {
         // Check if mouse has already left, route changed, or card was removed during the network request!
         if (!isHovered || !card.isConnected || window.location.hash !== initialHash) return;
 
-      // Prevent duplicate overlays
-      const existing = document.querySelector('.hover-preview-card');
-      if (existing) existing.remove();
+        // Prevent duplicate overlays
+        const existing = document.querySelector('.hover-preview-card');
+        if (existing) existing.remove();
 
-      const rect = card.getBoundingClientRect();
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        const rect = card.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
 
-        // Search trailer YouTube key (filter out Red-Band, R-Rated, and restricted videos to ensure autoplay muting operates 100% of the time)
+        // Search trailer YouTube key
         const videos = tmdbData?.videos?.results || [];
         let cleanTrailer = videos.find(v => 
           v.type === 'Trailer' && 
@@ -228,12 +260,18 @@ export function attachCardClicks(container) {
 
         const youtubeKey = cleanTrailer ? cleanTrailer.key : '';
 
-        // Extract metadata details
-        const title = tmdbData?.title || tmdbData?.name || card.querySelector('.movie-card-title')?.textContent || 'Unknown';
-        const rawYear = tmdbData?.release_date || tmdbData?.first_air_date || '';
+        // Extract metadata details using custom data attributes for fallbacks
+        const cardTitle = decodeURIComponent(card.dataset.title || 'Unknown');
+        const cardPoster = card.dataset.poster || '';
+        const cardBackdrop = card.dataset.backdrop || '';
+        const cardRating = parseFloat(card.dataset.rating) || 0;
+        const cardReleaseDate = card.dataset.releaseDate || '';
+
+        const title = tmdbData?.title || tmdbData?.name || cardTitle;
+        const rawYear = tmdbData?.release_date || tmdbData?.first_air_date || cardReleaseDate;
         const year = rawYear.slice(0, 4) || '2026';
         const lang = tmdbData?.original_language?.toUpperCase() || 'EN';
-        const rating = tmdbData?.vote_average || item?.vote_average || 0;
+        const rating = tmdbData?.vote_average || cardRating || 0;
         
         let ageRating = 'U/A 13+';
         if (type === 'movie') {
@@ -297,13 +335,13 @@ export function attachCardClicks(container) {
         previewCard.style.left = `${previewLeft}px`;
         previewCard.style.width = `${previewWidth}px`;
 
-        // Logo overlay HTML positioned at the bottom-left inside the video/backdrop container
         const logoOverlay = logoUrl 
           ? `<img class="preview-logo-overlay" src="${logoUrl}" alt="${title}" style="position: absolute; left: 16px; bottom: 12px; max-width: 140px; max-height: 52px; object-fit: contain; z-index: 5; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); pointer-events: none; transition: opacity 0.3s;" />` 
           : '';
 
+        const backdropUrl = tmdbData?.backdrop_path || cardBackdrop || tmdbData?.poster_path || cardPoster || '';
         const trailerHTML = youtubeKey
-          ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(tmdbData?.backdrop_path || item?.backdrop_path || '')}); background-size:cover; background-position:center; position:relative;">
+          ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; position:relative;">
                <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&wmode=transparent&autohide=1&origin=${encodeURIComponent(window.location.origin)}" allow="autoplay" frameborder="0"></iframe>
                ${logoOverlay}
                <button class="preview-volume-btn" aria-label="Toggle Sound">
@@ -311,7 +349,7 @@ export function attachCardClicks(container) {
                  <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                </button>
              </div>`
-          : `<div class="preview-no-trailer" style="background-image:url(${img.backdrop(tmdbData?.backdrop_path || item?.backdrop_path || '')}); background-size:cover; background-position:center; width:100%; aspect-ratio:16/9; position:relative;">
+          : `<div class="preview-no-trailer" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; width:100%; aspect-ratio:16/9; position:relative;">
                <div class="preview-no-trailer-overlay"></div>
                ${logoOverlay}
              </div>`;
@@ -319,7 +357,6 @@ export function attachCardClicks(container) {
         const watchlistIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
         const watchlistCheckedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
 
-        // Only render text title below the video if we could not retrieve a clean visual logo
         const titleHTML = !logoUrl ? `<div class="preview-title">${title}</div>` : '';
 
         previewCard.innerHTML = `
@@ -331,7 +368,7 @@ export function attachCardClicks(container) {
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Watch Now
               </button>
-              <button class="preview-wishlist-btn" data-id="${id}" data-type="${type}" data-title="${title}" data-poster="${tmdbData?.poster_path || item?.poster_path || ''}" data-backdrop="${tmdbData?.backdrop_path || item?.backdrop_path || ''}" data-rating="${tmdbData?.vote_average || 0}">
+              <button class="preview-wishlist-btn" data-id="${id}" data-type="${type}" data-title="${title}" data-poster="${tmdbData?.poster_path || cardPoster}" data-backdrop="${tmdbData?.backdrop_path || cardBackdrop}" data-rating="${rating}">
                 ${watchlistIcon}
               </button>
             </div>
@@ -361,13 +398,11 @@ export function attachCardClicks(container) {
 
         document.body.appendChild(previewCard);
 
-        // Position alignment so it center-expands smoothly
         setTimeout(() => {
           if (previewCard) previewCard.classList.add('active');
         }, 10);
 
-        // Setup real-time YouTube PLAYING state detection via postMessage JS API
-        let ytListener = (e) => {
+        ytListener = (e) => {
           try {
             const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
             const isPlaying = (data && (data.event === 'onStateChange' && data.info === 1)) || 
@@ -376,8 +411,6 @@ export function attachCardClicks(container) {
               const iframe = previewCard?.querySelector('.preview-iframe');
               if (iframe && !iframe.classList.contains('playing') && !iframe.dataset.fadeTimerStarted) {
                 iframe.dataset.fadeTimerStarted = 'true';
-                
-                // Play silently in background for 3.0 seconds so YouTube's loading/skip/title overlays automatically slide out of sight
                 setTimeout(() => {
                   if (previewCard && iframe) {
                     iframe.classList.add('playing');
@@ -389,8 +422,7 @@ export function attachCardClicks(container) {
         };
         window.addEventListener('message', ytListener);
 
-        // Fail-safe fallback timer (in case of network handshake drops)
-        const fallbackTimer = setTimeout(() => {
+        fallbackTimer = setTimeout(() => {
           if (previewCard) {
             const iframe = previewCard.querySelector('.preview-iframe');
             if (iframe && !iframe.classList.contains('playing')) {
@@ -399,7 +431,6 @@ export function attachCardClicks(container) {
           }
         }, 5000);
 
-        // Fetch User and setup wishlist trigger state
         const user = getUser();
         const wishlistBtn = previewCard.querySelector('.preview-wishlist-btn');
         if (user && wishlistBtn) {
@@ -415,7 +446,6 @@ export function attachCardClicks(container) {
           }
         }
 
-        // Wire Watchlist Click
         wishlistBtn?.addEventListener('click', async (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -451,7 +481,6 @@ export function attachCardClicks(container) {
           }
         });
 
-        // Wire Watch Now Click
         previewCard.querySelector('.preview-watch-btn')?.addEventListener('click', (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -459,39 +488,22 @@ export function attachCardClicks(container) {
           window.location.hash = route;
         });
 
-        // Wire Sound Toggle Click
         const volumeBtn = previewCard.querySelector('.preview-volume-btn');
-        const iframe = previewCard.querySelector('.preview-iframe');
         if (volumeBtn && iframe) {
           let muted = true;
           volumeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
             muted = !muted;
-            
-            // PostMessage to Youtube Player API (using unMute with capital M)
             iframe.contentWindow.postMessage(JSON.stringify({
               event: 'command',
               func: muted ? 'mute' : 'unMute',
               args: []
             }), '*');
-
             volumeBtn.querySelector('.vol-off').style.display = muted ? 'block' : 'none';
             volumeBtn.querySelector('.vol-on').style.display = muted ? 'none' : 'block';
           });
         }
-
-        // Dismiss handlers
-        const destroyPreview = () => {
-          window.removeEventListener('hashchange', destroyPreview);
-          window.removeEventListener('message', ytListener);
-          clearTimeout(fallbackTimer);
-          if (!previewCard) return;
-          const target = previewCard;
-          previewCard = null;
-          target.classList.remove('active');
-          setTimeout(() => target.remove(), 250);
-        };
 
         window.addEventListener('hashchange', destroyPreview);
         previewCard.addEventListener('mouseleave', destroyPreview);
@@ -504,6 +516,11 @@ export function attachCardClicks(container) {
         clearTimeout(hoverTimer);
         hoverTimer = null;
       }
+      setTimeout(() => {
+        if (previewCard && !previewCard.matches(':hover') && !card.matches(':hover')) {
+          destroyPreview();
+        }
+      }, 100);
     };
 
     card.addEventListener('mouseenter', handleMouseEnter);

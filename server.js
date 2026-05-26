@@ -168,11 +168,24 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
 function isSafeContent(item) {
   if (!item) return false;
   
+  // Extract additional metadata fields to filter recursively
+  const extraFields = [
+    item.studio || '',
+    item.provider || '',
+    item.providerName || '',
+    item.publisher || '',
+    item.creator || '',
+    item.author || '',
+    item.tag || '',
+    item.tags || '',
+    item.source || ''
+  ].map(s => String(s).toLowerCase());
+
   // 1. Genre Check (expanded to catch softcore / R18 / Vivamax / Hentai / JAV / TL Anime miscategorizations)
   const badGenres = ['erotica', 'adult', 'softcore', 'porn', 'sensual', '18+', 'vivamax', 'viva max', 'pinoy softcore', 'tagalog erotic', 'hentai', 'tl anime', 'anime 18+', 'adult anime'];
   const genreStr = (item.genre || '').toLowerCase();
   for (const bg of badGenres) {
-    if (genreStr.includes(bg)) return false;
+    if (genreStr.includes(bg) || extraFields.some(ef => ef.includes(bg))) return false;
   }
 
   // 2. Text Content Extraction (Title, Name, Description, Overview)
@@ -203,7 +216,7 @@ function isSafeContent(item) {
   ];
 
   for (const sub of badSubstrings) {
-    if (titleStr.includes(sub) || descStr.includes(sub) || genreStr.includes(sub)) {
+    if (titleStr.includes(sub) || descStr.includes(sub) || genreStr.includes(sub) || extraFields.some(ef => ef.includes(sub))) {
       return false;
     }
   }
