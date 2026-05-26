@@ -47,22 +47,22 @@ export async function renderHomePage({ container }) {
             </button>
             <div class="studio-row-scroll content-row-scroll">
               <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Disney_wordmark.svg/1200px-Disney_wordmark.svg.png" alt="Disney" style="filter: brightness(0) invert(1); max-height: 52px; object-fit: contain;" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="max-height: 58px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_Max_Logo.svg/1200px-HBO_Max_Logo.svg.png" alt="HBO Max" style="max-height: 50px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
-                <img class="studio-logo studio-logo-white" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/1920px-Netflix_2015_logo.svg.png" alt="Netflix" style="max-height: 42px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Amazon_Prime_Video_logo.svg/1200px-Amazon_Prime_Video_logo.svg.png" alt="Prime Video" style="max-height: 52px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Paramount_Plus_logo.svg/1200px-Paramount_Plus_logo.svg.png" alt="Paramount+" style="max-height: 58px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
-                <img class="studio-logo" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Marvel_Logo.svg/1200px-Marvel_Logo.svg.png" alt="Marvel" style="max-height: 44px; object-fit: contain;" />
               </div>
             </div>
             <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
