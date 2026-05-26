@@ -185,7 +185,7 @@ export async function renderCategoryPage({ container, query }) {
   } else if (isParamount) {
     initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />`;
   } else if (isMarvel) {
-    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
+    initialLogoHtml = `<img class="category-hero-logo-marvel" src="https://image.tmdb.org/t/p/original/hUzeosd33nzE5MCNsZxCGEKTXaQ.png" alt="Marvel Studios" />`;
   }
 
   const roomTitleHtml = initialLogoHtml 
@@ -195,11 +195,11 @@ export async function renderCategoryPage({ container, query }) {
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
       <!-- Glassmorphic Brand Room Header (Dual-Tier Row 1) -->
-      <div class="category-brand-room-header" style="--shadowColor: ${shadowColor}; --accent: ${accentColor};">
-        <div class="category-brand-room-left">
+      <div class="category-brand-room-header" style="--shadowColor: ${shadowColor}; --accent: ${accentColor}; flex-direction: column; justify-content: center; gap: 14px; padding: 25px var(--space-xl);">
+        <div class="category-brand-room-left" style="justify-content: center; width: 100%;">
           ${roomTitleHtml}
         </div>
-        <div class="category-brand-room-right">
+        <div class="category-brand-room-right" style="justify-content: center; width: 100%;">
           ${brandBadge}
         </div>
       </div>

@@ -53,7 +53,7 @@ export async function renderHomePage({ container }) {
                 <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
               </div>
               <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
-                <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
+                <img class="studio-logo studio-logo-white" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
               </div>
               <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
                 <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />

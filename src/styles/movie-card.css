@@ -520,9 +520,12 @@
   justify-content: center;
   width: 210px;
   height: 118px; /* High-fidelity cinematic 16:9 aspect ratio */
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(26, 26, 36, 0.35); /* Translucent glass dark */
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   cursor: pointer;
   overflow: hidden;
   flex-shrink: 0;
@@ -532,22 +535,22 @@
   perspective: 1000px;
 }
 
-/* Base transparent PNG/SVG logo settings */
 .studio-logo {
-  width: 70%;
-  height: 65%;
+  max-width: 75%;
+  max-height: 55%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   z-index: 2;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
   pointer-events: none;
 }
 
 .studio-logo-white {
-  filter: brightness(0) invert(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) !important;
+  filter: brightness(0) invert(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45)) !important;
 }
 
-/* Subtle brand gradient gloss overlays */
 .studio-card::before {
   content: '';
   position: absolute;
@@ -558,10 +561,9 @@
   transition: opacity 0.4s;
 }
 
-/* Interactive Hover Transitions */
 .studio-card:hover {
-  transform: translateY(-8px) scale(1.04) rotateX(2deg);
-  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-8px) scale(1.05);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .studio-card:hover .studio-logo {
@@ -577,53 +579,37 @@
   opacity: 1;
 }
 
-/* Disney+ Theming */
-.studio-disney {
-  background: linear-gradient(135deg, #0e1e40 0%, #070e26 100%);
-}
+/* Hover-Only Brand Glow and Gradient shifts */
 .studio-disney:hover {
-  box-shadow: 0 15px 35px rgba(0, 110, 255, 0.32), 0 0 15px rgba(0, 110, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 110, 255, 0.35), 0 0 20px rgba(0, 110, 255, 0.2);
+  background: linear-gradient(135deg, rgba(14, 30, 64, 0.65) 0%, rgba(7, 14, 38, 0.85) 100%);
 }
 
-/* HBO Max Theming */
-.studio-hbo {
-  background: linear-gradient(135deg, #3d0066 0%, #170033 100%);
-}
 .studio-hbo:hover {
-  box-shadow: 0 15px 35px rgba(175, 0, 255, 0.32), 0 0 15px rgba(175, 0, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(175, 0, 255, 0.35), 0 0 20px rgba(175, 0, 255, 0.2);
+  background: linear-gradient(135deg, rgba(61, 0, 102, 0.65) 0%, rgba(23, 0, 51, 0.85) 100%);
 }
 
-/* Netflix Theming */
-.studio-netflix {
-  background: linear-gradient(135deg, #1f0505 0%, #0d0101 100%);
-}
 .studio-netflix:hover {
-  box-shadow: 0 15px 35px rgba(229, 9, 20, 0.32), 0 0 15px rgba(229, 9, 20, 0.15);
+  box-shadow: 0 15px 35px rgba(229, 9, 20, 0.35), 0 0 20px rgba(229, 9, 20, 0.2);
+  background: linear-gradient(135deg, rgba(31, 5, 5, 0.65) 0%, rgba(13, 1, 1, 0.85) 100%);
 }
 
-/* Prime Video Theming */
-.studio-prime {
-  background: linear-gradient(135deg, #021a30 0%, #010c17 100%);
-}
 .studio-prime:hover {
-  box-shadow: 0 15px 35px rgba(0, 168, 225, 0.32), 0 0 15px rgba(0, 168, 225, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 168, 225, 0.35), 0 0 20px rgba(0, 168, 225, 0.2);
+  background: linear-gradient(135deg, rgba(2, 26, 48, 0.65) 0%, rgba(1, 12, 23, 0.85) 100%);
 }
 
-/* Paramount+ Theming */
-.studio-paramount {
-  background: linear-gradient(135deg, #0b2f61 0%, #03142e 100%);
-}
 .studio-paramount:hover {
-  box-shadow: 0 15px 35px rgba(0, 100, 255, 0.32), 0 0 15px rgba(0, 100, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 100, 255, 0.35), 0 0 20px rgba(0, 100, 255, 0.2);
+  background: linear-gradient(135deg, rgba(11, 47, 97, 0.65) 0%, rgba(3, 20, 46, 0.85) 100%);
 }
 
-/* Marvel Theming */
-.studio-marvel {
-  background: linear-gradient(135deg, #4d0006 0%, #210002 100%);
-}
 .studio-marvel:hover {
-  box-shadow: 0 15px 35px rgba(240, 20, 30, 0.32), 0 0 15px rgba(240, 20, 30, 0.15);
+  box-shadow: 0 15px 35px rgba(240, 20, 30, 0.35), 0 0 20px rgba(240, 20, 30, 0.2);
+  background: linear-gradient(135deg, rgba(77, 0, 6, 0.65) 0%, rgba(33, 0, 2, 0.85) 100%);
 }
+
 .studio-marvel .studio-logo {
   filter: drop-shadow(1px 0px 0px #fff) 
           drop-shadow(-1px 0px 0px #fff) 
@@ -631,6 +617,7 @@
           drop-shadow(0px -1px 0px #fff);
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.4s ease;
 }
+
 .studio-marvel:hover .studio-logo {
   filter: drop-shadow(1px 0px 0px #fff) 
           drop-shadow(-1px 0px 0px #fff) 
@@ -640,6 +627,7 @@
 }
 
 /* Mobile responsive widths for Brand Cards */
+
 @media (max-width: 767px) {
   .studio-card {
     width: 140px;
