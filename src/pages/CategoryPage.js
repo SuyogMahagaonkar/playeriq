@@ -76,8 +76,8 @@ export async function renderCategoryPage({ container, query }) {
   tmdbPage = 1;
 
   const cleanTitle = cleanStringForMatching(categoryTitle);
-  const isNetflix = cleanTitle === 'latest from netflix' || cleanTitle === 'netflix' || cleanTitle === 'netflix originals' || cleanTitle === 'netflix original';
-  const isPrime = cleanTitle === 'latest from prime' || cleanTitle === 'latest from prime video' || cleanTitle === 'prime' || cleanTitle === 'amazon prime video' || cleanTitle === 'amazon prime' || cleanTitle === 'prime video';
+  const isNetflix = cleanTitle.includes('netflix');
+  const isPrime = cleanTitle.includes('prime') || cleanTitle.includes('amazon');
   
   // Genres matching
   const isHorror = cleanTitle.includes('horror');
