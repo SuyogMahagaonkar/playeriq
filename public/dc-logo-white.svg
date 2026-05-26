@@ -1,0 +1,5 @@
+<!-- DC Studios - White on transparent -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+  <text x="60" y="38" font-family="Arial Black, sans-serif" font-size="28" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="2">DC</text>
+  <circle cx="60" cy="30" r="28" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+</svg>

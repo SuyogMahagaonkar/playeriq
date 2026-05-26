@@ -96,8 +96,14 @@ export async function renderCategoryPage({ container, query }) {
   const isHbo = cleanTitle.includes('hbo') || cleanTitle.includes('hbo max') || lowerTitle.includes('hbo') || lowerTitle.includes('hbo max');
   const isParamount = cleanTitle.includes('paramount') || cleanTitle.includes('paramount+') || lowerTitle.includes('paramount') || lowerTitle.includes('paramount+');
   const isMarvel = cleanTitle.includes('marvel') || lowerTitle.includes('marvel');
+  const isDC = (cleanTitle.includes('dc') && !cleanTitle.includes('dice') && !cleanTitle.includes('decade')) || lowerTitle.includes('dc studios');
+  const isWarnerBros = cleanTitle.includes('warner') || lowerTitle.includes('warner');
+  const isUniversal = cleanTitle.includes('universal') || lowerTitle.includes('universal');
+  const isSony = cleanTitle.includes('sony') || lowerTitle.includes('sony');
+  const isAppleTV = cleanTitle.includes('apple') || lowerTitle.includes('apple');
+  const isDreamWorks = cleanTitle.includes('dreamworks') || lowerTitle.includes('dreamworks');
 
-  const isLiveProvider = isNetflix || isPrime || isHorror || isRomance || isSciFi || isKids || isComedy || isAnime || isDisney || isHbo || isParamount || isMarvel;
+  const isLiveProvider = isNetflix || isPrime || isHorror || isRomance || isSciFi || isKids || isComedy || isAnime || isDisney || isHbo || isParamount || isMarvel || isDC || isWarnerBros || isUniversal || isSony || isAppleTV || isDreamWorks;
 
   console.log(`[CategoryPage] Diagnostic: categoryTitle="${categoryTitle}", cleanTitle="${cleanTitle}", isDisney=${isDisney}, isPrime=${isPrime}, isLiveProvider=${isLiveProvider}`);
 
@@ -169,6 +175,42 @@ export async function renderCategoryPage({ container, query }) {
     brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(251, 113, 133, 0.18); border: 1px solid rgba(251, 113, 133, 0.45); color: #fb7185;">Anime Classics</span>`;
     accentColor = '#fb7185';
     shadowColor = 'rgba(251, 113, 133, 0.3)';
+  } else if (isDC) {
+    bannerBg = 'linear-gradient(135deg, rgba(0, 75, 200, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#004bc8';
+    shadowColor = 'rgba(0, 75, 200, 0.35)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 75, 200, 0.18); border: 1px solid rgba(0, 75, 200, 0.45); color: #4da6ff;">DC Universe</span>`;
+    bannerIcon = '🦇';
+  } else if (isWarnerBros) {
+    bannerBg = 'linear-gradient(135deg, rgba(200, 160, 0, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#c8a000';
+    shadowColor = 'rgba(200, 160, 0, 0.35)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(200, 160, 0, 0.18); border: 1px solid rgba(200, 160, 0, 0.45); color: #f5d060;">Warner Bros.</span>`;
+    bannerIcon = '🎬';
+  } else if (isUniversal) {
+    bannerBg = 'linear-gradient(135deg, rgba(200, 160, 0, 0.2) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#d4a017';
+    shadowColor = 'rgba(212, 160, 23, 0.3)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(212, 160, 23, 0.18); border: 1px solid rgba(212, 160, 23, 0.45); color: #f5c842;">Universal Pictures</span>`;
+    bannerIcon = '🌍';
+  } else if (isSony) {
+    bannerBg = 'linear-gradient(135deg, rgba(180, 180, 220, 0.15) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#b4b4dc';
+    shadowColor = 'rgba(180, 180, 220, 0.3)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(180, 180, 220, 0.18); border: 1px solid rgba(180, 180, 220, 0.45); color: #c8c8f0;">Sony Pictures</span>`;
+    bannerIcon = '🎥';
+  } else if (isAppleTV) {
+    bannerBg = 'linear-gradient(135deg, rgba(160, 160, 180, 0.15) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#a0a0b4';
+    shadowColor = 'rgba(160, 160, 180, 0.25)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(160, 160, 180, 0.18); border: 1px solid rgba(160, 160, 180, 0.45); color: #dcdce8;">Apple Originals</span>`;
+    bannerIcon = '🍎';
+  } else if (isDreamWorks) {
+    bannerBg = 'linear-gradient(135deg, rgba(0, 140, 200, 0.2) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
+    accentColor = '#008cc8';
+    shadowColor = 'rgba(0, 140, 200, 0.3)';
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 140, 200, 0.18); border: 1px solid rgba(0, 140, 200, 0.45); color: #40c0f0;">DreamWorks Animation</span>`;
+    bannerIcon = '🌙';
   }
 
   // Pre-determine brand room logo for instantaneous rendering
@@ -185,6 +227,18 @@ export async function renderCategoryPage({ container, query }) {
     initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" style="filter: brightness(0) invert(1); max-height: 80px; object-fit: contain;" />`;
   } else if (isMarvel) {
     initialLogoHtml = `<img class="category-hero-logo-marvel" src="/marvel-logo-white.svg" alt="Marvel Studios" style="max-height: 60px; object-fit: contain;" />`;
+  } else if (isDC) {
+    initialLogoHtml = `<img src="/dc-logo-white.svg" alt="DC Studios" style="max-height: 80px; object-fit: contain;" />`;
+  } else if (isWarnerBros) {
+    initialLogoHtml = `<img src="/wb-logo-white.svg" alt="Warner Bros" style="max-height: 70px; object-fit: contain;" />`;
+  } else if (isUniversal) {
+    initialLogoHtml = `<img src="/universal-logo-white.svg" alt="Universal Pictures" style="max-height: 70px; object-fit: contain;" />`;
+  } else if (isSony) {
+    initialLogoHtml = `<img src="/sony-logo-white.svg" alt="Sony Pictures" style="max-height: 70px; object-fit: contain;" />`;
+  } else if (isAppleTV) {
+    initialLogoHtml = `<img src="/appletv-logo-white.svg" alt="Apple TV+" style="max-height: 70px; object-fit: contain;" />`;
+  } else if (isDreamWorks) {
+    initialLogoHtml = `<img src="/dreamworks-logo-white.svg" alt="DreamWorks" style="max-height: 70px; object-fit: contain;" />`;
   }
 
   const roomTitleHtml = initialLogoHtml 

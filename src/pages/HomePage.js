@@ -64,6 +64,24 @@ export async function renderHomePage({ container }) {
               <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
                 <img class="studio-logo" src="/marvel-logo-white.svg" alt="Marvel" />
               </div>
+              <div class="studio-card studio-dc" data-route="/category?title=DC%20Studios">
+                <img class="studio-logo" src="/dc-logo-white.svg" alt="DC Studios" />
+              </div>
+              <div class="studio-card studio-wb" data-route="/category?title=Warner%20Bros">
+                <img class="studio-logo" src="/wb-logo-white.svg" alt="Warner Bros" />
+              </div>
+              <div class="studio-card studio-universal" data-route="/category?title=Universal%20Pictures">
+                <img class="studio-logo" src="/universal-logo-white.svg" alt="Universal Pictures" />
+              </div>
+              <div class="studio-card studio-sony" data-route="/category?title=Sony%20Pictures">
+                <img class="studio-logo" src="/sony-logo-white.svg" alt="Sony Pictures" />
+              </div>
+              <div class="studio-card studio-appletv" data-route="/category?title=Apple%20TV%2B">
+                <img class="studio-logo" src="/appletv-logo-white.svg" alt="Apple TV+" />
+              </div>
+              <div class="studio-card studio-dreamworks" data-route="/category?title=DreamWorks">
+                <img class="studio-logo" src="/dreamworks-logo-white.svg" alt="DreamWorks" />
+              </div>
             </div>
             <button class="content-row-arrow content-row-arrow-right" aria-label="Scroll right">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>

@@ -610,6 +610,36 @@
   background: linear-gradient(135deg, rgba(77, 0, 6, 0.65) 0%, rgba(33, 0, 2, 0.85) 100%);
 }
 
+.studio-dc:hover {
+  box-shadow: 0 15px 35px rgba(0, 75, 200, 0.4), 0 0 20px rgba(0, 75, 200, 0.2);
+  background: linear-gradient(135deg, rgba(0, 20, 80, 0.65) 0%, rgba(0, 8, 40, 0.85) 100%);
+}
+
+.studio-wb:hover {
+  box-shadow: 0 15px 35px rgba(200, 160, 0, 0.35), 0 0 20px rgba(200, 160, 0, 0.2);
+  background: linear-gradient(135deg, rgba(50, 35, 0, 0.65) 0%, rgba(20, 14, 0, 0.85) 100%);
+}
+
+.studio-universal:hover {
+  box-shadow: 0 15px 35px rgba(255, 200, 0, 0.3), 0 0 20px rgba(255, 200, 0, 0.15);
+  background: linear-gradient(135deg, rgba(45, 35, 0, 0.65) 0%, rgba(20, 15, 0, 0.85) 100%);
+}
+
+.studio-sony:hover {
+  box-shadow: 0 15px 35px rgba(200, 200, 220, 0.3), 0 0 20px rgba(200, 200, 220, 0.15);
+  background: linear-gradient(135deg, rgba(20, 20, 35, 0.65) 0%, rgba(8, 8, 18, 0.85) 100%);
+}
+
+.studio-appletv:hover {
+  box-shadow: 0 15px 35px rgba(180, 180, 200, 0.3), 0 0 20px rgba(180, 180, 200, 0.15);
+  background: linear-gradient(135deg, rgba(15, 15, 25, 0.65) 0%, rgba(5, 5, 10, 0.85) 100%);
+}
+
+.studio-dreamworks:hover {
+  box-shadow: 0 15px 35px rgba(0, 150, 200, 0.35), 0 0 20px rgba(0, 150, 200, 0.2);
+  background: linear-gradient(135deg, rgba(0, 30, 55, 0.65) 0%, rgba(0, 10, 25, 0.85) 100%);
+}
+
 .studio-marvel .studio-logo {
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.4s ease;

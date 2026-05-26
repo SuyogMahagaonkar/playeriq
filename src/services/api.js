@@ -616,7 +616,7 @@ export async function getStudioContent(studioName, page = 1) {
   const cleanName = studioName.toLowerCase().replace(/[^a-z0-9+]/g, '');
   
   if (cleanName.includes('disney')) {
-    // Walt Disney Pictures (2), Walt Disney Animation Studios (6125), Pixar (3), Walt Disney Studios (33), Lucasfilm (1), Marvel Studios (420)
+    // Walt Disney Pictures (2), Walt Disney Animation Studios (6125), Pixar (3), Walt Disney Studios (33)
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&vote_count.gte=100&page=${page}`;
     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('hbo')) {
@@ -632,13 +632,37 @@ export async function getStudioContent(studioName, page = 1) {
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('paramount')) {
-    // Paramount Pictures company ID: 4, CBS network ID: 1025
+    // Paramount Pictures company ID: 4|34
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=4|34&sort_by=popularity.desc&page=${page}`;
     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_networks=1025&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('marvel')) {
     // Marvel Studios production company ID: 420
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('dc') || cleanName.includes('dcstudios') || cleanName.includes('dccomics')) {
+    // DC Entertainment (9993), DC Studios (128064)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('warner') || cleanName.includes('wb')) {
+    // Warner Bros. Pictures (174)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=174&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=174&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('universal')) {
+    // Universal Pictures (33)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=33&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=33&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('sony')) {
+    // Sony Pictures Entertainment (5), Columbia Pictures (13)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('apple')) {
+    // Apple TV+ watch provider 350
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
+  } else if (cleanName.includes('dreamworks')) {
+    // DreamWorks Animation (521), DreamWorks Pictures (27734)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
   } else {
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
     urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
