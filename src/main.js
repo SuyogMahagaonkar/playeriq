@@ -104,22 +104,7 @@ import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';
 import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater, applyGlobalTheme } from './services/auth.js';
-import { renderLoginPage } from './pages/LoginPage.js';
 
-// Pages
-import { renderHomePage } from './pages/HomePage.js';
-import { renderMoviesPage } from './pages/MoviesPage.js';
-import { renderTVShowsPage } from './pages/TVShowsPage.js';
-import { renderDetailPage } from './pages/DetailPage.js';
-import { renderPlayerPage } from './pages/PlayerPage.js';
-import { renderSearchPage } from './pages/SearchPage.js';
-import { renderRankingPage } from './pages/RankingPage.js';
-import { renderWatchHistoryPage } from './pages/WatchHistoryPage.js';
-import { renderWatchlistPage } from './pages/WatchlistPage.js';
-import { renderSettingsPage } from './pages/SettingsPage.js';
-import { render18PlusPage } from './pages/18PlusPage.js';
-import { renderCategoryPage } from './pages/CategoryPage.js';
-import { renderDownloadsPage } from './pages/DownloadsPage.js';
 
 // ---- Connectivity Monitoring (YouTube-style active probing) ----
 
@@ -380,71 +365,85 @@ function initApp() {
   // ---- Register Routes ----
   addRoute('/', async (ctx) => {
     updateSidebarActive();
+    const { renderHomePage } = await import('./pages/HomePage.js');
     return await renderHomePage(ctx);
   });
 
   addRoute('/movies', async (ctx) => {
     updateSidebarActive();
+    const { renderMoviesPage } = await import('./pages/MoviesPage.js');
     return await renderMoviesPage(ctx);
   });
 
   addRoute('/tv', async (ctx) => {
     updateSidebarActive();
+    const { renderTVShowsPage } = await import('./pages/TVShowsPage.js');
     return await renderTVShowsPage(ctx);
   });
 
   addRoute('/movie/:id', async (ctx) => {
     updateSidebarActive();
+    const { renderDetailPage } = await import('./pages/DetailPage.js');
     return await renderDetailPage(ctx);
   });
 
   addRoute('/tv/:id', async (ctx) => {
     updateSidebarActive();
+    const { renderDetailPage } = await import('./pages/DetailPage.js');
     return await renderDetailPage(ctx);
   });
 
   addRoute('/watch/:type/:id', async (ctx) => {
     updateSidebarActive();
+    const { renderPlayerPage } = await import('./pages/PlayerPage.js');
     return await renderPlayerPage(ctx);
   });
 
   addRoute('/search', async (ctx) => {
     updateSidebarActive();
+    const { renderSearchPage } = await import('./pages/SearchPage.js');
     return await renderSearchPage(ctx);
   });
 
   addRoute('/ranking', async (ctx) => {
     updateSidebarActive();
+    const { renderRankingPage } = await import('./pages/RankingPage.js');
     return await renderRankingPage(ctx);
   });
 
   addRoute('/history', async (ctx) => {
     updateSidebarActive();
+    const { renderWatchHistoryPage } = await import('./pages/WatchHistoryPage.js');
     return await renderWatchHistoryPage(ctx);
   });
 
   addRoute('/watchlist', async (ctx) => {
     updateSidebarActive();
+    const { renderWatchlistPage } = await import('./pages/WatchlistPage.js');
     return await renderWatchlistPage(ctx);
   });
 
   addRoute('/settings', async (ctx) => {
     updateSidebarActive();
+    const { renderSettingsPage } = await import('./pages/SettingsPage.js');
     return await renderSettingsPage(ctx);
   });
 
   addRoute('/18plus', async (ctx) => {
     updateSidebarActive();
+    const { render18PlusPage } = await import('./pages/18PlusPage.js');
     return await render18PlusPage(ctx);
   });
 
   addRoute('/category', async (ctx) => {
     updateSidebarActive();
+    const { renderCategoryPage } = await import('./pages/CategoryPage.js');
     return await renderCategoryPage(ctx);
   });
 
   addRoute('/downloads', async (ctx) => {
     updateSidebarActive();
+    const { renderDownloadsPage } = await import('./pages/DownloadsPage.js');
     return await renderDownloadsPage(ctx);
   });
 
@@ -478,7 +477,9 @@ function initApp() {
           }
         });
 
-        renderLoginPage(loginContainer);
+        import('./pages/LoginPage.js').then(({ renderLoginPage }) => {
+          renderLoginPage(loginContainer);
+        });
       }
     }, 600);
   }, 800);

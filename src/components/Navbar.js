@@ -7,7 +7,6 @@ import { searchMovieBox } from '../services/api.js';
 import { addRecentSearch } from '../services/state.js';
 import { toggleSidebar, refreshSidebarNav } from './Sidebar.js';
 import { getUser, login, logout, onUserChange } from '../services/auth.js';
-import { renderLoginPage } from '../pages/LoginPage.js';
 
 let searchTimeout = null;
 
