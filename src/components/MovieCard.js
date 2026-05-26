@@ -2,7 +2,7 @@
 // PlayerIQ — Movie Card Component
 // ========================================
 
-import { img } from '../services/api.js';
+import { img, NODE_PROXY } from '../services/api.js';
 import { getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 
@@ -79,10 +79,11 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
   const cardWidth = cardLayout === 'landscape' ? '280px' : '180px';
   const layoutClass = cardLayout === 'landscape' ? 'landscape' : '';
 
-  const posterPath = item.poster_path || '';
-  const backdropPath = item.backdrop_path || '';
-  const ratingVal = item.vote_average || 0;
-  const releaseDate = item.release_date || item.first_air_date || item.year || '';
+  const posterPath = item.poster_path || item.cover?.url || item.cover_url || '';
+  const backdropPath = item.backdrop_path || item.cover?.url || item.cover_url || '';
+  const ratingVal = item.vote_average || item.imdbRate || item.rating || 0;
+  const releaseDate = item.release_date || item.first_air_date || item.releaseDate || item.year || '';
+  const overviewVal = item.overview || item.description || '';
 
   return `
     <div class="movie-card ${layoutClass}" 
@@ -92,6 +93,7 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
          data-backdrop="${backdropPath}" 
          data-rating="${ratingVal}" 
          data-release-date="${releaseDate}" 
+         data-overview="${encodeURIComponent(overviewVal)}"
          data-media-type="${mediaType}"
          style="width:${cardWidth}" role="button" tabindex="0" aria-label="${title}">
       <div class="movie-card-poster-wrapper">
@@ -212,14 +214,73 @@ export function attachCardClicks(container) {
         if (!type || !id) return;
 
         const initialHash = window.location.hash;
-        
-        // Fetch details from TMDB dynamically
+        const isMovieBox = route.includes('mb_');
+        const cardTitle = decodeURIComponent(card.dataset.title || 'Unknown');
+        const cardPoster = card.dataset.poster || '';
+        const cardBackdrop = card.dataset.backdrop || '';
+        const cardRating = parseFloat(card.dataset.rating) || 0;
+        const cardReleaseDate = card.dataset.releaseDate || '';
+        const cardOverview = decodeURIComponent(card.dataset.overview || '');
+
         let tmdbData = null;
-        try {
-          const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
-          if (res.ok) tmdbData = await res.json();
-        } catch (e) {
-          console.warn('Failed to fetch TMDB hover preview details', e);
+
+        if (isMovieBox) {
+          try {
+            // First search TMDB by clean title in the background to get TMDB details
+            const cleanTitle = cardTitle.replace(/\[.*?\]/g, '').trim();
+            const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
+            if (searchRes.ok) {
+              const searchData = await searchRes.json();
+              if (searchData.results && searchData.results.length > 0) {
+                let matchedResult = searchData.results[0];
+                const cardYear = cardReleaseDate.slice(0, 4);
+                if (cardYear) {
+                  const matchByYear = searchData.results.find(r => {
+                    const rYear = (r.release_date || r.first_air_date || '').slice(0, 4);
+                    return rYear === cardYear;
+                  });
+                  if (matchByYear) matchedResult = matchByYear;
+                }
+                
+                // Fetch full details with images, videos using matched TMDB ID
+                const tmdbId = matchedResult.id;
+                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
+                if (detailsRes.ok) {
+                  tmdbData = await detailsRes.json();
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to resolve TMDB details via search for MovieBox item', e);
+          }
+
+          // Fallback to MovieBox native details API if TMDB search failed
+          if (!tmdbData) {
+            try {
+              const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${id}`);
+              if (res.ok) {
+                const data = await res.json();
+                tmdbData = {
+                  title: data.title,
+                  overview: data.description || '',
+                  release_date: data.releaseDate || '',
+                  vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : 0,
+                  backdrop_path: data.cover?.url || data.coverUrl || '',
+                  poster_path: data.cover?.url || data.coverUrl || '',
+                };
+              }
+            } catch (e) {
+              console.warn('Failed to fetch MovieBox native info for preview', e);
+            }
+          }
+        } else {
+          // Standard TMDB card, fetch details directly
+          try {
+            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
+            if (res.ok) tmdbData = await res.json();
+          } catch (e) {
+            console.warn('Failed to fetch TMDB details directly', e);
+          }
         }
 
         // Check if mouse has already left, route changed, or card was removed during the network request!
@@ -260,18 +321,24 @@ export function attachCardClicks(container) {
 
         const youtubeKey = cleanTrailer ? cleanTrailer.key : '';
 
-        // Extract metadata details using custom data attributes for fallbacks
-        const cardTitle = decodeURIComponent(card.dataset.title || 'Unknown');
-        const cardPoster = card.dataset.poster || '';
-        const cardBackdrop = card.dataset.backdrop || '';
-        const cardRating = parseFloat(card.dataset.rating) || 0;
-        const cardReleaseDate = card.dataset.releaseDate || '';
-
+        // Extract metadata details with clean fallbacks
         const title = tmdbData?.title || tmdbData?.name || cardTitle;
         const rawYear = tmdbData?.release_date || tmdbData?.first_air_date || cardReleaseDate;
         const year = rawYear.slice(0, 4) || '2026';
         const lang = tmdbData?.original_language?.toUpperCase() || 'EN';
         const rating = tmdbData?.vote_average || cardRating || 0;
+        const overview = tmdbData?.overview || cardOverview || 'No synopsis available.';
+
+        // Resolve title transparent PNG/SVG logo overlay
+        let logoUrl = '';
+        if (tmdbData?.images?.logos && tmdbData.images.logos.length > 0) {
+          const enLogo = tmdbData.images.logos.find(l => l.iso_639_1 === 'en');
+          const hiLogo = tmdbData.images.logos.find(l => l.iso_639_1 === 'hi');
+          const bestLogo = enLogo || hiLogo || tmdbData.images.logos[0];
+          if (bestLogo) {
+            logoUrl = `https://image.tmdb.org/t/p/w500${bestLogo.file_path}`;
+          }
+        }
         
         let ageRating = 'U/A 13+';
         if (type === 'movie') {
@@ -326,9 +393,15 @@ export function attachCardClicks(container) {
         previewCard.style.width = `${previewWidth}px`;
 
         const backdropUrl = tmdbData?.backdrop_path || cardBackdrop || tmdbData?.poster_path || cardPoster || '';
+        
+        const logoOverlayHTML = logoUrl
+          ? `<img class="preview-logo-overlay" src="${logoUrl}" alt="${title} Logo" style="position: absolute; bottom: 12px; left: 16px; max-width: 140px; max-height: 50px; object-fit: contain; z-index: 5; pointer-events: none; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.85)); transition: opacity 0.3s ease;" />`
+          : '';
+
         const trailerHTML = youtubeKey
           ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; position:relative;">
                <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&wmode=transparent&autohide=1&origin=${encodeURIComponent(window.location.origin)}" allow="autoplay" frameborder="0"></iframe>
+               ${logoOverlayHTML}
                <button class="preview-volume-btn" aria-label="Toggle Sound">
                  <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
                  <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -336,6 +409,7 @@ export function attachCardClicks(container) {
              </div>`
           : `<div class="preview-no-trailer" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; width:100%; aspect-ratio:16/9; position:relative;">
                <div class="preview-no-trailer-overlay"></div>
+               ${logoOverlayHTML}
              </div>`;
 
         const watchlistIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
@@ -376,6 +450,7 @@ export function attachCardClicks(container) {
                 </span>
               ` : ''}
             </div>
+            <div class="preview-desc">${overview}</div>
           </div>
         `;
 
