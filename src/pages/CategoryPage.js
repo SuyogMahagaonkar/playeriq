@@ -26,7 +26,7 @@ let allItems = [];
 let filteredItems = [];
 let currentPage = 1;
 let tmdbPage = 1;
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 21;
 
 function cleanStringForMatching(str) {
   if (!str) return '';
