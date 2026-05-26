@@ -616,9 +616,9 @@ export async function getStudioContent(studioName, page = 1) {
   const cleanName = studioName.toLowerCase().replace(/[^a-z0-9+]/g, '');
   
   if (cleanName.includes('disney')) {
-    // Watch providers: 122 (Disney+ Hotstar IN) and 337 (Disney+ US)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=122|337&watch_region=IN&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=122|337&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    // Walt Disney Pictures (2), Walt Disney Animation Studios (6125), Pixar (3), Walt Disney Studios (33), Lucasfilm (1), Marvel Studios (420)
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&vote_count.gte=100&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('hbo')) {
     // TV network 49 (HBO), Production company 3268 (HBO Films)
     urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=3268|9993&sort_by=popularity.desc&page=${page}`;

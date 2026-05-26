@@ -47,7 +47,7 @@ export async function renderHomePage({ container }) {
             </button>
             <div class="studio-row-scroll content-row-scroll">
               <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />
+                <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Disney_wordmark.svg/1200px-Disney_wordmark.svg.png" alt="Disney" style="filter: brightness(0) invert(1); max-height: 52px; object-fit: contain;" />
               </div>
               <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
                 <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />

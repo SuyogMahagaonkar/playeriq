@@ -122,9 +122,9 @@ export async function renderCategoryPage({ container, query }) {
     bannerIcon = '💙';
   } else if (isDisney) {
     bannerBg = 'linear-gradient(135deg, rgba(0, 102, 204, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
-    accentColor = '#0066cc';
+    accentColor = '#1a6fbf';
     shadowColor = 'rgba(0, 102, 204, 0.35)';
-    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 102, 204, 0.18); border: 1px solid rgba(0, 102, 204, 0.45); color: #0066cc;">Disney+ Exclusive</span>`;
+    brandBadge = `<span class="category-hero-brand-badge" style="background: rgba(0, 102, 204, 0.18); border: 1px solid rgba(0, 102, 204, 0.45); color: #4da6ff;">✨ Disney Originals</span>`;
     bannerIcon = '✨';
   } else if (isHbo) {
     bannerBg = 'linear-gradient(135deg, rgba(153, 51, 255, 0.22) 0%, rgba(10, 10, 15, 0.75) 50%, rgba(5, 5, 8, 0.95) 100%)';
@@ -176,7 +176,7 @@ export async function renderCategoryPage({ container, query }) {
   if (isHbo) {
     initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />`;
   } else if (isDisney) {
-    initialLogoHtml = `<img src="https://image.tmdb.org/t/p/original/wdrCwmRnLFJhEoH8GSfymY85KHT.png" alt="Disney+" />`;
+    initialLogoHtml = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Disney_wordmark.svg/1200px-Disney_wordmark.svg.png" alt="Disney" style="filter: brightness(0) invert(1); max-height: 70px; object-fit: contain;" />`;
   } else if (isNetflix) {
     initialLogoHtml = `<img src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />`;
   } else if (isPrime) {
