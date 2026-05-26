@@ -194,13 +194,10 @@ export async function renderCategoryPage({ container, query }) {
 
   container.innerHTML = `
     <div class="movie-grid-page animate-fade-in">
-      <!-- Glassmorphic Brand Room Header (Dual-Tier Row 1) -->
-      <div class="category-brand-room-header" style="--shadowColor: ${shadowColor}; --accent: ${accentColor}; flex-direction: column; justify-content: center; gap: 14px; padding: 25px var(--space-xl);">
+      <!-- Glassmorphic Brand Room Header (Logo Only, No Badge Text) -->
+      <div class="category-brand-room-header" style="--shadowColor: ${shadowColor}; --accent: ${accentColor}; padding: 25px var(--space-xl);">
         <div class="category-brand-room-left" style="justify-content: center; width: 100%;">
           ${roomTitleHtml}
-        </div>
-        <div class="category-brand-room-right" style="justify-content: center; width: 100%;">
-          ${brandBadge}
         </div>
       </div>
 
@@ -273,12 +270,33 @@ export async function renderCategoryPage({ container, query }) {
       synopsisText = `Experience the incredible release of ${heroItem.title || heroItem.name}, now streaming in high fidelity on PlayerIQ's premium ${categoryTitle} hub.`;
     }
 
+    // Fetch transparent logo from TMDB images endpoint
+    const tmdbId = heroItem.id && !String(heroItem.id).startsWith('mb_') ? heroItem.id : null;
+    let heroLogoHtml = '';
+    if (tmdbId) {
+      try {
+        const mediaTypeForImg = (heroItem.media_type === 'tv') ? 'tv' : 'movie';
+        const imgRes = await fetch(`https://api.themoviedb.org/3/${mediaTypeForImg}/${tmdbId}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,null`);
+        if (imgRes.ok) {
+          const imgData = await imgRes.json();
+          const logos = (imgData.logos || []).filter(l => l.file_path && (l.file_path.endsWith('.png') || l.file_path.endsWith('.svg')));
+          const bestLogo = logos.find(l => l.iso_639_1 === 'en') || logos[0];
+          if (bestLogo) {
+            heroLogoHtml = `<img class="category-hero-movie-logo" src="https://image.tmdb.org/t/p/w500${bestLogo.file_path}" alt="${heroItem.title || heroItem.name}" />`;
+          }
+        }
+      } catch (_) { /* silent fallback to text title */ }
+    }
+
+    const heroTitleBlock = heroLogoHtml
+      ? heroLogoHtml
+      : `<h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>`;
+
     heroContainer.innerHTML = `
       <div class="category-hero-billboard" style="background-image: url('${backdropUrl || posterUrl}');">
         <div class="category-hero-mask"></div>
         <div class="category-hero-content">
-          <span class="category-hero-brand-badge" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff;">🔥 FEATURED SPOTLIGHT</span>
-          <h1 class="category-hero-title">${heroItem.title || heroItem.name}</h1>
+          ${heroTitleBlock}
           
           <div class="category-hero-metadata">
             <span class="category-hero-rating">★ ${voteAverage}</span>
