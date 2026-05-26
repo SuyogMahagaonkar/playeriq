@@ -298,16 +298,6 @@ export function attachCardClicks(container) {
           duration = `${tmdbData.episode_run_time[0]}m`;
         }
 
-        const overview = tmdbData?.overview
-          ? (tmdbData.overview.length > 140 ? tmdbData.overview.slice(0, 137) + '...' : tmdbData.overview)
-          : 'No synopsis available.';
-
-        // Extract English logo or fallback logo from TMDB images response
-        const logos = tmdbData?.images?.logos || [];
-        const englishLogos = logos.filter(l => l.iso_639_1 === 'en' || !l.iso_639_1);
-        const bestLogo = englishLogos[0] || logos[0];
-        const logoUrl = bestLogo ? `https://image.tmdb.org/t/p/w500${bestLogo.file_path}` : '';
-
         // Calculate the centered horizontal position for the wide preview card
         const previewWidth = 320;
         let previewLeft = rect.left + scrollLeft - (previewWidth - rect.width) / 2;
@@ -335,15 +325,10 @@ export function attachCardClicks(container) {
         previewCard.style.left = `${previewLeft}px`;
         previewCard.style.width = `${previewWidth}px`;
 
-        const logoOverlay = logoUrl 
-          ? `<img class="preview-logo-overlay" src="${logoUrl}" alt="${title}" style="position: absolute; left: 16px; bottom: 12px; max-width: 140px; max-height: 52px; object-fit: contain; z-index: 5; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8)); pointer-events: none; transition: opacity 0.3s;" />` 
-          : '';
-
         const backdropUrl = tmdbData?.backdrop_path || cardBackdrop || tmdbData?.poster_path || cardPoster || '';
         const trailerHTML = youtubeKey
           ? `<div class="preview-trailer-wrapper" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; position:relative;">
                <iframe class="preview-iframe" src="https://www.youtube.com/embed/${youtubeKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeKey}&playsinline=1&enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&wmode=transparent&autohide=1&origin=${encodeURIComponent(window.location.origin)}" allow="autoplay" frameborder="0"></iframe>
-               ${logoOverlay}
                <button class="preview-volume-btn" aria-label="Toggle Sound">
                  <svg class="vol-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>
                  <svg class="vol-on" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -351,13 +336,12 @@ export function attachCardClicks(container) {
              </div>`
           : `<div class="preview-no-trailer" style="background-image:url(${img.backdrop(backdropUrl)}); background-size:cover; background-position:center; width:100%; aspect-ratio:16/9; position:relative;">
                <div class="preview-no-trailer-overlay"></div>
-               ${logoOverlay}
              </div>`;
 
         const watchlistIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
         const watchlistCheckedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
 
-        const titleHTML = !logoUrl ? `<div class="preview-title">${title}</div>` : '';
+        const titleHTML = `<div class="preview-title">${title}</div>`;
 
         previewCard.innerHTML = `
           ${trailerHTML}
@@ -392,7 +376,6 @@ export function attachCardClicks(container) {
                 </span>
               ` : ''}
             </div>
-            <div class="preview-desc">${overview}</div>
           </div>
         `;
 
