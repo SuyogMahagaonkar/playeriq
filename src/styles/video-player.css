@@ -533,3 +533,35 @@
   text-overflow: ellipsis;
 }
 
+/* ========================================
+   💬 PREMIUM IN-PLAYER SUBTITLES STYLES
+   ======================================== */
+.vp-subtitles-desktop-wrapper {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 2px 8px;
+  height: 28px;
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.vp-subtitles-desktop-wrapper:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.vp-subtitles-desktop-wrapper svg {
+  color: inherit;
+}
+
+.vp-subtitles-desktop-wrapper select.vp-select {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+  height: 100%;
+}
+
+

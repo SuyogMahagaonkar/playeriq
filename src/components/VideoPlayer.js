@@ -176,6 +176,13 @@ export function createVideoPlayer(container, streamData, {
               <option value="-1">Auto</option>
             </select>
 
+            <div class="vp-subtitles-desktop-wrapper" id="vp-subtitles-desktop-wrapper" style="display: flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;opacity:0.8;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/></svg>
+              <select class="vp-select" id="vp-subtitles" title="Subtitles" aria-label="Video Subtitles">
+                <option value="off" selected>Off</option>
+              </select>
+            </div>
+
             <button class="vp-btn" id="vp-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
             </button>
@@ -410,6 +417,15 @@ export function createVideoPlayer(container, streamData, {
         </svg>
         <span class="vp-opt-text" id="vp-opt-episodes-label">${isTvShow ? 'Episodes' : 'Related'}</span>
       </div>
+      <!-- Subtitles option -->
+      <div class="vp-mobile-opt" id="vp-opt-subtitles">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="7" y1="9" x2="17" y2="9"/>
+          <line x1="7" y1="13" x2="15" y2="13"/>
+        </svg>
+        <span class="vp-opt-text" id="vp-opt-subtitles-label">Subtitles</span>
+      </div>
       <!-- Audio & Quality option: transparent select sits on top -->
       <div class="vp-mobile-opt" id="vp-opt-quality">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -438,6 +454,8 @@ export function createVideoPlayer(container, streamData, {
     const optEpisodes = document.getElementById('vp-opt-episodes');
     const optEpisodesLabel = document.getElementById('vp-opt-episodes-label');
     const optQuality = document.getElementById('vp-opt-quality');
+    const optSubtitles = document.getElementById('vp-opt-subtitles');
+    const optSubtitlesLabel = document.getElementById('vp-opt-subtitles-label');
     const optNext = document.getElementById('vp-opt-next');
     const optNextLabel = document.getElementById('vp-opt-next-label');
 
@@ -601,11 +619,101 @@ export function createVideoPlayer(container, streamData, {
         qualityObserver.observe(realQuality, { childList: true, subtree: true });
 
         optQuality.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openCustomPicker('Video Quality', realQuality);
-        });
-      }
-    }
+           e.stopPropagation();
+           openCustomPicker('Video Quality', realQuality);
+         });
+       }
+     }
+
+     // Subtitles option logic (Desktop Dropdown & Mobile Picker)
+     const realSubtitles = document.getElementById('vp-subtitles');
+     if (realSubtitles) {
+       function toggleSubtitleTrack(trackIndex) {
+         const tracks = video.textTracks;
+         if (!tracks) return;
+         
+         Array.from(tracks).forEach((track, i) => {
+           if (i === trackIndex) {
+             track.mode = 'showing';
+           } else {
+             track.mode = 'disabled';
+           }
+         });
+         
+         localStorage.setItem('piq_sub_preference', trackIndex === -1 ? 'off' : String(trackIndex));
+
+         // Update mobile opt label text dynamically
+         if (optSubtitlesLabel) {
+           if (trackIndex === -1) {
+             optSubtitlesLabel.textContent = 'Subtitles (Off)';
+           } else {
+             const subLabel = streamData.subtitles?.[trackIndex]?.label || `Subtitle ${trackIndex + 1}`;
+             optSubtitlesLabel.textContent = subLabel;
+           }
+         }
+       }
+
+       // Populates subtitles dynamically in the select element
+       const setupSubtitles = () => {
+         if (streamData.subtitles?.length) {
+           realSubtitles.innerHTML = '<option value="off">Off</option>';
+           streamData.subtitles.forEach((sub, i) => {
+             realSubtitles.innerHTML += `<option value="${i}">${sub.label || `Subtitle ${i + 1}`}</option>`;
+           });
+
+           // Apply default or saved user preference
+           const savedSubPref = localStorage.getItem('piq_sub_preference');
+           if (savedSubPref !== null) {
+             if (savedSubPref === 'off') {
+               realSubtitles.value = 'off';
+               toggleSubtitleTrack(-1);
+             } else {
+               const prefIdx = parseInt(savedSubPref);
+               if (!isNaN(prefIdx) && prefIdx < streamData.subtitles.length) {
+                 realSubtitles.value = savedSubPref;
+                 toggleSubtitleTrack(prefIdx);
+               } else {
+                 realSubtitles.value = 'off';
+                 toggleSubtitleTrack(-1);
+               }
+             }
+           } else {
+             // Default to index 0 (typically English) if available
+             realSubtitles.value = '0';
+             toggleSubtitleTrack(0);
+           }
+         } else {
+           // Hide UI controls if no subtitles are available
+           const desktopWrapper = document.getElementById('vp-subtitles-desktop-wrapper');
+           if (desktopWrapper) desktopWrapper.style.display = 'none';
+           if (optSubtitles) optSubtitles.style.display = 'none';
+         }
+       };
+
+       setupSubtitles();
+
+       // Bind change listener for desktop selector
+       realSubtitles.addEventListener('change', (e) => {
+         const val = e.target.value;
+         toggleSubtitleTrack(val === 'off' ? -1 : parseInt(val));
+       });
+
+       // Bind mobile picker trigger
+       if (optSubtitles) {
+         optSubtitles.addEventListener('click', (e) => {
+           e.stopPropagation();
+           openCustomPicker('Subtitles', realSubtitles);
+         });
+       }
+
+       // Ensure tracks are synchronized if they are lazy loaded by the browser
+       video.textTracks.addEventListener('addtrack', () => {
+         const savedSubPref = localStorage.getItem('piq_sub_preference');
+         const activeIdx = (savedSubPref === 'off' || savedSubPref === null) ? -1 : parseInt(savedSubPref);
+         toggleSubtitleTrack(activeIdx === -1 ? (streamData.subtitles?.length ? 0 : -1) : activeIdx);
+       });
+     }
+
 
     function renderEpisodeCards() {
       const carousel = document.getElementById('vp-episodes-carousel');
