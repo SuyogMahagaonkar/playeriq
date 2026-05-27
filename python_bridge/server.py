@@ -25,7 +25,8 @@ from moviebox_api.v3.core import (
     SUBJECT_GET_PATH,
     SEASON_INFO_PATH,
     RESOURCE_PATH,
-    Homepage
+    Homepage,
+    DownloadableCaptionFileDetails
 )
 
 
@@ -208,9 +209,20 @@ def get_movie_stream(title: str):
                     client, title, SubjectType.MOVIES
                 )
                 raw, files = await _get_streams(client, subject_id, release_date)
-                return subject_id, item_title, raw, files
+                
+                best = pick_best(files)
+                captions = []
+                if best and best.get("resourceId"):
+                    try:
+                        captions_downloader = DownloadableCaptionFileDetails(client)
+                        captions_raw = await captions_downloader.get_content(subject_id, best.get("resourceId"))
+                        captions = captions_raw.get("extCaptions") or []
+                    except Exception as e:
+                        log.warning("Failed to fetch captions: %s", e)
+                        
+                return subject_id, item_title, raw, files, captions
 
-        subject_id, item_title, raw, files = run_async(fetch())
+        subject_id, item_title, raw, files, captions = run_async(fetch())
 
         if not files:
             # Log raw response for debugging
@@ -234,6 +246,14 @@ def get_movie_stream(title: str):
             "codec": best_fmt["codec"],
             "duration": duration_secs,
             "all_streams": [format_file(f) for f in files],
+            "subtitles": [
+                {
+                    "id": c.get("id"),
+                    "lan": c.get("lan"),
+                    "label": c.get("lanName"),
+                    "url": c.get("url")
+                } for c in captions
+            ]
         })
 
     except ValueError as e:
@@ -253,9 +273,20 @@ def get_tv_stream(title: str, season: int, episode: int):
                     client, title, SubjectType.TV_SERIES
                 )
                 raw, files = await _get_episode_streams(client, subject_id, season, episode)
-                return subject_id, item_title, raw, files
+                
+                best = pick_best(files)
+                captions = []
+                if best and best.get("resourceId"):
+                    try:
+                        captions_downloader = DownloadableCaptionFileDetails(client)
+                        captions_raw = await captions_downloader.get_content(subject_id, best.get("resourceId"))
+                        captions = captions_raw.get("extCaptions") or []
+                    except Exception as e:
+                        log.warning("Failed to fetch captions: %s", e)
+                        
+                return subject_id, item_title, raw, files, captions
 
-        subject_id, item_title, raw, files = run_async(fetch())
+        subject_id, item_title, raw, files, captions = run_async(fetch())
 
         if not files:
             log.warning("No files found. Raw keys: %s", list(raw.keys()))
@@ -282,6 +313,14 @@ def get_tv_stream(title: str, season: int, episode: int):
             "codec": best_fmt["codec"],
             "duration": duration_secs,
             "all_streams": [format_file(f) for f in files],
+            "subtitles": [
+                {
+                    "id": c.get("id"),
+                    "lan": c.get("lan"),
+                    "label": c.get("lanName"),
+                    "url": c.get("url")
+                } for c in captions
+            ]
         })
 
     except ValueError as e:
@@ -298,9 +337,20 @@ def get_movie_stream_by_id(subject_id: str):
         async def fetch():
             async with MovieBoxHttpClient() as client:
                 raw, files = await _get_streams(client, subject_id, None)
-                return raw, files
+                
+                best = pick_best(files)
+                captions = []
+                if best and best.get("resourceId"):
+                    try:
+                        captions_downloader = DownloadableCaptionFileDetails(client)
+                        captions_raw = await captions_downloader.get_content(subject_id, best.get("resourceId"))
+                        captions = captions_raw.get("extCaptions") or []
+                    except Exception as e:
+                        log.warning("Failed to fetch captions: %s", e)
+                        
+                return raw, files, captions
 
-        raw, files = run_async(fetch())
+        raw, files, captions = run_async(fetch())
 
         if not files:
             return jsonify({"error": "No stream files found"}), 404
@@ -318,6 +368,14 @@ def get_movie_stream_by_id(subject_id: str):
             "codec": best_fmt["codec"],
             "duration": duration_secs,
             "all_streams": [format_file(f) for f in files],
+            "subtitles": [
+                {
+                    "id": c.get("id"),
+                    "lan": c.get("lan"),
+                    "label": c.get("lanName"),
+                    "url": c.get("url")
+                } for c in captions
+            ]
         })
     except Exception as e:
         log.error("Movie fetch by ID error: %s", e, exc_info=True)
@@ -331,9 +389,20 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
         async def fetch():
             async with MovieBoxHttpClient() as client:
                 raw, files = await _get_episode_streams(client, subject_id, season, episode)
-                return raw, files
+                
+                best = pick_best(files)
+                captions = []
+                if best and best.get("resourceId"):
+                    try:
+                        captions_downloader = DownloadableCaptionFileDetails(client)
+                        captions_raw = await captions_downloader.get_content(subject_id, best.get("resourceId"))
+                        captions = captions_raw.get("extCaptions") or []
+                    except Exception as e:
+                        log.warning("Failed to fetch captions: %s", e)
+                        
+                return raw, files, captions
 
-        raw, files = run_async(fetch())
+        raw, files, captions = run_async(fetch())
 
         if not files:
             return jsonify({"error": "No stream files found"}), 404
@@ -354,6 +423,14 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
             "codec": best_fmt["codec"],
             "duration": duration_secs,
             "all_streams": [format_file(f) for f in files],
+            "subtitles": [
+                {
+                    "id": c.get("id"),
+                    "lan": c.get("lan"),
+                    "label": c.get("lanName"),
+                    "url": c.get("url")
+                } for c in captions
+            ]
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -152,7 +152,10 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
       codec: chosenStream.codec || 'hevc',
       duration: totalDuration,
       transcoded: false,
-      subtitles: [],
+      subtitles: (data.subtitles || []).map(sub => ({
+        label: sub.label || sub.lan || 'Unknown',
+        url: `/api/proxy/subtitle?url=${encodeURIComponent(sub.url)}`
+      })),
       all_streams: allStreams.map(s => ({
         ...s,
         url: makeStreamUrl(s.url),
@@ -782,9 +785,19 @@ app.get('/api/proxy/subtitle', async (req, res) => {
       timeout: 10000,
     });
 
+    let subtitleText = data;
+    // Auto-convert SRT format to WebVTT on the fly for successful browser rendering
+    if (typeof subtitleText === 'string' && !subtitleText.trim().startsWith('WEBVTT')) {
+      subtitleText = 'WEBVTT\n\n' + subtitleText
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        // Convert SRT timing format "00:00:00,000" to WebVTT timing format "00:00:00.000"
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+    }
+
     res.setHeader('Content-Type', 'text/vtt');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(data);
+    res.send(subtitleText);
 
   } catch (err) {
     console.error('Subtitle proxy error:', err.message);
