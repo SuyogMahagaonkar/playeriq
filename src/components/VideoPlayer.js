@@ -1164,7 +1164,15 @@ export function createVideoPlayer(container, streamData, {
       const track = document.createElement('track');
       track.kind = 'subtitles';
       track.label = sub.label || `Subtitle ${i + 1}`;
-      track.src = sub.url;
+      
+      // Ensure the subtitle URL is absolute by prefixing NODE_PROXY if relative
+      let subUrl = sub.url;
+      if (subUrl && subUrl.startsWith('/')) {
+        subUrl = `${NODE_PROXY}${subUrl}`;
+      }
+      track.src = subUrl;
+      track.srclang = sub.lan || 'en';
+      
       if (i === 0) track.default = true;
       video.appendChild(track);
     });
