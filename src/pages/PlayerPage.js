@@ -2624,6 +2624,23 @@ function loadGoogleCastSDK() {
 }
 
 /**
+ * Helper to format seconds to time string (e.g. HH:MM:SS or MM:SS)
+ */
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds === null) return '00:00';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  const pad = (n) => String(n).padStart(2, '0');
+  
+  if (hrs > 0) {
+    return `${hrs}:${pad(mins)}:${pad(secs)}`;
+  }
+  return `${pad(mins)}:${pad(secs)}`;
+}
+
+/**
  * Stop the casting flow and clean up all associated state and UI.
  * @param {boolean} fromSdkEvent  Pass true when called from a SESSION_ENDED event
  *   so we don't call endCurrentSession() a second time (would throw).
@@ -2636,6 +2653,11 @@ function stopCastingFlow(fromSdkEvent = false) {
   // Remove sticky cast bar
   const bar = document.getElementById('global-cast-session-bar');
   if (bar) bar.remove();
+
+  // Remove full screen remote overlay
+  const overlay = document.getElementById('global-cast-remote-overlay');
+  if (overlay) overlay.remove();
+
   // Nullify live references
   _castRemotePlayer = null;
   _castController   = null;
@@ -2645,7 +2667,7 @@ function stopCastingFlow(fromSdkEvent = false) {
 
 /**
  * Mount the sticky cast session bar at the bottom of the page.
- * Controls are wired to the real RemotePlayerController â€” no polling needed.
+ * Controls are wired to the real RemotePlayerController — no polling needed.
  *
  * @param {string}      deviceName  Friendly name from SDK (e.g. "Living Room TV")
  * @param {string}      title       Content title
@@ -2655,7 +2677,12 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
   const existing = document.getElementById('global-cast-session-bar');
   if (existing) existing.remove();
 
+  const existingOverlay = document.getElementById('global-cast-remote-overlay');
+  if (existingOverlay) existingOverlay.remove();
+
   const thumbSrc = imagePath ? img.backdrop(imagePath) : '';
+  
+  // 1. Create the Mini Sticky Cast Bar
   const bar = document.createElement('div');
   bar.className = 'cast-session-bar';
   bar.id = 'global-cast-session-bar';
@@ -2675,25 +2702,313 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
+    <div class="cast-session-bar-progress" id="cast-bar-progress-fill" style="width: 0%;"></div>
   `;
   document.body.appendChild(bar);
 
-  const playBtn       = bar.querySelector('#cast-bar-play-btn');
-  const disconnectBtn = bar.querySelector('#cast-bar-disconnect-btn');
-  const statusEl      = bar.querySelector('#cast-bar-status');
+  // 2. Create the Full-screen Premium Cast Remote Overlay (Hotstar style)
+  const overlay = document.createElement('div');
+  overlay.className = 'cast-remote-overlay';
+  overlay.id = 'global-cast-remote-overlay';
+  overlay.innerHTML = `
+    <div class="cast-remote-ambient" style="background-image: url('${thumbSrc}')"></div>
+    <div class="cast-remote-header">
+      <button class="cast-remote-close-btn" id="cast-remote-minimize-btn" title="Minimize Remote">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px;">
+          <polyline points="4 9 12 17 20 9"/>
+        </svg>
+      </button>
+      <div class="cast-remote-device-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+          <path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8A14 14 0 0 1 14 20M2 20h.01"/>
+        </svg>
+        <span>${deviceName || 'TV Connected'}</span>
+      </div>
+      <div style="width:40px;"></div> <!-- Spacer for design balance -->
+    </div>
+    
+    <div class="cast-remote-body">
+      <div class="cast-remote-artwork-container">
+        <img class="cast-remote-artwork" src="${thumbSrc}" alt="Poster" onerror="this.style.display='none'" />
+      </div>
+      <h2 class="cast-remote-title">${title}</h2>
+      <p class="cast-remote-sub" id="cast-remote-sub-status">Streaming on ${deviceName || 'TV'}</p>
+      
+      <!-- Timeline Scrubbing / Slider -->
+      <div class="cast-remote-timeline">
+        <div class="cast-remote-slider-container" id="cast-remote-slider-container">
+          <div class="cast-remote-slider-track">
+            <div class="cast-remote-slider-fill" id="cast-remote-slider-fill" style="width: 0%;"></div>
+          </div>
+          <div class="cast-remote-slider-thumb" id="cast-remote-slider-thumb" style="left: 0%;"></div>
+        </div>
+        <div class="cast-remote-time-labels">
+          <span id="cast-remote-current-time">00:00</span>
+          <span id="cast-remote-duration">00:00</span>
+        </div>
+      </div>
+      
+      <!-- Playback Control Buttons -->
+      <div class="cast-remote-playback-controls">
+        <button class="cast-remote-btn skip-back" id="cast-remote-skip-back" title="Rewind 10s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <polyline points="3 3 3 8 8 8"/>
+            <text x="12" y="15" font-size="8" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none" style="font-family:system-ui">10</text>
+          </svg>
+        </button>
+        <button class="cast-remote-btn playpause-btn" id="cast-remote-playpause" title="Play/Pause">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        </button>
+        <button class="cast-remote-btn skip-forward" id="cast-remote-skip-forward" title="Forward 10s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <polyline points="21 3 21 8 16 8"/>
+            <text x="12" y="15" font-size="8" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none" style="font-family:system-ui">10</text>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Volume Slider -->
+      <div class="cast-remote-volume-container">
+        <button class="cast-remote-volume-btn" id="cast-remote-volume-btn" title="Mute/Unmute">
+          <svg id="volume-icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="volume-icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;display:none;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="22" y1="9" x2="16" y2="15"/>
+            <line x1="16" y1="9" x2="22" y2="15"/>
+          </svg>
+        </button>
+        <div class="cast-remote-volume-slider-wrapper" id="cast-remote-volume-slider-wrapper">
+          <div class="cast-remote-volume-track">
+            <div class="cast-remote-volume-fill" id="cast-remote-volume-fill" style="width: 80%;"></div>
+          </div>
+          <div class="cast-remote-volume-thumb" id="cast-remote-volume-thumb" style="left: 80%;"></div>
+        </div>
+      </div>
+      
+      <!-- Disconnect button -->
+      <button class="cast-remote-disconnect-btn" id="cast-remote-disconnect-btn" title="Stop Streaming">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+          <line x1="12" y1="2" x2="12" y2="12"/>
+        </svg>
+        <span>Disconnect TV</span>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 
-  // Play/pause wired to the real SDK RemotePlayerController
-  if (playBtn && _castController) {
-    playBtn.addEventListener('click', () => _castController.playOrPause());
+  const playBtn             = bar.querySelector('#cast-bar-play-btn');
+  const disconnectBtn       = bar.querySelector('#cast-bar-disconnect-btn');
+  const statusEl            = bar.querySelector('#cast-bar-status');
+  
+  const minimizeBtn         = overlay.querySelector('#cast-remote-minimize-btn');
+  const remotePlayPauseBtn   = overlay.querySelector('#cast-remote-playpause');
+  const remoteDisconnectBtn = overlay.querySelector('#cast-remote-disconnect-btn');
+  const skipBackBtn         = overlay.querySelector('#cast-remote-skip-back');
+  const skipForwardBtn      = overlay.querySelector('#cast-remote-skip-forward');
+  
+  const sliderContainer     = overlay.querySelector('#cast-remote-slider-container');
+  const sliderFill          = overlay.querySelector('#cast-remote-slider-fill');
+  const sliderThumb         = overlay.querySelector('#cast-remote-slider-thumb');
+  const currentTimeLabel     = overlay.querySelector('#cast-remote-current-time');
+  const durationLabel       = overlay.querySelector('#cast-remote-duration');
+  
+  const volumeBtn           = overlay.querySelector('#cast-remote-volume-btn');
+  const volumeSliderWrapper = overlay.querySelector('#cast-remote-volume-slider-wrapper');
+  const volumeFill          = overlay.querySelector('#cast-remote-volume-fill');
+  const volumeThumb         = overlay.querySelector('#cast-remote-volume-thumb');
+  const volIconUnmuted       = overlay.querySelector('#volume-icon-unmuted');
+  const volIconMuted         = overlay.querySelector('#volume-icon-muted');
+
+  // ---- Interaction Events ----
+
+  // Expand full overlay on clicking the mini cast bar itself
+  bar.addEventListener('click', (e) => {
+    if (e.target.closest('#cast-bar-play-btn') || e.target.closest('#cast-bar-disconnect-btn')) {
+      return;
+    }
+    overlay.classList.add('active');
+  });
+
+  // Minimize/fold overlay down
+  if (minimizeBtn) {
+    minimizeBtn.addEventListener('click', () => {
+      overlay.classList.remove('active');
+    });
   }
 
-  // Disconnect wired to SDK endCurrentSession
+  // Disconnect / stop casting flow
   if (disconnectBtn) {
-    disconnectBtn.addEventListener('click', () => stopCastingFlow(false));
+    disconnectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      stopCastingFlow(false);
+    });
+  }
+  if (remoteDisconnectBtn) {
+    remoteDisconnectBtn.addEventListener('click', () => {
+      stopCastingFlow(false);
+    });
   }
 
-  // Sync play/pause icon with live TV state via RemotePlayerController events
+  // Play/pause toggling
+  if (playBtn && _castController) {
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _castController.playOrPause();
+    });
+  }
+  if (remotePlayPauseBtn && _castController) {
+    remotePlayPauseBtn.addEventListener('click', () => {
+      _castController.playOrPause();
+    });
+  }
+
+  // Skip backwards 10 seconds
+  if (skipBackBtn && _castController && _castRemotePlayer) {
+    skipBackBtn.addEventListener('click', () => {
+      const newTime = Math.max(0, _castRemotePlayer.currentTime - 10);
+      _castRemotePlayer.currentTime = newTime;
+      _castController.seek();
+    });
+  }
+
+  // Skip forwards 10 seconds
+  if (skipForwardBtn && _castController && _castRemotePlayer) {
+    skipForwardBtn.addEventListener('click', () => {
+      const duration = _castRemotePlayer.duration || 0;
+      const newTime = Math.min(duration, _castRemotePlayer.currentTime + 10);
+      _castRemotePlayer.currentTime = newTime;
+      _castController.seek();
+    });
+  }
+
+  // Timeline Progress Slider / Scrubbing (Drag-seeking)
+  let isDraggingSlider = false;
+
+  function updateOverlayProgress(currentTime, duration) {
+    if (isDraggingSlider) return;
+    
+    const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+    if (sliderFill) sliderFill.style.width = `${pct}%`;
+    if (sliderThumb) sliderThumb.style.left = `${pct}%`;
+    if (currentTimeLabel) currentTimeLabel.textContent = formatTime(currentTime);
+    if (durationLabel) durationLabel.textContent = formatTime(duration);
+  }
+
+  if (sliderContainer) {
+    const handleSliderDrag = (e, shouldSeek = false) => {
+      if (!_castRemotePlayer || !_castController) return;
+      const rect = sliderContainer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const pct = Math.min(1.0, Math.max(0.0, clickX / width));
+      const duration = _castRemotePlayer.duration || 0;
+      
+      const newTime = duration * pct;
+      if (sliderFill) sliderFill.style.width = `${pct * 100}%`;
+      if (sliderThumb) sliderThumb.style.left = `${pct * 100}%`;
+      if (currentTimeLabel) currentTimeLabel.textContent = formatTime(newTime);
+      
+      if (shouldSeek) {
+        _castRemotePlayer.currentTime = newTime;
+        _castController.seek();
+      }
+    };
+    
+    sliderContainer.addEventListener('pointerdown', (e) => {
+      isDraggingSlider = true;
+      sliderContainer.setPointerCapture(e.pointerId);
+      handleSliderDrag(e);
+    });
+    
+    sliderContainer.addEventListener('pointermove', (e) => {
+      if (isDraggingSlider) handleSliderDrag(e);
+    });
+    
+    sliderContainer.addEventListener('pointerup', (e) => {
+      if (isDraggingSlider) {
+        isDraggingSlider = false;
+        sliderContainer.releasePointerCapture(e.pointerId);
+        handleSliderDrag(e, true /* shouldSeek */);
+      }
+    });
+  }
+
+  // Volume Level Slider & Muting (Drag-volume)
+  let isDraggingVolume = false;
+
+  function updateVolumeUI(level, isMuted) {
+    if (isDraggingVolume) return;
+    
+    const displayLevel = isMuted ? 0 : level;
+    if (volumeFill) volumeFill.style.width = `${displayLevel * 100}%`;
+    if (volumeThumb) volumeThumb.style.left = `${displayLevel * 100}%`;
+    
+    if (volIconUnmuted && volIconMuted) {
+      if (isMuted || level === 0) {
+        volIconUnmuted.style.display = 'none';
+        volIconMuted.style.display = 'block';
+      } else {
+        volIconUnmuted.style.display = 'block';
+        volIconMuted.style.display = 'none';
+      }
+    }
+  }
+
+  if (volumeSliderWrapper) {
+    const handleVolumeDrag = (e, shouldSet = false) => {
+      if (!_castRemotePlayer || !_castController) return;
+      const rect = volumeSliderWrapper.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const pct = Math.min(1.0, Math.max(0.0, clickX / width));
+      
+      if (volumeFill) volumeFill.style.width = `${pct * 100}%`;
+      if (volumeThumb) volumeThumb.style.left = `${pct * 100}%`;
+      
+      if (shouldSet) {
+        _castRemotePlayer.volumeLevel = pct;
+        _castController.setVolumeLevel();
+        if (_castRemotePlayer.isMuted && pct > 0) {
+          _castController.muteOrUnmute(); // Auto-unmute when pulling volume up
+        }
+      }
+    };
+    
+    volumeSliderWrapper.addEventListener('pointerdown', (e) => {
+      isDraggingVolume = true;
+      volumeSliderWrapper.setPointerCapture(e.pointerId);
+      handleVolumeDrag(e);
+    });
+    
+    volumeSliderWrapper.addEventListener('pointermove', (e) => {
+      if (isDraggingVolume) handleVolumeDrag(e);
+    });
+    
+    volumeSliderWrapper.addEventListener('pointerup', (e) => {
+      if (isDraggingVolume) {
+        isDraggingVolume = false;
+        volumeSliderWrapper.releasePointerCapture(e.pointerId);
+        handleVolumeDrag(e, true /* shouldSet */);
+      }
+    });
+  }
+
+  if (volumeBtn && _castController) {
+    volumeBtn.addEventListener('click', () => {
+      _castController.muteOrUnmute();
+    });
+  }
+
+  // ---- Sync UI state via RemotePlayerController EventListeners ----
   if (_castController && _castRemotePlayer) {
+    // Play/Pause sync
     _castController.addEventListener(
       cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
       () => {
@@ -2704,13 +3019,75 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
             ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
             : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
         }
+        if (remotePlayPauseBtn) {
+          remotePlayPauseBtn.innerHTML = paused
+            ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        }
         if (statusEl) {
           statusEl.textContent = paused
             ? `Paused on ${deviceName || 'TV'}`
             : `Casting to ${deviceName || 'TV'}\u2026`;
         }
+        const remoteSubStatus = overlay.querySelector('#cast-remote-sub-status');
+        if (remoteSubStatus) {
+          remoteSubStatus.textContent = paused
+            ? `Paused on ${deviceName || 'TV'}`
+            : `Playing on ${deviceName || 'TV'}`;
+        }
       }
     );
+
+    // Current Time Progress sync
+    _castController.addEventListener(
+      cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
+      () => {
+        if (!_castRemotePlayer) return;
+        const cur = _castRemotePlayer.currentTime;
+        const dur = _castRemotePlayer.duration || 1;
+        const pct = (cur / dur) * 100;
+        
+        // Mini timeline indicator
+        const miniProgress = bar.querySelector('#cast-bar-progress-fill');
+        if (miniProgress) miniProgress.style.width = `${pct}%`;
+        
+        // Full timeline indicator
+        updateOverlayProgress(cur, dur);
+      }
+    );
+
+    // Duration sync
+    _castController.addEventListener(
+      cast.framework.RemotePlayerEventType.DURATION_CHANGED,
+      () => {
+        if (!_castRemotePlayer) return;
+        const cur = _castRemotePlayer.currentTime;
+        const dur = _castRemotePlayer.duration || 1;
+        updateOverlayProgress(cur, dur);
+      }
+    );
+
+    // Volume level sync
+    _castController.addEventListener(
+      cast.framework.RemotePlayerEventType.VOLUME_LEVEL_CHANGED,
+      () => {
+        if (!_castRemotePlayer) return;
+        updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
+      }
+    );
+
+    // Muted sync
+    _castController.addEventListener(
+      cast.framework.RemotePlayerEventType.IS_MUTED_CHANGED,
+      () => {
+        if (!_castRemotePlayer) return;
+        updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
+      }
+    );
+    
+    // Initial State Sync
+    updateOverlayProgress(_castRemotePlayer.currentTime, _castRemotePlayer.duration || 1);
+    updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
   }
 }
 
