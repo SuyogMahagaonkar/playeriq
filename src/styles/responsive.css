@@ -5776,7 +5776,7 @@
    📱 MOBILE ADAPTIVE VIEWPORTS (Snapping Bottom Sheet Layout)
    ========================================================================== */
 @media (max-width: 500px) {
-  .piq-floating-cast-card {
+  .piq-floating-cast-card:not(.collapsed) {
     left: 8px !important;
     right: 8px !important;
     bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
@@ -5788,6 +5788,13 @@
     border-radius: 14px !important;
     border-color: rgba(168, 85, 247, 0.25) !important;
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5) !important;
+  }
+  .piq-floating-cast-card.collapsed {
+    width: 280px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+    border-radius: 12px !important;
   }
   
   .floating-cast-header {
@@ -5856,6 +5863,28 @@
   height: 52px !important;
   min-height: 52px !important;
   max-height: 52px !important;
+  border-color: rgba(168, 85, 247, 0.65) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(168, 85, 247, 0.25) !important;
+  animation: collapsedCardGlow 3s infinite ease-in-out !important;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+@keyframes collapsedCardGlow {
+  0%, 100% {
+    border-color: rgba(168, 85, 247, 0.5) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(168, 85, 247, 0.18) !important;
+  }
+  50% {
+    border-color: rgba(192, 132, 252, 0.8) !important;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 30px rgba(192, 132, 252, 0.35) !important;
+  }
+}
+
+.piq-floating-cast-card.collapsed:hover {
+  transform: scale(1.03) !important;
+  border-color: rgba(192, 132, 252, 0.95) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75), 0 0 35px rgba(192, 132, 252, 0.5) !important;
+  cursor: grab !important;
 }
 
 .piq-floating-cast-card .floating-cast-body {
@@ -5899,4 +5928,76 @@
 
 .piq-floating-cast-card.collapsed .floating-cast-header-progress {
   display: block !important;
+}
+
+/* Redesigned circular/mini-poster preview thumb inside header */
+.floating-cast-header-thumb-wrap {
+  position: relative !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.25) !important;
+  margin-right: 10px !important;
+  background: #09090f !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.floating-cast-header-thumb {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 5px !important;
+}
+
+/* Active playback pulsating green connection/radar dot */
+.floating-cast-pulse-dot {
+  position: absolute !important;
+  bottom: -2px !important;
+  right: -2px !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #22c55e !important;
+  border: 1.5px solid #0c0c14 !important;
+  animation: pulseActive 1.8s infinite ease-in-out !important;
+}
+
+@keyframes pulseActive {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Header buttons and action coordination */
+.floating-cast-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.floating-cast-header-return-btn {
+  display: none !important; /* Hidden in expanded state */
+}
+
+.piq-floating-cast-card.collapsed .floating-cast-header-return-btn {
+  display: flex !important; /* Visible ONLY when collapsed */
+  color: #c084fc !important;
+}
+
+.floating-cast-header-return-btn:hover {
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5) !important;
 }

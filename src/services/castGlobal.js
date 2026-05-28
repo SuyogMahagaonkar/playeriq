@@ -289,7 +289,7 @@ export function mountFloatingRemoteCard() {
       claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP', sender: _piqTabId });
       claimChannel.close();
     } catch (e) {}
-  }
+  }  const isMobile = window.innerWidth <= 768;
 
   // Retrieve saved placement/geometry coordinates
   const savedX = localStorage.getItem('piq_cast_card_x');
@@ -298,7 +298,7 @@ export function mountFloatingRemoteCard() {
   const savedH = localStorage.getItem('piq_cast_card_h') || 'auto';
   const isInitiallyCollapsed = localStorage.getItem('piq_cast_card_collapsed') === 'true';
 
-  // Calculate default viewport centering if no coordinates are stored
+  // Calculate default viewport coordinates
   let posX = window.innerWidth - parseInt(savedW) - 40;
   let posY = 100;
 
@@ -306,6 +306,11 @@ export function mountFloatingRemoteCard() {
     // Restrict within viewport bounds dynamically on mount
     posX = Math.max(0, Math.min(parseInt(savedX), window.innerWidth - parseInt(savedW)));
     posY = Math.max(0, Math.min(parseInt(savedY), window.innerHeight - 300));
+  } else if (isMobile) {
+    // Default mobile positioning at the bottom-right corner
+    const defaultMobileW = isInitiallyCollapsed ? 280 : 320;
+    posX = window.innerWidth - defaultMobileW - 16;
+    posY = window.innerHeight - (isInitiallyCollapsed ? 140 : 380);
   }
 
   card = document.createElement('div');
@@ -337,16 +342,30 @@ export function mountFloatingRemoteCard() {
           <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
         </svg>
       </div>
+      
+      <!-- Sleek circular movie poster preview -->
+      <div class="floating-cast-header-thumb-wrap">
+        <img class="floating-cast-header-thumb" src="${thumbSrc}" onerror="this.style.display='none';">
+        <div class="floating-cast-pulse-dot" id="floating-cast-header-pulse"></div>
+      </div>
+      
       <div class="floating-cast-meta">
         <h4 class="floating-cast-title">${title}</h4>
         <span class="floating-cast-device">Casting to ${deviceName}</span>
       </div>
-      <button class="floating-cast-close-btn" id="floating-cast-hide-btn" title="Toggle Remote Size">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;">
-          <polyline points="4 9 12 17 20 9"/>
-        </svg>
-      </button>
-      <div class="floating-cast-header-progress" id="floating-cast-header-progress"></div>
+      
+      <div class="floating-cast-header-actions">
+        <button class="floating-cast-close-btn floating-cast-header-return-btn" id="floating-cast-header-return-btn" title="Return to Player">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+          </svg>
+        </button>
+        <button class="floating-cast-close-btn" id="floating-cast-hide-btn" title="Toggle Remote Size">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;">
+            <polyline points="4 9 12 17 20 9"/>
+          </svg>
+        </button>
+      </div>    <div class="floating-cast-header-progress" id="floating-cast-header-progress"></div>
     </div>
 
     <!-- Body Artwork Card -->
@@ -553,6 +572,7 @@ export function mountFloatingRemoteCard() {
   const volumeBtn       = card.querySelector('#floating-cast-volume-btn');
   const volumeSlider    = card.querySelector('#floating-cast-volume-slider-wrapper');
   const returnBtn       = card.querySelector('#floating-cast-return-btn');
+  const headerReturnBtn = card.querySelector('#floating-cast-header-return-btn');
   const disconnectBtn   = card.querySelector('#floating-cast-disconnect-btn');
   const hideBtn         = card.querySelector('#floating-cast-hide-btn');
 
@@ -593,50 +613,57 @@ export function mountFloatingRemoteCard() {
   }
 
   let isReturnClicked = false;
-  if (returnBtn) {
-    returnBtn.addEventListener('click', () => {
-      if (isReturnClicked) return;
-      isReturnClicked = true;
+  const handleReturnClick = (btnEl) => {
+    if (isReturnClicked) return;
+    isReturnClicked = true;
 
-      // Glow animation feedback
-      returnBtn.classList.add('clicking');
-      setTimeout(() => returnBtn.classList.remove('clicking'), 800);
-      setTimeout(() => { isReturnClicked = false; }, 1000); // 1s throttle
+    // Glow animation feedback
+    if (btnEl) {
+      btnEl.classList.add('clicking');
+      setTimeout(() => btnEl.classList.remove('clicking'), 800);
+    }
+    setTimeout(() => { isReturnClicked = false; }, 1000); // 1s throttle
 
-      if (videoId) {
-        const watchType = isTV ? 'tv' : 'movie';
-        let route = `watch/${watchType}/${videoId}`;
-        if (isTV) {
-          route += `?s=${season}&e=${episode}`;
-        }
-
-        // Multi-tab focus check
-        if ('BroadcastChannel' in window) {
-          const channel = new BroadcastChannel('piq_cast_channel');
-          let pongReceived = false;
-
-          const handlePong = (e) => {
-            if (e.data.type === 'PONG_PLAYER_TAB') {
-              pongReceived = true;
-              console.log('[Cast Return] Active player page found in another tab. Focused successfully.');
-            }
-          };
-          channel.addEventListener('message', handlePong);
-          channel.postMessage({ type: 'PING_PLAYER_TAB' });
-
-          // Wait 250ms for tab response. If none, navigate here.
-          setTimeout(() => {
-            channel.removeEventListener('message', handlePong);
-            channel.close();
-            if (!pongReceived) {
-              window.location.hash = `#/${route}`;
-            }
-          }, 250);
-        } else {
-          window.location.hash = `#/${route}`;
-        }
+    if (videoId) {
+      const watchType = isTV ? 'tv' : 'movie';
+      let route = `watch/${watchType}/${videoId}`;
+      if (isTV) {
+        route += `?s=${season}&e=${episode}`;
       }
-    });
+
+      // Multi-tab focus check
+      if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('piq_cast_channel');
+        let pongReceived = false;
+
+        const handlePong = (e) => {
+          if (e.data.type === 'PONG_PLAYER_TAB') {
+            pongReceived = true;
+            console.log('[Cast Return] Active player page found in another tab. Focused successfully.');
+          }
+        };
+        channel.addEventListener('message', handlePong);
+        channel.postMessage({ type: 'PING_PLAYER_TAB' });
+
+        // Wait 250ms for tab response. If none, navigate here.
+        setTimeout(() => {
+          channel.removeEventListener('message', handlePong);
+          channel.close();
+          if (!pongReceived) {
+            window.location.hash = `#/${route}`;
+          }
+        }, 250);
+      } else {
+        window.location.hash = `#/${route}`;
+      }
+    }
+  };
+
+  if (returnBtn) {
+    returnBtn.addEventListener('click', () => handleReturnClick(returnBtn));
+  }
+  if (headerReturnBtn) {
+    headerReturnBtn.addEventListener('click', () => handleReturnClick(headerReturnBtn));
   }
 
   if (playpauseBtn && _globalCastController) {
