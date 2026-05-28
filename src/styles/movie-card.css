@@ -190,6 +190,86 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+/* ---- Landscape Card Layout (Continue Watching) ---- */
+.movie-card.landscape {
+  width: 280px !important;
+  aspect-ratio: 16/9 !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--bg-card);
+}
+
+.movie-card.landscape .movie-card-poster-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 16/9 !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.movie-card.landscape .movie-card-poster {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* ---- Landscape Card Logo Overlay ---- */
+.movie-card-logo-container {
+  position: absolute;
+  bottom: 18px;
+  left: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.movie-card-logo-img {
+  max-width: 140px;
+  max-height: 38px;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.85));
+}
+
+.movie-card-logo-text {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  text-align: left;
+}
+
+.movie-card-logo-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent); /* Matches active theme dynamically */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.movie-card.landscape .card-progress-wrap {
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+  padding-top: 30px;
+}
+
+.movie-card.landscape .card-time-left {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 12px 4px 12px;
+  color: var(--text-muted);
+}
+
 /* ---- Progress Bar (Continue Watching) ---- */
 .card-progress-wrap {
   position: absolute;

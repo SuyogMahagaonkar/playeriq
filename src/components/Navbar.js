@@ -374,7 +374,7 @@ export function setupNavbarEvents() {
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
-        voiceBtn.style.color = '#ff0055';
+        voiceBtn.classList.add('listening');
         input.placeholder = 'Listening... Speak now';
         
         // Dynamic feedback visual indicator
@@ -400,7 +400,7 @@ export function setupNavbarEvents() {
 
       recognition.onerror = (evt) => {
         console.error('Speech recognition error', evt.error);
-        voiceBtn.style.color = 'var(--text-muted)';
+        voiceBtn.classList.remove('listening');
         input.placeholder = 'Search movies, shows...';
         
         const oldToast = document.querySelector('.voice-toast');
@@ -408,7 +408,7 @@ export function setupNavbarEvents() {
       };
 
       recognition.onend = () => {
-        voiceBtn.style.color = 'var(--text-muted)';
+        voiceBtn.classList.remove('listening');
         input.placeholder = 'Search movies, shows...';
         const oldToast = document.querySelector('.voice-toast');
         if (oldToast) oldToast.remove();

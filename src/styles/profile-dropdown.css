@@ -59,11 +59,13 @@
 }
 
 .navbar-profile-btn.signed-in .navbar-avatar-inner {
-  border-color: #22c55e;
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
 }
 
 .navbar-profile-btn.signed-in:hover .navbar-avatar-inner {
-  border-color: #16a34a;
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.45);
 }
 
 /* Chevron indicator */

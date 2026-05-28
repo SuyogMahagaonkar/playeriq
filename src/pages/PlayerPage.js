@@ -32,6 +32,7 @@ let currentPlayerMode = localStorage.getItem('piq_player_mode') || 'custom'; // 
 let activePlayer = null;
 let iframeInterval = null;
 let isOfflinePlayback = false;
+let activeLogoUrl = null;
 
 // ---- Mini-player state (mobile only) ----
 let _miniPlayerRoute = null;  // route string e.g. '/watch/movie/12345'
@@ -199,7 +200,8 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
         duration,
         episode_title: epTitle,
         episode_still: epStill,
-        episode_overview: epOverview
+        episode_overview: epOverview,
+        logo_path: activeLogoUrl
       });
 
       // Stop tracking if fully watched (90% watch threshold or under 5 min left)
@@ -1003,6 +1005,7 @@ export async function renderPlayerPage({ params, container }) {
 
   let data;
   isOfflinePlayback = false;
+  activeLogoUrl = null;
   let activeId = id;
 
   // If launched from Downloads page, immediately use offline mode
@@ -1127,6 +1130,7 @@ export async function renderPlayerPage({ params, container }) {
     } catch (logoErr) {
       console.warn('[PlayerPage] Failed to fetch official logo:', logoErr);
     }
+    activeLogoUrl = logoUrl;
 
     // Store TMDB runtime in seconds for the video player duration fallback
     // Movies: data.runtime is in minutes. TV: episode_run_time is average per-episode.
@@ -1165,7 +1169,15 @@ export async function renderPlayerPage({ params, container }) {
 
     // Save initial progress (Movies only — TV shows will save after metadata loads)
     if (!isTV) {
-      saveProgress({ id: activeId, title, type: 'movie', poster_path, season: currentSeason, episode: currentEpisode });
+      saveProgress({ 
+        id: activeId, 
+        title, 
+        type: 'movie', 
+        poster_path, 
+        season: currentSeason, 
+        episode: currentEpisode,
+        logo_path: activeLogoUrl
+      });
     }
 
     // Build seasons sidebar for TV
@@ -1380,7 +1392,8 @@ export async function renderPlayerPage({ params, container }) {
         episode: currentEpisode,
         episode_title: epTitle,
         episode_still: epStill,
-        episode_overview: epOverview
+        episode_overview: epOverview,
+        logo_path: activeLogoUrl
       });
 
       loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
@@ -1427,7 +1440,8 @@ export async function renderPlayerPage({ params, container }) {
         episode: currentEpisode,
         episode_title: epTitle,
         episode_still: epStill,
-        episode_overview: epOverview
+        episode_overview: epOverview,
+        logo_path: activeLogoUrl
       });
 
       loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);

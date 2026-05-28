@@ -102,6 +102,18 @@ export function createMovieCard(item, type = 'movie', customRoute = null, custom
       : `<div class="movie-card-poster" style="background:var(--bg-tertiary);width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:var(--text-xs);">No Image</div>`
     }
         <div class="movie-card-gradient"></div>
+        ${cardLayout === 'landscape'
+          ? `
+          <div class="movie-card-logo-container">
+            ${item.logo_path
+              ? `<img class="movie-card-logo-img" src="${item.logo_path}" alt="${title} Logo" />`
+              : `<span class="movie-card-logo-text">${title}</span>`
+            }
+            ${customSubtitle ? `<div class="movie-card-logo-sub">${customSubtitle}</div>` : ''}
+          </div>
+          `
+          : ''
+        }
         ${deleteBtn}
         ${hindiBadge}
         ${movieBoxBadge}
