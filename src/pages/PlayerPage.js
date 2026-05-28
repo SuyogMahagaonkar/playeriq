@@ -371,18 +371,14 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             loadPlayer(id, isTV, season, episode, title, imdbId, posterPath, backdropPath, onEnded, onNextEpisodeClick, goToEpisode, tvTime);
           };
 
-          // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
-          const hashChangeHandler = () => {
-            const hash = window.location.hash || '';
-            const isOnPlayerPage = hash.includes('/watch/');
-            if (!isOnPlayerPage) {
-              if (_castRemotePlayer && _castController) {
-                mountGlobalCastBar(activeDeviceName, title, backdropPath || posterPath);
-              }
-              window.removeEventListener('hashchange', hashChangeHandler);
-            }
-          };
-          window.addEventListener('hashchange', hashChangeHandler);
+          // Save details in localStorage for global floating remote card
+          localStorage.setItem('piq_cast_videoId', id);
+          localStorage.setItem('piq_cast_isTV', isTV ? 'true' : 'false');
+          localStorage.setItem('piq_cast_season', season);
+          localStorage.setItem('piq_cast_episode', episode);
+          localStorage.setItem('piq_cast_title', title);
+          localStorage.setItem('piq_cast_poster', posterPath || backdropPath || '');
+          if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
 
           if (typeof window._triggerInPlayerRemoteUI === 'function') {
             window._triggerInPlayerRemoteUI(activeDeviceName);
@@ -710,18 +706,14 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
                 loadPlayer(id, isTV, season, episode, title, imdbId, posterPath, backdropPath, onEnded, onNextEpisodeClick, goToEpisode, tvTime);
               };
 
-              // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
-              const hashChangeHandler = () => {
-                const hash = window.location.hash || '';
-                const isOnPlayerPage = hash.includes('/watch/');
-                if (!isOnPlayerPage) {
-                  if (_castRemotePlayer && _castController) {
-                    mountGlobalCastBar(activeDeviceName, title, backdropPath || posterPath);
-                  }
-                  window.removeEventListener('hashchange', hashChangeHandler);
-                }
-              };
-              window.addEventListener('hashchange', hashChangeHandler);
+              // Save details in localStorage for global floating remote card
+              localStorage.setItem('piq_cast_videoId', id);
+              localStorage.setItem('piq_cast_isTV', isTV ? 'true' : 'false');
+              localStorage.setItem('piq_cast_season', season);
+              localStorage.setItem('piq_cast_episode', episode);
+              localStorage.setItem('piq_cast_title', title);
+              localStorage.setItem('piq_cast_poster', posterPath || backdropPath || '');
+              if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
 
 
               const isHls = activeStreamType === 'hls' || activeStreamUrl.includes('m3u8') || activeStreamUrl.includes('mpegURL');
@@ -1530,22 +1522,15 @@ export async function renderPlayerPage({ params, container }) {
             }
             renderInPlayerRemoteUI(deviceName);
           } else {
-            // Otherwise show global sticky cast control bar at the bottom
-            mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
+            // Save details in localStorage for global floating remote card
+            localStorage.setItem('piq_cast_videoId', activeId || id);
+            localStorage.setItem('piq_cast_isTV', isTV ? 'true' : 'false');
+            localStorage.setItem('piq_cast_season', currentSeason || season);
+            localStorage.setItem('piq_cast_episode', currentEpisode || episode);
+            localStorage.setItem('piq_cast_title', title);
+            localStorage.setItem('piq_cast_poster', data.poster_path || data.backdrop_path || '');
+            if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
           }
-
-          // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
-          const hashChangeHandler = () => {
-            const hash = window.location.hash || '';
-            const isOnPlayerPage = hash.includes('/watch/');
-            if (!isOnPlayerPage) {
-              if (_castRemotePlayer && _castController) {
-                mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
-              }
-              window.removeEventListener('hashchange', hashChangeHandler);
-            }
-          };
-          window.addEventListener('hashchange', hashChangeHandler);
         })
 
         .catch((err) => {

@@ -104,6 +104,7 @@ import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';
 import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater, applyGlobalTheme } from './services/auth.js';
+import { initGlobalCastSDK } from './services/castGlobal.js';
 
 
 // ---- Connectivity Monitoring (YouTube-style active probing) ----
@@ -243,6 +244,7 @@ function setupConnectivityMonitoring() {
 function initApp() {
   applyGlobalTheme();
   setupConnectivityMonitoring();
+  initGlobalCastSDK();
   const app = document.getElementById('app');
 
   // Create layout
@@ -311,8 +313,12 @@ function initApp() {
     });
   }
 
-  window.addEventListener('hashchange', updateMobileBottomNavActive);
+  window.addEventListener('hashchange', () => {
+    updateMobileBottomNavActive();
+    if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
+  });
   updateMobileBottomNavActive();
+  if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
 
   // Setup navbar events
   setupNavbarEvents();

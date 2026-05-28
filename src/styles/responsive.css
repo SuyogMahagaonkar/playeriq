@@ -5389,8 +5389,438 @@
     width: 60px !important;
   }
 }
+/* ==========================================================================
+   📺 GLOBAL DRAGGABLE & RESIZABLE FLOATING CHROMECAST REMOTE OVERLAY CARD
+   ========================================================================== */
+.piq-floating-cast-card {
+  position: fixed !important;
+  z-index: 10000 !important;
+  background: rgba(15, 15, 26, 0.72) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(168, 85, 247, 0.12) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 300px !important;
+  max-width: 550px !important;
+  min-height: 180px !important;
+  max-height: 480px !important;
+  user-select: none !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
 
+.piq-floating-cast-card.dragging {
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 45px rgba(168, 85, 247, 0.25) !important;
+  cursor: grabbing !important;
+}
 
+.piq-floating-cast-card.resizing {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+}
 
+/* Ambient artwork blurred glow background */
+.floating-cast-ambient {
+  position: absolute !important;
+  top: -15% !important;
+  left: -15% !important;
+  width: 130% !important;
+  height: 130% !important;
+  background-size: cover !important;
+  background-position: center !important;
+  filter: blur(50px) brightness(0.2) saturate(130%) !important;
+  opacity: 0.5 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
 
+/* Drag Header title block */
+.floating-cast-header {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 10px 14px !important;
+  background: rgba(10, 10, 16, 0.4) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  cursor: grab !important;
+  touch-action: none !important;
+}
 
+.floating-cast-drag-indicator {
+  margin-right: 10px !important;
+  color: #c084fc !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.floating-cast-meta {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.floating-cast-title {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  letter-spacing: -0.2px !important;
+}
+
+.floating-cast-device {
+  font-size: 10px !important;
+  color: #c084fc !important;
+  font-weight: 700 !important;
+  margin-top: 1px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.floating-cast-close-btn {
+  background: none !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s, transform 0.2s !important;
+}
+
+.floating-cast-close-btn:hover {
+  color: #ffffff !important;
+  transform: translateY(1px) !important;
+}
+
+/* Card content body */
+.floating-cast-body {
+  position: relative !important;
+  z-index: 2 !important;
+  padding: 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  justify-content: space-between !important;
+  min-height: 0 !important;
+}
+
+/* Image Artwork */
+.floating-cast-artwork-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-bottom: 12px !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.floating-cast-artwork {
+  max-height: 120px !important;
+  border-radius: 8px !important;
+  object-fit: cover !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+}
+
+/* Timeline/Seek Bar */
+.floating-cast-timeline {
+  width: 100% !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+}
+
+.floating-cast-slider-container {
+  position: relative !important;
+  width: 100% !important;
+  height: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  touch-action: none !important;
+}
+
+.floating-cast-slider-track {
+  width: 100% !important;
+  height: 3.5px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  position: relative !important;
+}
+
+.floating-cast-slider-fill {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, #a855f7 0%, #c084fc 100%) !important;
+  border-radius: 4px !important;
+  width: 0%;
+}
+
+.floating-cast-slider-thumb {
+  position: absolute !important;
+  top: 50% !important;
+  left: 0%;
+  transform: translate(-50%, -50%) scale(0.8) !important;
+  width: 11px !important;
+  height: 11px !important;
+  background: #ffffff !important;
+  border-radius: 50% !important;
+  border: 1.5px solid #a855f7 !important;
+  transition: transform 0.15s ease !important;
+  pointer-events: none !important;
+}
+
+.floating-cast-slider-container:hover .floating-cast-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.1) !important;
+}
+
+.floating-cast-time-labels {
+  display: flex !important;
+  justify-content: space-between !important;
+  font-size: 10px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-family: 'SF Mono', Monaco, monospace !important;
+  font-weight: 700 !important;
+}
+
+/* Playback Control Row */
+.floating-cast-playback-controls {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 20px !important;
+  margin-bottom: 14px !important;
+}
+
+.floating-cast-btn {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.floating-cast-btn:hover {
+  background: rgba(168, 85, 247, 0.1) !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+}
+
+.floating-cast-btn:active {
+  transform: scale(0.94) !important;
+}
+
+.floating-cast-btn.playpause-btn {
+  width: 48px !important;
+  height: 48px !important;
+  background: #ffffff !important;
+  border: none !important;
+  color: #0c0c14 !important;
+  box-shadow: 0 6px 18px rgba(168, 85, 247, 0.2) !important;
+}
+
+.floating-cast-btn.playpause-btn:hover {
+  background: #c084fc !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.35) !important;
+}
+
+/* Volume Slider + Action Button bottom layouts */
+.floating-cast-bottom-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding-top: 12px !important;
+}
+
+.floating-cast-volume {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.floating-cast-volume-btn {
+  background: none !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  cursor: pointer !important;
+  padding: 2px !important;
+  display: flex !important;
+  transition: color 0.2s !important;
+}
+
+.floating-cast-volume-btn:hover {
+  color: #ffffff !important;
+}
+
+.floating-cast-volume-slider-wrapper {
+  position: relative !important;
+  width: 70px !important;
+  height: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  touch-action: none !important;
+}
+
+.floating-cast-volume-track {
+  width: 100% !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px !important;
+}
+
+.floating-cast-volume-fill {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  background: #ffffff !important;
+  border-radius: 2px !important;
+  width: 80%;
+}
+
+.floating-cast-volume-thumb {
+  position: absolute !important;
+  left: 80%;
+  top: 50% !important;
+  transform: translate(-50%, -50%) scale(0.8) !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: #ffffff !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+}
+
+.floating-cast-buttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.floating-cast-action-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.floating-cast-action-btn:hover {
+  background: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  color: #c084fc !important;
+  transform: translateY(-1px) !important;
+}
+
+.floating-cast-action-btn.disconnect-btn {
+  background: rgba(239, 68, 68, 0.06) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+}
+
+.floating-cast-action-btn.disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #ff8787 !important;
+}
+
+/* Card Resize Handle in Bottom Right */
+.floating-cast-resize-handle {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+  cursor: se-resize !important;
+  z-index: 10 !important;
+  background: linear-gradient(135deg, transparent 50%, rgba(168, 85, 247, 0.4) 50%) !important;
+  border-bottom-right-radius: 16px !important;
+}
+
+/* ==========================================================================
+   📱 MOBILE ADAPTIVE VIEWPORTS (Snapping Bottom Sheet Layout)
+   ========================================================================== */
+@media (max-width: 500px) {
+  .piq-floating-cast-card {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: 200px !important;
+    min-width: 0 !important;
+    border-radius: 14px !important;
+    border-color: rgba(168, 85, 247, 0.25) !important;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  .floating-cast-header {
+    cursor: default !important;
+  }
+  
+  .floating-cast-drag-indicator {
+    display: none !important;
+  }
+  
+  .floating-cast-artwork-container {
+    display: none !important; /* Hide artwork to save space on mobile bottom layout */
+  }
+  
+  .floating-cast-resize-handle {
+    display: none !important; /* Disable resizing in snap mode */
+  }
+  
+  .floating-cast-playback-controls {
+    margin-bottom: 8px !important;
+    gap: 14px !important;
+  }
+  
+  .floating-cast-volume {
+    display: none !important; /* Hide volume on mobile sheet to avoid clutter */
+  }
+  
+  .floating-cast-buttons {
+    flex: 1 !important;
+    justify-content: space-around !important;
+  }
+  
+  .floating-cast-bottom-actions {
+    padding-top: 8px !important;
+  }
+}
