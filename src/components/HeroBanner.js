@@ -37,21 +37,10 @@ export function createHeroBanner(items) {
 
     // Mobil portrait floating poster card
     const posterUrl = m.poster_path ? img.poster(m.poster_path) : img.backdrop(m.backdrop_path);
-    const views = m.vote_count ? (m.vote_count > 100 ? (m.vote_count * 3.4 / 10).toFixed(1) + 'm' : (m.vote_count * 12.5).toFixed(0) + 'k') : '102.5m';
     const mobilePosterHTML = `
       <div class="hero-mobile-poster-container">
         <img class="hero-mobile-poster" src="${posterUrl}" alt="${title} mobile poster" loading="lazy" />
         <div class="hero-mobile-overlay"></div>
-        <div class="hero-mobile-badges">
-          <div class="hero-mobile-badge-item rating">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="#ffb800" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            <span>${rating}</span>
-          </div>
-          <div class="hero-mobile-badge-item views">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>${views}</span>
-          </div>
-        </div>
       </div>
     `;
 
@@ -123,12 +112,23 @@ export function initHeroBanner() {
   const total = slides.length;
 
   function goTo(index) {
-    slides[current].classList.remove('active');
-    indicators[current].classList.remove('active');
+    slides.forEach(s => s.classList.remove('active', 'prev', 'next'));
     current = ((index % total) + total) % total;
+    
+    const prevIndex = (current - 1 + total) % total;
+    const nextIndex = (current + 1) % total;
+    
     slides[current].classList.add('active');
-    indicators[current].classList.add('active');
+    slides[prevIndex].classList.add('prev');
+    slides[nextIndex].classList.add('next');
+    
+    indicators.forEach((ind, i) => {
+      ind.classList.toggle('active', i === current);
+    });
   }
+
+  // Set initial sibling class alignment
+  goTo(0);
 
   // Auto advance
   let interval = setInterval(() => goTo(current + 1), 6000);
