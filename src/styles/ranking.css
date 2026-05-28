@@ -551,6 +551,7 @@
 /* ---- Discover Pages Custom Spotlight Banner Adjustments (Movies / TV) ---- */
 .discover-spotlight {
   height: 380px !important;
+  margin-top: 0 !important; /* Overrides the negative margin-top of .ranking-spotlight to prevent covering genre pills */
   margin-bottom: var(--space-lg) !important;
 }
 
@@ -561,5 +562,7 @@
 @media (max-width: 767px) {
   .discover-spotlight {
     height: auto !important;
+    margin-top: 0 !important;
   }
 }
+
