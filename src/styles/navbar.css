@@ -120,7 +120,7 @@ body.sidebar-collapsed .navbar {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Premium Search Actions (Voice & Clear Buttons) */
+/* Minimalist Search Actions (Pure Vector Icons, No Background Circles) */
 .search-voice,
 .search-clear {
   display: flex;
@@ -128,45 +128,43 @@ body.sidebar-collapsed .navbar {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
   color: var(--text-dim) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   flex-shrink: 0;
-  margin-left: 6px;
+  margin-left: 8px; /* High contrast spacing */
   padding: 0 !important;
 }
 
-/* Listening pulsing active state for voice search mic */
+/* Listening pulsing active state for voice search mic (pure glow) */
 .search-voice.listening {
   color: #ef4444 !important;
-  background: rgba(239, 68, 68, 0.15) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  animation: voicePulse 1.2s infinite ease-in-out !important;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
+  animation: voiceIconPulse 1s infinite ease-in-out !important;
 }
 
-@keyframes voicePulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important; }
-  100% { transform: scale(1); }
+@keyframes voiceIconPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
 }
 
 .search-voice:hover,
 .search-clear:hover {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.1) !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: scale(1.18) !important;
 }
 
 .search-voice:active,
 .search-clear:active {
-  transform: scale(0.92) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  transform: scale(0.9) !important;
+  background: transparent !important;
+  color: var(--accent) !important;
 }
 
 /* Beautiful custom vector icons */
