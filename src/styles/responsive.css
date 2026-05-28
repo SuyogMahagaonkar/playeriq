@@ -6909,7 +6909,7 @@
     max-width: 68% !important;
     max-height: 48% !important;
     object-fit: contain !important;
-    filter: brightness(1) !important;
+    filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 

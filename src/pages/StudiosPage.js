@@ -28,7 +28,7 @@ export async function renderStudiosPage({ container }) {
     return `
       <div class="studio-circle-card" data-route="${studio.route}">
         <div class="studio-circle-bubble studio-circle-${nameSlug}">
-          <img class="studio-circle-logo" src="${studio.logo}" alt="${studio.name}" loading="lazy" />
+          <img class="studio-circle-logo studio-logo-white" src="${studio.logo}" alt="${studio.name}" loading="lazy" />
         </div>
         <div class="studio-circle-label">${studio.name}</div>
       </div>
