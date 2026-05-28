@@ -4,6 +4,8 @@
 
 import { img } from './api.js';
 
+const _piqTabId = Math.random().toString(36).substring(2);
+
 let _globalCastRemotePlayer = null;
 let _globalCastController   = null;
 let _isGlobalCastListening  = false;
@@ -284,7 +286,7 @@ export function mountFloatingRemoteCard() {
   if ('BroadcastChannel' in window) {
     try {
       const claimChannel = new BroadcastChannel('piq_cast_channel');
-      claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP' });
+      claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP', sender: _piqTabId });
       claimChannel.close();
     } catch (e) {}
   }
@@ -813,8 +815,10 @@ if ('BroadcastChannel' in window) {
         }
       }
     } else if (e.data.type === 'CLAIM_CAST_CARD_OWNERSHIP') {
-      console.log('[Global Cast] Another tab claimed ownership. Unmounting card from this tab.');
-      destroyFloatingCastCard();
+      if (e.data.sender !== _piqTabId) {
+        console.log('[Global Cast] Another tab claimed ownership. Unmounting card from this tab.');
+        destroyFloatingCastCard();
+      }
     }
   });
 }
@@ -832,7 +836,7 @@ function claimCardOwnership() {
         // Send claim message to other tabs
         if ('BroadcastChannel' in window) {
           const claimChannel = new BroadcastChannel('piq_cast_channel');
-          claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP' });
+          claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP', sender: _piqTabId });
           claimChannel.close();
         }
         // Mount/recreate card locally on the active tab
