@@ -961,7 +961,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         wrapper.appendChild(fsBtnClone);
       }
 
-      startIframeTracker(id, isTV, season, episode, title, data.poster_path, data.backdrop_path);
+      startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
     }
     return;
   }
