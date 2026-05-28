@@ -140,7 +140,7 @@ export async function getMovieBoxHome(forceRefresh = false) {
 export const getMovieDetails = async (id) => {
   let details = null;
   if (!String(id).startsWith('mb_')) {
-    const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
+    const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations,videos`);
     if (!res.ok) throw new Error('TMDB details failed');
     details = await res.json();
   } else {
@@ -175,7 +175,7 @@ export const getMovieDetails = async (id) => {
 export const getTVDetails = async (id) => {
   let details = null;
   if (!String(id).startsWith('mb_')) {
-    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations`);
+    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations,videos`);
     if (!res.ok) throw new Error('TMDB tv details failed');
     const data = await res.json();
     details = {

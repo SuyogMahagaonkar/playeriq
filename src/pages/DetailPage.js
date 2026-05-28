@@ -187,6 +187,25 @@ export async function renderDetailPage({ params, container }) {
     const similar = data.similar?.results?.slice(0, 12) || data.recommendations?.results?.slice(0, 12) || [];
     const type = isTV ? 'tv' : 'movie';
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const isMovieUnreleased = !isTV && (
+      (data.status && data.status !== 'Released') || 
+      (data.release_date && data.release_date > todayStr)
+    );
+
+    let formattedReleaseDate = null;
+    if (isMovieUnreleased && data.release_date) {
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      formattedReleaseDate = new Date(data.release_date).toLocaleDateString('en-US', options);
+    }
+
+    // Extract YouTube trailer key
+    const videoList = data.videos?.results || [];
+    const trailerObj = videoList.find(v => v.site === 'YouTube' && v.type === 'Trailer') || 
+                       videoList.find(v => v.site === 'YouTube' && v.type === 'Teaser') ||
+                       videoList.find(v => v.site === 'YouTube');
+    const trailerKey = trailerObj?.key || null;
+
     let imagesData = null;
     try {
       const cleanTitleForImages = title.replace(/\[.*?\]/g, '').trim();
@@ -295,10 +314,23 @@ export async function renderDetailPage({ params, container }) {
             <h3 class="detail-overview-title">Overview</h3>
             <p class="detail-overview">${data.overview || 'No overview available.'}</p>
             <div class="detail-actions">
-              <button class="detail-btn detail-btn-primary" id="watch-btn">
-                <i data-lucide="play" style="width:20px;height:20px"></i>
-                Watch Now
-              </button>
+              ${isMovieUnreleased ? `
+                <button class="detail-btn detail-btn-primary" id="watch-btn" disabled style="opacity: 0.65; cursor: not-allowed; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);">
+                  <i data-lucide="calendar" style="width:20px;height:20px"></i>
+                  ${formattedReleaseDate ? `Releasing ${formattedReleaseDate}` : 'Coming Soon'}
+                </button>
+              ` : `
+                <button class="detail-btn detail-btn-primary" id="watch-btn">
+                  <i data-lucide="play" style="width:20px;height:20px"></i>
+                  Watch Now
+                </button>
+              `}
+              ${trailerKey ? `
+                <button class="detail-btn detail-btn-secondary" id="trailer-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.4); color: var(--accent, #a855f7);">
+                  <i data-lucide="youtube" style="width:18px;height:18px"></i>
+                  Watch Trailer
+                </button>
+              ` : ''}
               <button class="detail-btn detail-btn-secondary" id="details-btn">
                 <i data-lucide="info" style="width:18px;height:18px"></i>
                 Details
@@ -320,9 +352,9 @@ export async function renderDetailPage({ params, container }) {
             </div>
           </div>
         </div>
-
+ 
         ${seasonsHTML}
-
+ 
         ${similar.length ? createContentRow('You May Also Like', similar, type) : ''}
         
         <div class="detail-modal" id="details-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
@@ -330,6 +362,14 @@ export async function renderDetailPage({ params, container }) {
             <button id="close-modal-btn" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
             <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 24px;">Extra Details</h2>
             <div id="details-modal-content" style="color: var(--text-dim); line-height: 1.6;"></div>
+          </div>
+        </div>
+
+        <!-- Watch Trailer Modal -->
+        <div class="detail-modal" id="trailer-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1001; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #000; width: 100%; max-width: 900px; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+            <button id="close-trailer-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,0.5); border: none; color: #fff; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+            <div id="trailer-video-container" style="width:100%; height:100%;"></div>
           </div>
         </div>
       </div>
@@ -379,6 +419,10 @@ export async function renderDetailPage({ params, container }) {
       if (slideshowInterval) {
         clearInterval(slideshowInterval);
       }
+      const videoContainer = document.getElementById('trailer-video-container');
+      if (videoContainer) {
+        videoContainer.innerHTML = '';
+      }
       window.removeEventListener('hashchange', checkSlideCleanup);
     };
     window.addEventListener('hashchange', checkSlideCleanup);
@@ -392,6 +436,30 @@ export async function renderDetailPage({ params, container }) {
         }
       } else {
         navigate(`/watch/${type}/${id}`);
+      }
+    });
+
+    // Watch Trailer button click listener
+    document.getElementById('trailer-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('trailer-modal');
+      const videoContainer = document.getElementById('trailer-video-container');
+      if (modal && videoContainer && trailerKey) {
+        videoContainer.innerHTML = `
+          <iframe src="https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0" 
+                  style="width:100%; height:100%; border:none;" 
+                  allow="autoplay; encrypted-media; fullscreen" 
+                  allowfullscreen></iframe>`;
+        modal.style.display = 'flex';
+      }
+    });
+
+    // Close Trailer button click listener
+    document.getElementById('close-trailer-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('trailer-modal');
+      const videoContainer = document.getElementById('trailer-video-container');
+      if (modal && videoContainer) {
+        videoContainer.innerHTML = '';
+        modal.style.display = 'none';
       }
     });
 
