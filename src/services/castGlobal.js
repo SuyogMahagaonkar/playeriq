@@ -329,9 +329,7 @@ export function mountFloatingRemoteCard() {
     right: auto !important;
     bottom: auto !important;
     display: flex !important;
-  `;
-
-  card.innerHTML = `
+  `;  card.innerHTML = `
     <div class="floating-cast-ambient" style="background-image: url('${thumbSrc}')"></div>
     
     <!-- Drag Handle Header -->
@@ -343,21 +341,19 @@ export function mountFloatingRemoteCard() {
         </svg>
       </div>
       
-      <!-- Sleek circular movie poster preview -->
-      <div class="floating-cast-header-thumb-wrap">
-        <img class="floating-cast-header-thumb" src="${thumbSrc}" onerror="this.style.display='none';">
-        <div class="floating-cast-pulse-dot" id="floating-cast-header-pulse"></div>
-      </div>
-      
       <div class="floating-cast-meta">
         <h4 class="floating-cast-title">${title}</h4>
-        <span class="floating-cast-device">Casting to ${deviceName}</span>
+        <span class="floating-cast-device">
+          <span class="floating-cast-live-dot"></span>
+          Casting to ${deviceName}
+        </span>
       </div>
       
       <div class="floating-cast-header-actions">
-        <button class="floating-cast-close-btn floating-cast-header-return-btn" id="floating-cast-header-return-btn" title="Return to Player">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;">
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        <!-- Power button in header to stop session -->
+        <button class="floating-cast-close-btn header-power-btn" id="floating-cast-disconnect-btn" title="Stop Casting TV Session">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
           </svg>
         </button>
         <button class="floating-cast-close-btn" id="floating-cast-hide-btn" title="Toggle Remote Size">
@@ -365,40 +361,63 @@ export function mountFloatingRemoteCard() {
             <polyline points="4 9 12 17 20 9"/>
           </svg>
         </button>
-      </div>    <div class="floating-cast-header-progress" id="floating-cast-header-progress"></div>
+      </div>
     </div>
 
-    <!-- Body Artwork Card -->
+    <!-- Body Layout -->
     <div class="floating-cast-body">
+      <!-- Left Column: Small Poster Thumbnail -->
       <div class="floating-cast-artwork-container">
         <img class="floating-cast-artwork" src="${thumbSrc}" alt="Poster" onerror="this.style.display='none';" />
       </div>
       
-      <!-- Timeline Scrubbing -->
-      <div class="floating-cast-timeline">
-        <div class="floating-cast-slider-container" id="floating-cast-slider-container">
-          <div class="floating-cast-slider-track">
-            <div class="floating-cast-slider-fill" id="floating-cast-slider-fill" style="width: 0%;"></div>
-          </div>
-          <div class="floating-cast-slider-thumb" id="floating-cast-slider-thumb" style="left: 0%;"></div>
+      <!-- Right Column: Media Actions & Progress Bar -->
+      <div class="floating-cast-controls-col">
+        <!-- Compact Buttons Row -->
+        <div class="floating-cast-compact-actions">
+          <button class="floating-cast-btn compact-btn playpause-btn" id="floating-cast-playpause" title="Play/Pause">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <button class="floating-cast-action-btn compact-btn return-btn" id="floating-cast-return-btn" title="Return to Fullscreen Player">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+            </svg>
+          </button>
+          <button class="floating-cast-volume-btn compact-btn volume-btn" id="floating-cast-volume-btn" title="Mute/Unmute">
+            <svg id="floating-cast-volume-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <svg id="floating-cast-volume-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;display:none;">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>
+            </svg>
+          </button>
         </div>
-        <div class="floating-cast-time-labels">
-          <span id="floating-cast-current-time">00:00</span>
-          <span id="floating-cast-duration">00:00</span>
+        
+        <!-- Timeline Scrubbing -->
+        <div class="floating-cast-timeline">
+          <div class="floating-cast-slider-container" id="floating-cast-slider-container">
+            <div class="floating-cast-slider-track">
+              <div class="floating-cast-slider-fill" id="floating-cast-slider-fill" style="width: 0%;"></div>
+            </div>
+            <div class="floating-cast-slider-thumb" id="floating-cast-slider-thumb" style="left: 0%;"></div>
+          </div>
+          <div class="floating-cast-time-labels">
+            <span id="floating-cast-current-time">00:00</span>
+            <span id="floating-cast-duration">00:00</span>
+          </div>
         </div>
       </div>
 
-      <!-- Playback Control Buttons -->
-      <div class="floating-cast-playback-controls">
+      <!-- Skip Controls (Visible ONLY when expanded) -->
+      <div class="floating-cast-expanded-skips">
         <button class="floating-cast-btn skip-back" id="floating-cast-skip-back" title="Rewind 10s">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
             <polyline points="3 3 3 8 8 8"/>
             <text x="12" y="15" font-size="8" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none" style="font-family:system-ui">10</text>
           </svg>
-        </button>
-        <button class="floating-cast-btn playpause-btn" id="floating-cast-playpause" title="Play/Pause">
-          <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>
         <button class="floating-cast-btn skip-forward" id="floating-cast-skip-forward" title="Forward 10s">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;">
@@ -409,41 +428,20 @@ export function mountFloatingRemoteCard() {
         </button>
       </div>
 
-      <!-- Volume & Return Navigation Controls -->
-      <div class="floating-cast-bottom-actions">
-        <div class="floating-cast-volume">
-          <button class="floating-cast-volume-btn" id="floating-cast-volume-btn" title="Mute/Unmute">
-            <svg id="floating-cast-volume-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-            </svg>
-            <svg id="floating-cast-volume-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;display:none;">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>
-            </svg>
-          </button>
-          <div class="floating-cast-volume-slider-wrapper" id="floating-cast-volume-slider-wrapper">
-            <div class="floating-cast-volume-track">
-              <div class="floating-cast-volume-fill" id="floating-cast-volume-fill" style="width: 80%;"></div>
-            </div>
-            <div class="floating-cast-volume-thumb" id="floating-cast-volume-thumb" style="left: 80%;"></div>
+      <!-- Expanded bottom elements (Visible ONLY when expanded) -->
+      <div class="floating-cast-expanded-bottom">
+        <div class="floating-cast-volume-slider-wrapper" id="floating-cast-volume-slider-wrapper">
+          <div class="floating-cast-volume-track">
+            <div class="floating-cast-volume-fill" id="floating-cast-volume-fill" style="width: 80%;"></div>
           </div>
+          <div class="floating-cast-volume-thumb" id="floating-cast-volume-thumb" style="left: 80%;"></div>
         </div>
-
-        <div class="floating-cast-buttons">
-          <button class="floating-cast-action-btn return-btn" id="floating-cast-return-btn" title="Return to Fullscreen Player">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;">
-              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
-            </svg>
-            <span>Return</span>
-          </button>
-          <button class="floating-cast-action-btn disconnect-btn" id="floating-cast-disconnect-btn" title="Stop Casting TV Session">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
-              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
-            </svg>
-            <span>Stop</span>
-          </button>
-        </div>
+        <button class="floating-cast-action-btn disconnect-btn" id="floating-cast-expanded-disconnect-btn" title="Stop Casting TV Session">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+          <span>Stop</span>
+        </button>
       </div>
     </div>
 
@@ -574,6 +572,7 @@ export function mountFloatingRemoteCard() {
   const returnBtn       = card.querySelector('#floating-cast-return-btn');
   const headerReturnBtn = card.querySelector('#floating-cast-header-return-btn');
   const disconnectBtn   = card.querySelector('#floating-cast-disconnect-btn');
+  const expandedDisconnectBtn = card.querySelector('#floating-cast-expanded-disconnect-btn');
   const hideBtn         = card.querySelector('#floating-cast-hide-btn');
 
   const sliderContainer = card.querySelector('#floating-cast-slider-container');
@@ -603,13 +602,16 @@ export function mountFloatingRemoteCard() {
         
         card.classList.add('collapsed');
         localStorage.setItem('piq_cast_card_collapsed', 'true');
-        card.style.setProperty('height', '52px', 'important');
+        card.style.setProperty('height', '124px', 'important');
       }
     });
   }
 
   if (disconnectBtn) {
     disconnectBtn.addEventListener('click', disconnectCasting);
+  }
+  if (expandedDisconnectBtn) {
+    expandedDisconnectBtn.addEventListener('click', disconnectCasting);
   }
 
   let isReturnClicked = false;
