@@ -460,7 +460,7 @@
 }
 
 /* ---- Mobile Responsive Chart Adjustments ---- */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .ranking-spotlight {
     height: auto;
     border-radius: var(--radius-md);
@@ -559,7 +559,7 @@
   object-position: center 20% !important;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .discover-spotlight {
     height: auto !important;
     margin-top: 0 !important;
