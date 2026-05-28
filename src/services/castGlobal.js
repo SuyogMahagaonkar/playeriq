@@ -555,15 +555,49 @@ export function mountFloatingRemoteCard() {
     disconnectBtn.addEventListener('click', disconnectCasting);
   }
 
+  let isReturnClicked = false;
   if (returnBtn) {
     returnBtn.addEventListener('click', () => {
+      if (isReturnClicked) return;
+      isReturnClicked = true;
+
+      // Glow animation feedback
+      returnBtn.classList.add('clicking');
+      setTimeout(() => returnBtn.classList.remove('clicking'), 800);
+      setTimeout(() => { isReturnClicked = false; }, 1000); // 1s throttle
+
       if (videoId) {
         const watchType = isTV ? 'tv' : 'movie';
         let route = `watch/${watchType}/${videoId}`;
         if (isTV) {
           route += `?s=${season}&e=${episode}`;
         }
-        window.location.hash = `#/${route}`;
+
+        // Multi-tab focus check
+        if ('BroadcastChannel' in window) {
+          const channel = new BroadcastChannel('piq_cast_channel');
+          let pongReceived = false;
+
+          const handlePong = (e) => {
+            if (e.data.type === 'PONG_PLAYER_TAB') {
+              pongReceived = true;
+              console.log('[Cast Return] Active player page found in another tab. Focused successfully.');
+            }
+          };
+          channel.addEventListener('message', handlePong);
+          channel.postMessage({ type: 'PING_PLAYER_TAB' });
+
+          // Wait 250ms for tab response. If none, navigate here.
+          setTimeout(() => {
+            channel.removeEventListener('message', handlePong);
+            channel.close();
+            if (!pongReceived) {
+              window.location.hash = `#/${route}`;
+            }
+          }, 250);
+        } else {
+          window.location.hash = `#/${route}`;
+        }
       }
     });
   }
@@ -720,4 +754,29 @@ function formatTime(seconds) {
     return `${hrs}:${pad(mins)}:${pad(secs)}`;
   }
   return `${pad(mins)}:${pad(secs)}`;
+}
+
+// ---- Multi-Tab Focus Coordination Channel ----
+if ('BroadcastChannel' in window) {
+  const globalChannel = new BroadcastChannel('piq_cast_channel');
+  globalChannel.addEventListener('message', (e) => {
+    if (e.data.type === 'PING_PLAYER_TAB') {
+      const hash = window.location.hash || '';
+      const isOnPlayerPage = hash.includes('/watch/');
+      if (isOnPlayerPage) {
+        globalChannel.postMessage({ type: 'PONG_PLAYER_TAB' });
+        
+        // Focus the window/tab.
+        window.focus();
+        
+        // Browser notification alert fallback if window.focus() is blocked
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('PlayerIQ: Reconnected! 🍿', {
+            body: 'Your casting controller was refocused on this tab.',
+            icon: '/favicon.ico'
+          });
+        }
+      }
+    }
+  });
 }

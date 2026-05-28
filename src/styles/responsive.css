@@ -5824,3 +5824,29 @@
     padding-top: 8px !important;
   }
 }
+
+.floating-cast-action-btn.return-btn.clicking {
+  animation: returnBtnGlow 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  pointer-events: none !important;
+}
+
+@keyframes returnBtnGlow {
+  0% {
+    transform: scale(0.95) !important;
+    background: rgba(168, 85, 247, 0.35) !important;
+    border-color: #c084fc !important;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.8) !important;
+  }
+  50% {
+    transform: scale(1.05) !important;
+    background: rgba(168, 85, 247, 0.2) !important;
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.4) !important;
+  }
+  100% {
+    transform: scale(1) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: none !important;
+  }
+}
