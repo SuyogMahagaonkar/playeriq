@@ -1,5 +1,5 @@
-// ========================================
-// PlayerIQ — Player Page (Cinema Mode)
+﻿// ========================================
+// PlayerIQ â€” Player Page (Cinema Mode)
 // ========================================
 
 import { getMovieDetails, getTVDetails, getSeasonDetails, getMediaImages, img, NODE_PROXY, findMovieBoxMatch } from '../services/api.js';
@@ -12,7 +12,7 @@ import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/
 import { DownloadManager } from '../services/download.js';
 import { validateSources, onValidationUpdate, getCachedResults, getFallbackSources, BADGE_CONFIG, SOURCE_ID_TO_INDEX, streamValidateSources } from '../services/SourceValidator.js';
 
-// Embed sources — using TMDB ID
+// Embed sources â€” using TMDB ID
 // Nontongo is the primary working source (user-verified)
 const SOURCES = [
   { id: 'nontongo', name: 'Nontongo', getMovieUrl: (id) => `https://www.nontongo.win/embed/movie/${id}`, getTVUrl: (id, s, e) => `https://www.nontongo.win/embed/tv/${id}/${s}/${e}` },
@@ -78,7 +78,7 @@ function showMiniPlayer(videoEl, title, posterUrl, route) {
   mini.id = 'vp-mini-player';
   mini.className = 'active';
   mini.setAttribute('role', 'complementary');
-  mini.setAttribute('aria-label', 'Mini player — tap to restore');
+  mini.setAttribute('aria-label', 'Mini player â€” tap to restore');
   mini.innerHTML = `
     <img class="vp-mini-thumb" src="${posterUrl || ''}" alt="" onerror="this.style.display='none'">
     <div class="vp-mini-body" id="vp-mini-restore">
@@ -217,9 +217,9 @@ function startIframeTracker(id, isTV, season, episode, title, posterPath, backdr
   });
 }
 
-let tmdbRuntimeSeconds = null; // TMDB runtime in seconds — used as duration fallback for slider
-let episodeRuntimes = new Map(); // key: `S${season}E${ep}` — per-episode runtime in seconds
-let episodeDetails = new Map(); // key: `S${season}E${ep}` — episode metadata (still_path, name, overview)
+let tmdbRuntimeSeconds = null; // TMDB runtime in seconds â€” used as duration fallback for slider
+let episodeRuntimes = new Map(); // key: `S${season}E${ep}` â€” per-episode runtime in seconds
+let episodeDetails = new Map(); // key: `S${season}E${ep}` â€” episode metadata (still_path, name, overview)
 let totalEpisodes = 0;
 let currentSeasonEpisodes = []; // Cached episodes list for in-player navigation
 let currentEpisodesPage = 1;
@@ -456,7 +456,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   `;
 
   // ---- Stream fetch timeout: 60s with live countdown ----
-  // On production the VPS MovieBox scrape can take 10–40s.
+  // On production the VPS MovieBox scrape can take 10â€“40s.
   // We show a live status message so the user knows it's working,
   // then gracefully fall back to iframe if it takes too long.
   const STREAM_TIMEOUT_MS = 60000;
@@ -544,10 +544,10 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
       );
     };
 
-    // ✅ PRODUCTION: If user has downloaded this item, ALWAYS play the local file
-    // This works whether online or offline — the downloaded copy takes priority
+    // âœ… PRODUCTION: If user has downloaded this item, ALWAYS play the local file
+    // This works whether online or offline â€” the downloaded copy takes priority
     if (match) {
-      console.log(`[PlayerPage] Found completed local download for ${downloadId} — playing offline copy`);
+      console.log(`[PlayerPage] Found completed local download for ${downloadId} â€” playing offline copy`);
       await playOfflineMatch(match);
       return;
     }
@@ -595,7 +595,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         ? `/api/stream/tv/${id}/${season}/${episode}`
         : `/api/stream/movie/${id}`;
 
-      // Use NODE_PROXY (production API URL) — NOT localhost.
+      // Use NODE_PROXY (production API URL) â€” NOT localhost.
       // On local dev, Vite proxies /api/* to localhost:8788 automatically.
       const res = await fetch(`${NODE_PROXY}${endpoint}`, { signal: controller.signal });
       clearTimers();
@@ -612,7 +612,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         // ---- Bug fix: rewrite relative /api/* proxy URLs to absolute ----
         // The Node proxy returns stream/transcode/segment URLs as relative paths
         // (e.g. /api/proxy/transcode?...). On GitHub Pages these resolve against
-        // the GitHub Pages origin — NOT the VPS — so video.src breaks silently.
+        // the GitHub Pages origin â€” NOT the VPS â€” so video.src breaks silently.
         // We must prefix them with NODE_PROXY before handing to VideoPlayer.
         const toAbsolute = (url) => {
           if (!url) return url;
@@ -736,9 +736,9 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         if (wrapper._initMediaSession) {
           wrapper._initMediaSession(
             title,
-            isTV ? `Season ${season} · Episode ${episode}` : '',
+            isTV ? `Season ${season} Â· Episode ${episode}` : '',
             posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '',
-            null, // onPrev — wired up later via onNextEpisodeClick
+            null, // onPrev â€” wired up later via onNextEpisodeClick
             onNextEpisodeClick
           );
         }
@@ -776,10 +776,10 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
         // ---- Background Source Validation (fires AFTER player is ready) ----
         // Non-blocking: player is already playing. Validation runs silently via SSE.
-        // Each server result streams in individually — the dropdown updates in real time
+        // Each server result streams in individually â€” the dropdown updates in real time
         // as each source check completes (fastest servers appear first).
         setTimeout(() => {
-          // ── Helper: update a single server item in the dropdown ──────────────────
+          // â”€â”€ Helper: update a single server item in the dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           const _updateSourceItem = (r) => {
             const list = document.getElementById('sv-list');
             if (!list) return;
@@ -816,7 +816,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             }
           };
 
-          // ── Helper: finalise — re-sort list, update trigger button ───────────────
+          // â”€â”€ Helper: finalise â€” re-sort list, update trigger button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           const _applyFinalSort = (results) => {
             const list         = document.getElementById('sv-list');
             const triggerLabel = document.getElementById('sv-trigger-label');
@@ -849,11 +849,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             }
           };
 
-          // ── Start validation ────────────────────────────────────────────────────
+          // â”€â”€ Start validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           // streamValidateSources handles cache detection internally.
           // For fresh checks it opens an SSE connection and calls:
-          //   onSourceResult(r)  — for each server the moment its check resolves
-          //   onComplete(all)    — once every server is done, with sorted results
+          //   onSourceResult(r)  â€” for each server the moment its check resolves
+          //   onComplete(all)    â€” once every server is done, with sorted results
           const checkingPill = document.getElementById('sv-checking-pill');
           if (checkingPill) checkingPill.style.display = 'flex';
 
@@ -1137,7 +1137,7 @@ export async function renderPlayerPage({ params, container }) {
           name: cleanName,
           poster_path: match.posterPath,
           backdrop_path: match.posterPath,
-          overview: `Offline Playback • Locally stored title inside IndexedDB.`,
+          overview: `Offline Playback â€¢ Locally stored title inside IndexedDB.`,
           vote_average: 10.0,
           genres: [{ name: 'Offline' }],
           runtime: match.type === 'movie' ? 120 : 45,
@@ -1161,7 +1161,7 @@ export async function renderPlayerPage({ params, container }) {
             name: cleanName,
             poster_path: match.posterPath,
             backdrop_path: match.posterPath,
-            overview: `Offline Playback • Locally stored title inside IndexedDB.`,
+            overview: `Offline Playback â€¢ Locally stored title inside IndexedDB.`,
             vote_average: 10.0,
             genres: [{ name: 'Offline' }],
             runtime: match.type === 'movie' ? 120 : 45,
@@ -1230,8 +1230,8 @@ export async function renderPlayerPage({ params, container }) {
     const imdbId = data.imdb_id || data.external_ids?.imdb_id || id;
     const title = data.title || data.name;
     const year = (data.release_date || data.first_air_date || '').slice(0, 4);
-    const rating = data.vote_average?.toFixed(1) || '—';
-    const genres = (data.genres || []).map(g => g.name).join(' • ');
+    const rating = data.vote_average?.toFixed(1) || 'â€”';
+    const genres = (data.genres || []).map(g => g.name).join(' â€¢ ');
     const runtime = data.runtime ? `${Math.floor(data.runtime / 60)}h ${data.runtime % 60}m` : '';
     const similar = data.similar?.results?.slice(0, 12) || [];
     const poster_path = data.poster_path;
@@ -1287,7 +1287,7 @@ export async function renderPlayerPage({ params, container }) {
       });
     }
 
-    // Save initial progress (Movies only — TV shows will save after metadata loads)
+    // Save initial progress (Movies only â€” TV shows will save after metadata loads)
     if (!isTV) {
       saveProgress({ 
         id: activeId, 
@@ -1346,11 +1346,11 @@ export async function renderPlayerPage({ params, container }) {
               <option value="custom" ${currentPlayerMode === 'custom' ? 'selected' : ''}>Custom Player</option>
               <option value="embed" ${currentPlayerMode === 'embed' ? 'selected' : ''}>Iframe Embed</option>
             </select>
-            <!-- Smart Source Selector — populated & updated by SourceValidator -->
+            <!-- Smart Source Selector â€” populated & updated by SourceValidator -->
             <div class="sv-source-wrapper" id="sv-source-wrapper" style="display: ${currentPlayerMode === 'custom' ? 'none' : 'flex'}; margin-left: 8px; position: relative;">
               <button class="sv-source-trigger" id="sv-source-trigger" title="Select Streaming Server">
                 <span class="sv-trigger-dot sv-dot-checking" id="sv-trigger-dot"></span>
-                <span id="sv-trigger-label">Checking servers…</span>
+                <span id="sv-trigger-label">Checking serversâ€¦</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sv-trigger-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               <div class="sv-dropdown" id="sv-dropdown" aria-hidden="true">
@@ -1358,7 +1358,7 @@ export async function renderPlayerPage({ params, container }) {
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93A10 10 0 0 0 19.07 19.07"/></svg>
                   <span>Streaming Servers</span>
                   <span class="sv-checking-pill" id="sv-checking-pill" style="display:none">
-                    <span class="sv-spin"></span> Checking…
+                    <span class="sv-spin"></span> Checkingâ€¦
                   </span>
                 </div>
                 <ul class="sv-list" id="sv-list" role="listbox">
@@ -1367,7 +1367,7 @@ export async function renderPlayerPage({ params, container }) {
                       <span class="sv-item-dot"></span>
                       <div class="sv-item-info">
                         <span class="sv-item-name">${s.name}</span>
-                        <span class="sv-item-status">Checking…</span>
+                        <span class="sv-item-status">Checkingâ€¦</span>
                       </div>
                       <span class="sv-item-badges" id="sv-badges-${s.id}"></span>
                     </li>
@@ -1397,7 +1397,7 @@ export async function renderPlayerPage({ params, container }) {
               `}
               
               <div class="badge-premium-container">
-                <span class="badge-premium badge-accent">⭐ IMDB ${rating}</span>
+                <span class="badge-premium badge-accent">â­ IMDB ${rating}</span>
                 <span class="badge-premium badge-gold">${isTV ? 'TV Series' : 'Movie'}</span>
                 ${year ? `<span class="badge-premium">${year}</span>` : ''}
                 ${runtime ? `<span class="badge-premium">${runtime}</span>` : ''}
@@ -1743,7 +1743,7 @@ export async function renderPlayerPage({ params, container }) {
 
       const recCards = similar.slice(0, 3).map(item => {
         const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : 'data:image/svg+xml,...';
-        const rating = item.vote_average ? item.vote_average.toFixed(1) : '—';
+        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'â€”';
         const year = (item.release_date || item.first_air_date || '').slice(0, 4);
         const cardRoute = `/${type}/${item.id}`;
         
@@ -1778,7 +1778,7 @@ export async function renderPlayerPage({ params, container }) {
                 font-weight: var(--weight-bold);
                 color: var(--rating-high);
                 border: 1px solid rgba(255,255,255,0.06);
-              ">⭐ ${rating}</div>
+              ">â­ ${rating}</div>
             </div>
             <div style="
               font-size: var(--text-sm);
@@ -1873,7 +1873,7 @@ export async function renderPlayerPage({ params, container }) {
     // Fullscreen button
     document.getElementById('player-fs-btn')?.addEventListener('click', toggleFullscreen);
 
-    // Smart Source Selector — dropdown toggle + item selection
+    // Smart Source Selector â€” dropdown toggle + item selection
     (() => {
       const wrapper = document.getElementById('sv-source-wrapper');
       const trigger = document.getElementById('sv-source-trigger');
@@ -1901,7 +1901,7 @@ export async function renderPlayerPage({ params, container }) {
         if (!wrapper?.contains(e.target)) closeDropdown();
       });
 
-      // Source item click — select source & reload iframe
+      // Source item click â€” select source & reload iframe
       dropdown.querySelectorAll('.sv-item').forEach(item => {
         item.addEventListener('click', () => {
           const idx = parseInt(item.dataset.idx);
@@ -2210,7 +2210,7 @@ async function loadPlayerEpisodes(tvId, seasonNumber, activeEpisode = 1, title =
 }
 
 // ====================================================
-// 📱 PORTRAIT-FIRST MOBILE REDESIGN IMPLEMENTATION
+// ðŸ“± PORTRAIT-FIRST MOBILE REDESIGN IMPLEMENTATION
 // ====================================================
 
 function pushTelemetry(event, data) {
@@ -2306,7 +2306,7 @@ function setupMiniPlayer(videoElement, activePlayerInstance, id, type, season, e
   miniPlayer.id = 'global-mini-player';
   miniPlayer.className = 'mini-player';
   
-  const subText = type === 'tv' ? `Season ${season} · Episode ${episode}` : 'Movie';
+  const subText = type === 'tv' ? `Season ${season} Â· Episode ${episode}` : 'Movie';
   
   miniPlayer.innerHTML = `
     <div class="mini-player-thumb-container" id="mini-player-thumb"></div>
@@ -2411,132 +2411,184 @@ function setupMiniPlayer(videoElement, activePlayerInstance, id, type, season, e
   pushTelemetry('mini_player_opened', { id, type, season, episode });
 }
 
-// ---- Dynamic Casting Integrations ----
+// ====================================================================
+// CAST â€” Google Cast Application Framework (CAF) v3 SDK Integration
+// ====================================================================
+
+// Module-level references set when a cast session starts
+let _castRemotePlayer = null; // cast.framework.RemotePlayer
+let _castController   = null; // cast.framework.RemotePlayerController
+let _castOnSessionEnd = null; // Callback set by renderPlayerPage closure
+
+/**
+ * Injects the Google Cast Sender SDK and initializes CastContext with the
+ * Default Media Receiver. __onGCastApiAvailable MUST be registered before
+ * the <script> tag is appended â€” that is the SDK's required entry point.
+ *
+ * Works in Chrome desktop and Android Chrome.
+ * Discovers ALL Cast-enabled devices on the local network:
+ *   Chromecast, Android TV, Google TV, Chromecast built-in Smart TVs.
+ */
 function loadGoogleCastSDK() {
-  if (window.chrome && window.chrome.cast) return;
+  if (window.__piqCastSdkLoaded) return;
+  window.__piqCastSdkLoaded = true;
+
+  // Must be registered BEFORE the <script> tag is appended
+  window['__onGCastApiAvailable'] = (isAvailable) => {
+    if (!isAvailable) return;
+    try {
+      const ctx = cast.framework.CastContext.getInstance();
+      ctx.setOptions({
+        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID, // 'CC1AD845'
+        autoJoinPolicy:        chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+        resumeSavedSession:    false,
+      });
+
+      // Session ended or failed (from TV side or connection drop) â†’ clean up
+      ctx.addEventListener(
+        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+        (event) => {
+          const { SESSION_ENDED, SESSION_START_FAILED } = cast.framework.SessionState;
+          if (event.sessionState === SESSION_ENDED || event.sessionState === SESSION_START_FAILED) {
+            if (typeof _castOnSessionEnd === 'function') {
+              try { _castOnSessionEnd(); } catch (e) {}
+            }
+            stopCastingFlow(true /* fromSdkEvent â€” don't call endCurrentSession again */);
+          }
+        }
+      );
+
+      // Sync cast button glow state with SDK connection state
+      ctx.addEventListener(
+        cast.framework.CastContextEventType.CAST_STATE_CHANGED,
+        (event) => {
+          const isCasting = event.castState === cast.framework.CastState.CONNECTED;
+          document.querySelectorAll('#action-cast, #vp-cast-btn')
+            .forEach(el => el && el.classList.toggle('casting-active', isCasting));
+        }
+      );
+
+      console.log('[Cast SDK] Initialized â€” Default Media Receiver (CC1AD845) â€” Android TV / Chromecast discovery enabled');
+    } catch (err) {
+      console.warn('[Cast SDK] Initialization failed:', err.message);
+    }
+  };
+
   const script = document.createElement('script');
   script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+  script.onerror = () => { window.__piqCastSdkLoaded = false; }; // Allow retry on error
   document.head.appendChild(script);
 }
 
-const SIMULATED_DEVICES = [
-  { id: 'chromecast-living', name: 'Living Room TV', type: 'Chromecast', status: 'ready', signal: 4 },
-  { id: 'airplay-bedroom', name: 'Bedroom Apple TV', type: 'AirPlay', status: 'ready', signal: 5 },
-  { id: 'dlna-basement', name: 'Basement Sony Bravia', type: 'Smart TV', status: 'ready', signal: 3 },
-  { id: 'chromecast-kitchen', name: 'Kitchen Hub', type: 'Chromecast', status: 'ready', signal: 2 }
-];
-
-function stopCastingFlow() {
-  if (window.castPollingInterval) {
-    clearInterval(window.castPollingInterval);
-    window.castPollingInterval = null;
+/**
+ * Stop the casting flow and clean up all associated state and UI.
+ * @param {boolean} fromSdkEvent  Pass true when called from a SESSION_ENDED event
+ *   so we don't call endCurrentSession() a second time (would throw).
+ */
+function stopCastingFlow(fromSdkEvent = false) {
+  // Tell the SDK to end the session when WE initiate the disconnect
+  if (!fromSdkEvent && window.cast && cast.framework) {
+    try { cast.framework.CastContext.getInstance().endCurrentSession(true); } catch (e) {}
   }
+  // Remove sticky cast bar
   const bar = document.getElementById('global-cast-session-bar');
   if (bar) bar.remove();
+  // Nullify live references
+  _castRemotePlayer = null;
+  _castController   = null;
+  _castOnSessionEnd = null;
   localStorage.removeItem('piq_cast_session_id');
 }
 
-function startCastSessionPolling(sessionId) {
-  if (window.castPollingInterval) clearInterval(window.castPollingInterval);
-
-  window.castPollingInterval = setInterval(async () => {
-    try {
-      const res = await fetch(`/api/cast/session/status?sessionId=${sessionId}`);
-      if (!res.ok) {
-        stopCastingFlow();
-        return;
-      }
-      const status = await res.json();
-      updateCastBarUI(status);
-    } catch (err) {
-      console.error('[Cast Polling] Error:', err);
-    }
-  }, 2000);
-}
-
-function updateCastBarUI(status) {
-  const statusEl = document.getElementById('cast-bar-status');
-  const playBtn = document.getElementById('cast-bar-play-btn');
-  if (statusEl) {
-    statusEl.textContent = status.state === 'PLAYING' 
-      ? `Casting to ${status.deviceType}...` 
-      : `Paused on ${status.deviceType}`;
-  }
-  if (playBtn) {
-    if (status.state === 'PLAYING') {
-      playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
-    } else {
-      playBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-    }
-  }
-}
-
-function mountGlobalCastBar(sessionId, title, imagePath) {
+/**
+ * Mount the sticky cast session bar at the bottom of the page.
+ * Controls are wired to the real RemotePlayerController â€” no polling needed.
+ *
+ * @param {string}      deviceName  Friendly name from SDK (e.g. "Living Room TV")
+ * @param {string}      title       Content title
+ * @param {string|null} imagePath   TMDB backdrop_path or poster_path
+ */
+function mountGlobalCastBar(deviceName, title, imagePath) {
   const existing = document.getElementById('global-cast-session-bar');
   if (existing) existing.remove();
 
+  const thumbSrc = imagePath ? img.backdrop(imagePath) : '';
   const bar = document.createElement('div');
   bar.className = 'cast-session-bar';
   bar.id = 'global-cast-session-bar';
   bar.innerHTML = `
     <div class="cast-session-details">
-      <img class="cast-session-thumb" src="${imagePath ? img.backdrop(imagePath) : 'data:image/svg+xml,...'}" alt="Thumb" />
+      ${thumbSrc ? `<img class="cast-session-thumb" src="${thumbSrc}" alt="Thumb" />` : ''}
       <div class="cast-session-info">
         <h4 class="cast-session-title">${title}</h4>
-        <div class="cast-session-status" id="cast-bar-status">Connecting to TV...</div>
+        <div class="cast-session-status" id="cast-bar-status">Casting to ${deviceName || 'TV'}\u2026</div>
       </div>
     </div>
     <div class="cast-session-controls">
       <button class="cast-session-btn" id="cast-bar-play-btn" aria-label="Toggle Play">
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
       </button>
       <button class="cast-session-btn disconnect" id="cast-bar-disconnect-btn" aria-label="Stop Casting">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
   `;
   document.body.appendChild(bar);
 
-  const playBtn = bar.querySelector('#cast-bar-play-btn');
+  const playBtn       = bar.querySelector('#cast-bar-play-btn');
   const disconnectBtn = bar.querySelector('#cast-bar-disconnect-btn');
+  const statusEl      = bar.querySelector('#cast-bar-status');
 
-  let isPlaying = true;
+  // Play/pause wired to the real SDK RemotePlayerController
+  if (playBtn && _castController) {
+    playBtn.addEventListener('click', () => _castController.playOrPause());
+  }
 
-  playBtn.addEventListener('click', async () => {
-    isPlaying = !isPlaying;
-    try {
-      const res = await fetch('/api/cast/session/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          action: isPlaying ? 'play' : 'pause'
-        })
-      });
-      if (res.ok) {
-        pushTelemetry('cast_control', { sessionId, action: isPlaying ? 'play' : 'pause' });
+  // Disconnect wired to SDK endCurrentSession
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', () => stopCastingFlow(false));
+  }
+
+  // Sync play/pause icon with live TV state via RemotePlayerController events
+  if (_castController && _castRemotePlayer) {
+    _castController.addEventListener(
+      cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
+      () => {
+        if (!_castRemotePlayer) return;
+        const paused = _castRemotePlayer.isPaused;
+        if (playBtn) {
+          playBtn.innerHTML = paused
+            ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        }
+        if (statusEl) {
+          statusEl.textContent = paused
+            ? `Paused on ${deviceName || 'TV'}`
+            : `Casting to ${deviceName || 'TV'}\u2026`;
+        }
       }
-    } catch (err) {
-      console.error('[Cast Bar Control] Failed:', err);
-    }
-  });
+    );
+  }
+}
 
-  disconnectBtn.addEventListener('click', async () => {
-    try {
-      await fetch('/api/cast/session/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          action: 'stop'
-        })
-      });
-      pushTelemetry('cast_control', { sessionId, action: 'stop' });
-    } catch (e) {}
-    stopCastingFlow();
-  });
+/**
+ * Show a non-blocking slide-up toast when casting is unavailable.
+ * Auto-dismisses after 4 seconds. Safe to call from any context.
+ */
+function showCastUnsupportedToast(message) {
+  const prev = document.querySelector('.cast-unsupported-toast');
+  if (prev) prev.remove();
 
-  startCastSessionPolling(sessionId);
+  const toast = document.createElement('div');
+  toast.className = 'cast-unsupported-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  // Double rAF ensures the element is painted before the class triggers the CSS transition
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('visible')));
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 400);
+  }, 4000);
 }
 
 async function loadMobileEpisodes(tvId, activeSeason, activeEpisode, title, data, goToEpisode) {
@@ -2791,11 +2843,11 @@ async function renderMobileLayout({
           <h1 class="mobile-player-title">${title}</h1>
           
           <div class="mobile-player-badges">
-            <span class="mobile-player-badge highlight">⭐ ${rating}</span>
+            <span class="mobile-player-badge highlight">â­ ${rating}</span>
             ${year ? `<span class="mobile-player-badge">${year}</span>` : ''}
             ${runtime ? `<span class="mobile-player-badge">${runtime}</span>` : ''}
             <span class="mobile-player-badge">${isTV ? 'TV Series' : 'Movie'}</span>
-            ${genres ? genres.split(' • ').map(g => `<span class="mobile-player-badge">${g}</span>`).join('') : ''}
+            ${genres ? genres.split(' â€¢ ').map(g => `<span class="mobile-player-badge">${g}</span>`).join('') : ''}
           </div>
 
           <div class="mobile-player-synopsis-container">
@@ -2979,261 +3031,127 @@ async function renderMobileLayout({
   // Bind rotation check to global hook for episode row plays
   window._checkAndTriggerRotation = checkAndTriggerRotation;
 
-  // Setup cast API dynamically
+  // Initialize the Google Cast SDK (registers __onGCastApiAvailable before script injection)
   loadGoogleCastSDK();
 
-  // Expose global callback for VideoPlayer cast click
-  window._triggerCastingFlow = () => {
-    triggerCastDialog();
-  };
+  // Expose for VideoPlayer component's cast button
+  window._triggerCastingFlow = () => triggerCastDialog();
 
+  /**
+   * Entry point for the Cast button.
+   * Checks preconditions â†’ calls SDK requestSession() â†’ loads media on TV.
+   */
   function triggerCastDialog() {
-    const consentModal = document.createElement('div');
-    consentModal.className = 'cast-picker-modal';
-    consentModal.innerHTML = `
-      <div class="cast-picker-content">
-        <div class="cast-picker-header">
-          <h3 class="cast-picker-title">Local Network Permission</h3>
-          <button class="cast-picker-close" id="consent-close" aria-label="Close Dialog">✕</button>
-        </div>
-        <p class="cast-microcopy">PlayerIQ needs local network permission to discover and connect to nearby Chromecast, AirPlay, or Smart TV devices.</p>
-        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <button id="consent-cancel" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; min-height: 44px;" aria-label="Cancel Search">Cancel</button>
-          <button id="consent-search" style="background: var(--accent); border: none; color: #fff; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow-sm); min-height: 44px;" aria-label="Search Devices">Search Devices</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(consentModal);
+    // 1. Iframe player is active â€” cast requires the custom HLS player
+    if (document.getElementById('player-iframe')) {
+      showCastUnsupportedToast('Switch to Custom Player to cast to your TV.');
+      return;
+    }
 
-    consentModal.querySelector('#consent-close').addEventListener('click', () => consentModal.remove());
-    consentModal.querySelector('#consent-cancel').addEventListener('click', () => consentModal.remove());
-    consentModal.querySelector('#consent-search').addEventListener('click', () => {
-      consentModal.remove();
-      showDevicePickerModal();
-    });
+    // 2. Cast SDK not ready yet (fast click before SDK script finished loading)
+    if (!window.cast || !cast.framework) {
+      showCastUnsupportedToast(
+        navigator.userAgent.includes('Chrome')
+          ? 'Cast is loading \u2014 please try again in a moment.'
+          : 'Casting requires Google Chrome or the PlayerIQ Android app.'
+      );
+      return;
+    }
+
+    const ctx = cast.framework.CastContext.getInstance();
+
+    // 3. Already connected â†’ load the current content into the existing session
+    const existingSession = ctx.getCurrentSession();
+    if (existingSession) {
+      _loadMediaOnCast(existingSession);
+      return;
+    }
+
+    // 4. Request a new cast session â€” shows the NATIVE Chrome device picker
+    //    (lists all Cast-enabled devices on the local network: Chromecast, Android TV, Google TVâ€¦)
+    ctx.requestSession()
+      .then(() => {
+        const session = ctx.getCurrentSession();
+        if (session) _loadMediaOnCast(session);
+      })
+      .catch((err) => {
+        if (err === chrome.cast.ErrorCode.CANCEL) return; // User dismissed â€” not an error
+        console.error('[Cast] requestSession failed:', err);
+        showCastUnsupportedToast("Could not connect. Make sure you're on the same WiFi as your TV.");
+      });
   }
 
-  function showDevicePickerModal() {
-    const picker = document.createElement('div');
-    picker.className = 'cast-picker-modal';
-    picker.innerHTML = `
-      <div class="cast-picker-content">
-        <div class="cast-picker-header">
-          <h3 class="cast-picker-title">Select Cast Device</h3>
-          <button class="cast-picker-close" id="picker-close" aria-label="Close Device Picker">✕</button>
-        </div>
-        <div class="cast-microcopy" id="picker-scanning-msg">Searching for nearby casting devices on your local network...</div>
-        <div class="player-loading-spinner" id="picker-loader" style="margin: 20px auto; width: 30px; height: 30px;"></div>
-        <div class="cast-device-list" id="device-list-container" style="display: none;"></div>
-      </div>
-    `;
-    document.body.appendChild(picker);
+  /**
+   * Sends the current content to the connected cast device via loadMedia().
+   *
+   * - Pauses local video and resumes on the TV from the exact same timestamp.
+   * - Sends HLS stream URL from the production proxy (publicly accessible).
+   * - Attaches title, season/episode, and poster art as Cast metadata.
+   * - Creates a RemotePlayerController for real-time play/pause/stop sync.
+   * - When the user disconnects from the TV, local video resumes where cast left off.
+   *
+   * @param {cast.framework.CastSession} castSession
+   */
+  function _loadMediaOnCast(castSession) {
+    const videoEl   = document.getElementById('vp-video');
+    const resumeTime = videoEl ? videoEl.currentTime : 0;
+    if (videoEl && !videoEl.paused) videoEl.pause();
 
-    picker.querySelector('#picker-close').addEventListener('click', () => picker.remove());
+    // Always use the production proxy URL (must be publicly accessible for Cast Receiver)
+    const PROD_PROXY = 'https://playerapi.suyogmahagaonkar.me';
+    const streamPath = isTV
+      ? `/api/stream/tv/${activeTmdbId || id}/${currentSeason}/${currentEpisode}`
+      : `/api/stream/movie/${activeTmdbId || id}`;
+    const streamUrl = `${PROD_PROXY}${streamPath}`;
 
-    setTimeout(() => {
-      const loader = picker.querySelector('#picker-loader');
-      const msg = picker.querySelector('#picker-scanning-msg');
-      const listContainer = picker.querySelector('#device-list-container');
-      if (loader) loader.style.display = 'none';
-      if (msg) msg.textContent = 'Active casting targets found:';
-      if (listContainer) {
-        listContainer.style.display = 'flex';
-        const SIMULATED_DEVICE_DIAGS = {
-          'chromecast-living': { ip: '192.168.1.45', protocol: 'Chromecast (Ultra)', firmware: 'v1.56.275829', network: 'Home_WiFi_5G' },
-          'airplay-bedroom': { ip: '192.168.1.62', protocol: 'AirPlay 2', firmware: 'tvOS 15.4.1', network: 'Home_WiFi_5G' },
-          'dlna-basement': { ip: '192.168.1.88', protocol: 'DLNA / SmartTV OS', firmware: 'v4.9.1-sony', network: 'Home_WiFi_2G' },
-          'chromecast-kitchen': { ip: '192.168.1.12', protocol: 'Chromecast (v3)', firmware: 'v1.49.230485', network: 'Home_WiFi_5G' }
+    // Build ChromeCast MediaInfo with HLS stream
+    const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegURL');
+    mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+
+    // Rich metadata shown on the TV screen
+    const metadata = isTV
+      ? new chrome.cast.media.TvShowMediaMetadata()
+      : new chrome.cast.media.MovieMediaMetadata();
+    metadata.title = title;
+    if (isTV) {
+      metadata.season  = currentSeason;
+      metadata.episode = currentEpisode;
+    }
+    if (posterPath) {
+      metadata.images = [new chrome.cast.Image(`https://image.tmdb.org/t/p/w500${posterPath}`)];
+    }
+    mediaInfo.metadata = metadata;
+
+    const request = new chrome.cast.media.LoadRequest(mediaInfo);
+    request.currentTime = resumeTime; // Seamless timestamp handoff
+
+    castSession.loadMedia(request)
+      .then(() => {
+        // Wire up the real RemotePlayerController for live state sync
+        _castRemotePlayer = new cast.framework.RemotePlayer();
+        _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
+
+        // When session ends from TV side: resume local video from cast position
+        _castOnSessionEnd = () => {
+          const vid = document.getElementById('vp-video');
+          if (vid && _castRemotePlayer && _castRemotePlayer.currentTime > 0) {
+            vid.currentTime = _castRemotePlayer.currentTime;
+          }
+          if (vid) vid.play().catch(() => {});
         };
 
-        listContainer.innerHTML = SIMULATED_DEVICES.map(device => {
-          let iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>`;
-          if (device.type === 'AirPlay') {
-            iconMarkup = `<svg viewBox="0 0 24 24" class="cast-device-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H19M12 5L17 11H7L12 5Z" fill="currentColor"/></svg>`;
-          }
-          
-          const diags = SIMULATED_DEVICE_DIAGS[device.id] || { ip: '192.168.1.1', protocol: 'Unknown', firmware: 'v1.0', network: 'Unknown' };
-          
-          return `
-            <div class="cast-device-item" data-id="${device.id}" aria-label="Cast device ${device.name}">
-              <div class="cast-device-item-top">
-                <div class="cast-device-info-left">
-                  <div class="cast-device-icon-wrap">${iconMarkup}</div>
-                  <div class="cast-device-details">
-                    <span class="cast-device-name">${device.name}</span>
-                    <span class="cast-device-type">${device.type}</span>
-                    <span class="cast-device-status-lbl" id="status-lbl-${device.id}">Ready</span>
-                  </div>
-                </div>
-                <div class="cast-signal-bars" title="Signal: ${device.signal}/5">
-                  <svg class="signal-svg" viewBox="0 0 24 24" width="24" height="24">
-                    <rect x="2" y="16" width="3" height="4" rx="1" fill="${device.signal >= 1 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
-                    <rect x="6" y="12" width="3" height="8" rx="1" fill="${device.signal >= 2 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
-                    <rect x="10" y="8" width="3" height="12" rx="1" fill="${device.signal >= 3 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
-                    <rect x="14" y="4" width="3" height="16" rx="1" fill="${device.signal >= 4 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
-                    <rect x="18" y="0" width="3" height="20" rx="1" fill="${device.signal >= 5 ? 'var(--accent, #e50914)' : 'rgba(255,255,255,0.2)'}"></rect>
-                  </svg>
-                </div>
-              </div>
-              <div class="cast-device-item-actions">
-                <button class="cast-act-btn connect-btn" id="connect-${device.id}" aria-label="Connect to ${device.name}">Connect</button>
-                <button class="cast-act-btn info-btn" id="info-${device.id}" aria-label="Toggle device diagnostics for ${device.name}">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                  </svg>
-                </button>
-                <button class="cast-act-btn more-btn" id="more-${device.id}" aria-label="More actions for ${device.name}">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <circle cx="12" cy="5" r="1"></circle>
-                    <circle cx="12" cy="19" r="1"></circle>
-                  </svg>
-                </button>
-              </div>
-              <div class="cast-device-diag-details" id="diag-details-${device.id}" style="display: none; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.15); margin-top: 6px; font-size: 10px; font-family: monospace; color: rgba(255,255,255,0.6); line-height: 1.4;">
-                <div>IP Address: <span style="color: var(--accent, #e50914);">${diags.ip}</span></div>
-                <div>Protocol: <span>${diags.protocol}</span></div>
-                <div>Firmware: <span>${diags.firmware}</span></div>
-                <div>Network: <span>${diags.network}</span></div>
-              </div>
-            </div>
-          `;
-        }).join('');
+        // Friendly device name from SDK (e.g. "Living Room TV", "Suyog's Android TV")
+        const deviceName = castSession.getCastDevice()?.friendlyName || 'TV';
+        mountGlobalCastBar(deviceName, title, backdropPath || posterPath);
+        pushTelemetry('cast_session_started', { deviceName, mediaId: id, resumeTime });
 
-        listContainer.querySelectorAll('.cast-device-item').forEach(item => {
-          const deviceId = item.dataset.id;
-          const device = SIMULATED_DEVICES.find(d => d.id === deviceId);
-          const diags = SIMULATED_DEVICE_DIAGS[deviceId] || { ip: '192.168.1.1', protocol: 'Unknown', firmware: 'v1.0', network: 'Unknown' };
-
-          // 1. Info click handler
-          const infoBtn = item.querySelector(`#info-${deviceId}`);
-          const diagDetails = item.querySelector(`#diag-details-${deviceId}`);
-          if (infoBtn && diagDetails) {
-            infoBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const isVisible = diagDetails.style.display === 'block';
-              diagDetails.style.display = isVisible ? 'none' : 'block';
-              infoBtn.classList.toggle('active', !isVisible);
-            });
-          }
-
-          // 2. More actions click handler
-          const moreBtn = item.querySelector(`#more-${deviceId}`);
-          if (moreBtn) {
-            moreBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              alert(`Device Options for ${device.name}:\n- Protocol: ${diags.protocol}\n- Signal Strength: ${device.signal}/5\n- Network: ${diags.network}`);
-            });
-          }
-
-          // 3. Connect button click handler
-          const connectBtn = item.querySelector(`#connect-${deviceId}`);
-          if (connectBtn) {
-            connectBtn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const statusLbl = item.querySelector(`#status-lbl-${deviceId}`);
-              if (statusLbl) {
-                statusLbl.className = 'cast-device-status-lbl connecting';
-                statusLbl.textContent = 'Connecting...';
-              }
-              connectBtn.disabled = true;
-              connectBtn.textContent = 'Connecting';
-
-              setTimeout(async () => {
-                try {
-                  const activeVideo = document.getElementById('vp-video');
-                  const currentLocalTime = activeVideo ? activeVideo.currentTime : 0;
-                  
-                  if (activeVideo && !activeVideo.paused) {
-                    activeVideo.pause();
-                  }
-
-                  const res = await fetch('/api/cast/session/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                       contentId: id,
-                       episodeId: isTV ? currentEpisode : null,
-                       deviceType: device.type,
-                       deviceId: device.id,
-                       startTime: currentLocalTime
-                    })
-                  });
-
-                  if (!res.ok) throw new Error('Failed to start session');
-                  const dataResponse = await res.json();
-                  const sessionId = dataResponse.sessionId;
-
-                  if (statusLbl) {
-                    statusLbl.className = 'cast-device-status-lbl connected';
-                    statusLbl.textContent = 'Connected';
-                  }
-                  connectBtn.textContent = 'Connected';
-                  connectBtn.style.background = '#22c55e';
-
-                  pushTelemetry('cast_session_started', { deviceType: device.type, deviceId: device.id, mediaId: id });
-                  localStorage.setItem('piq_cast_session_id', sessionId);
-                  mountGlobalCastBar(sessionId, title, data.backdrop_path || poster_path);
-
-                  setTimeout(() => {
-                    picker.remove();
-                  }, 800);
-
-                } catch (err) {
-                  console.error('[Casting] Session start failed:', err);
-                  if (statusLbl) {
-                    statusLbl.className = 'cast-device-status-lbl';
-                    statusLbl.style.color = '#ef4444';
-                    statusLbl.textContent = 'Failed';
-                  }
-                  connectBtn.disabled = false;
-                  connectBtn.textContent = 'Connect';
-                }
-              }, 1500);
-            });
-          }
-
-          // 4. Long Press & Double Tap on the card itself to toggle diagnostics
-          let lastTap = 0;
-          let pressTimer = null;
-
-          item.addEventListener('click', (e) => {
-            // Check double tap
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            if (tapLength < 300 && tapLength > 0) {
-              e.preventDefault();
-              if (diagDetails) {
-                const isVisible = diagDetails.style.display === 'block';
-                diagDetails.style.display = isVisible ? 'none' : 'block';
-                if (infoBtn) infoBtn.classList.toggle('active', !isVisible);
-              }
-            }
-            lastTap = currentTime;
-          });
-
-          item.addEventListener('touchstart', (e) => {
-            pressTimer = setTimeout(() => {
-              if (diagDetails) {
-                const isVisible = diagDetails.style.display === 'block';
-                diagDetails.style.display = isVisible ? 'none' : 'block';
-                if (infoBtn) infoBtn.classList.toggle('active', !isVisible);
-              }
-            }, 600); // 600ms for long press
-          });
-
-          item.addEventListener('touchend', () => {
-            clearTimeout(pressTimer);
-          });
-
-          item.addEventListener('touchmove', () => {
-            clearTimeout(pressTimer);
-          });
-        });
-      }
-    }, 1500);
+        console.log(`[Cast] Streaming to "${deviceName}" â€” ${isTV ? `S${currentSeason}E${currentEpisode}` : ''} t=${resumeTime.toFixed(1)}s`);
+      })
+      .catch((err) => {
+        console.error('[Cast] loadMedia failed:', err);
+        showCastUnsupportedToast('Failed to start cast. The stream may still be loading \u2014 try again shortly.');
+        if (videoEl) videoEl.play().catch(() => {}); // Restore local playback
+      });
   }
 
   const playBtn = document.getElementById('action-play');
@@ -3604,7 +3522,7 @@ async function renderMobileLayout({
 
     const recCards = similar.slice(0, 3).map(item => {
       const posterUrl = item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : 'data:image/svg+xml,...';
-      const ratingVal = item.vote_average ? item.vote_average.toFixed(1) : '—';
+      const ratingVal = item.vote_average ? item.vote_average.toFixed(1) : 'â€”';
       const itemYear = (item.release_date || item.first_air_date || '').slice(0, 4);
       const cardRoute = `/${type}/${item.id}`;
       
@@ -3639,7 +3557,7 @@ async function renderMobileLayout({
               font-weight: var(--weight-bold);
               color: var(--rating-high);
               border: 1px solid rgba(255,255,255,0.06);
-            ">⭐ ${ratingVal}</div>
+            ">â­ ${ratingVal}</div>
           </div>
           <div style="
             font-size: var(--text-sm);
