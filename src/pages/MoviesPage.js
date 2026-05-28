@@ -154,6 +154,18 @@ async function loadMovies(container) {
       const playRoute = `/watch/movie/${topId}`;
       const backdropUrl = topItem.backdrop_path || topItem.poster_path || '';
 
+      const maxChars = 85;
+      let overviewHTML = '';
+      if (overview.length > maxChars) {
+        const truncated = overview.slice(0, maxChars).trim() + '...';
+        overviewHTML = `
+          <span class="overview-text" data-full="${overview.replace(/"/g, '&quot;')}" data-truncated="${truncated.replace(/"/g, '&quot;')}">${truncated}</span>
+          <span class="spotlight-more-btn" style="color:#A020F0; font-weight:700; cursor:pointer; margin-left:4px; font-size:10px; text-transform:uppercase; letter-spacing:0.3px;">more</span>
+        `;
+      } else {
+        overviewHTML = `<span>${overview}</span>`;
+      }
+
       // Spotlight Hero HTML (Featured Movie)
       const spotlightHTML = `
         <div class="ranking-spotlight discover-spotlight" data-route="${spotlightRoute}">
@@ -178,7 +190,7 @@ async function loadMovies(container) {
                 <span class="spotlight-dot"></span>
                 <span>Movie</span>
               </div>
-              <p class="spotlight-overview">${overview}</p>
+              <p class="spotlight-overview">${overviewHTML}</p>
               <div class="spotlight-actions">
                 <button class="hero-btn hero-btn-primary" data-action="play" data-route="${playRoute}">
                   <i data-lucide="play" style="width:16px;height:16px"></i>
@@ -219,6 +231,19 @@ async function loadMovies(container) {
       // Clicks for spotlight
       spotlightEl.querySelectorAll('[data-route]').forEach(card => {
         card.addEventListener('click', (e) => {
+          const moreToggle = e.target.closest('.spotlight-more-btn');
+          if (moreToggle) {
+            e.stopPropagation();
+            const textEl = spotlightEl.querySelector('.overview-text');
+            if (moreToggle.textContent === 'more') {
+              textEl.textContent = textEl.dataset.full;
+              moreToggle.textContent = 'less';
+            } else {
+              textEl.textContent = textEl.dataset.truncated;
+              moreToggle.textContent = 'more';
+            }
+            return;
+          }
           const actionBtn = e.target.closest('[data-action]');
           if (actionBtn) {
             e.stopPropagation();

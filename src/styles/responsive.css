@@ -4477,6 +4477,17 @@
     width: 14px !important;
     height: 14px !important;
   }
+
+  /* Make spotlight overview text smaller and perfectly spaced on mobile */
+  .spotlight-overview {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    max-width: 310px !important;
+    margin-bottom: 12px !important;
+    text-align: center !important;
+    margin-inline: auto !important;
+  }
 }
 
 /* ==========================================================================
