@@ -1,4 +1,4 @@
-﻿// ========================================
+// ========================================
 // PlayerIQ â€” Player Page (Cinema Mode)
 // ========================================
 
@@ -1264,6 +1264,113 @@ export async function renderPlayerPage({ params, container }) {
       tmdbRuntimeSeconds = null;
     }
 
+    // ====================================================================
+    // CAST FLOW INITIALIZATION & BINDING (Available to both Desktop & Mobile)
+    // ====================================================================
+    loadGoogleCastSDK();
+    window._triggerCastingFlow = () => triggerCastDialog();
+
+    function triggerCastDialog() {
+      // 1. Iframe player is active — cast requires the custom HLS player
+      if (document.getElementById('player-iframe')) {
+        showCastUnsupportedToast('Switch to Custom Player to cast to your TV.');
+        return;
+      }
+
+      // 2. Cast SDK not ready yet (fast click before SDK script finished loading)
+      if (!window.cast || !cast.framework) {
+        showCastUnsupportedToast(
+          navigator.userAgent.includes('Chrome')
+            ? 'Cast is loading \u2014 please try again in a moment.'
+            : 'Casting requires Google Chrome or the PlayerIQ Android app.'
+        );
+        return;
+      }
+
+      const ctx = cast.framework.CastContext.getInstance();
+
+      // 3. Already connected — load the current content into the existing session
+      const existingSession = ctx.getCurrentSession();
+      if (existingSession) {
+        _loadMediaOnCast(existingSession);
+        return;
+      }
+
+      // 4. Request a new cast session — shows the NATIVE Chrome device picker
+      ctx.requestSession()
+        .then(() => {
+          const session = ctx.getCurrentSession();
+          if (session) _loadMediaOnCast(session);
+        })
+        .catch((err) => {
+          if (err === chrome.cast.ErrorCode.CANCEL) return; // User dismissed — not an error
+          console.error('[Cast] requestSession failed:', err);
+          showCastUnsupportedToast("Could not connect. Make sure you're on the same WiFi as your TV.");
+        });
+    }
+
+    function _loadMediaOnCast(castSession) {
+      const videoEl   = document.getElementById('vp-video');
+      const resumeTime = videoEl ? videoEl.currentTime : 0;
+      if (videoEl && !videoEl.paused) videoEl.pause();
+
+      // Always use the production proxy URL (must be publicly accessible for Cast Receiver)
+      const PROD_PROXY = 'https://playerapi.suyogmahagaonkar.me';
+      const streamPath = isTV
+        ? `/api/stream/tv/${activeTmdbId || id}/${currentSeason}/${currentEpisode}`
+        : `/api/stream/movie/${activeTmdbId || id}`;
+      const streamUrl = `${PROD_PROXY}${streamPath}`;
+
+      // Build ChromeCast MediaInfo with HLS stream
+      const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegURL');
+      mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+
+      // Rich metadata shown on the TV screen
+      const metadata = isTV
+        ? new chrome.cast.media.TvShowMediaMetadata()
+        : new chrome.cast.media.MovieMediaMetadata();
+      metadata.title = title;
+      if (isTV) {
+        metadata.season  = currentSeason;
+        metadata.episode = currentEpisode;
+      }
+      if (poster_path) {
+        metadata.images = [new chrome.cast.Image(`https://image.tmdb.org/t/p/w500${poster_path}`)];
+      }
+      mediaInfo.metadata = metadata;
+
+      const request = new chrome.cast.media.LoadRequest(mediaInfo);
+      request.currentTime = resumeTime; // Seamless timestamp handoff
+
+      castSession.loadMedia(request)
+        .then(() => {
+          // Wire up the real RemotePlayerController for live state sync
+          _castRemotePlayer = new cast.framework.RemotePlayer();
+          _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
+
+          // When session ends from TV side: resume local video from cast position
+          _castOnSessionEnd = () => {
+            const vid = document.getElementById('vp-video');
+            if (vid && _castRemotePlayer && _castRemotePlayer.currentTime > 0) {
+              vid.currentTime = _castRemotePlayer.currentTime;
+            }
+            if (vid) vid.play().catch(() => {});
+          };
+
+          // Friendly device name from SDK (e.g. "Living Room TV", "Suyog's Android TV")
+          const deviceName = castSession.getCastDevice()?.friendlyName || 'TV';
+          mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
+          pushTelemetry('cast_session_started', { deviceName, mediaId: id, resumeTime });
+
+          console.log(`[Cast] Streaming to "${deviceName}" — ${isTV ? `S${currentSeason}E${currentEpisode}` : ''} t=${resumeTime.toFixed(1)}s`);
+        })
+        .catch((err) => {
+          console.error('[Cast] loadMedia failed:', err);
+          showCastUnsupportedToast('Failed to start cast. The stream may still be loading \u2014 try again shortly.');
+          if (videoEl) videoEl.play().catch(() => {}); // Restore local playback
+        });
+    }
+
     const isMobile = window.innerWidth <= 767;
     if (isMobile) {
       return renderMobileLayout({
@@ -2458,15 +2565,39 @@ function loadGoogleCastSDK() {
         }
       );
 
-      // Sync cast button glow state with SDK connection state
+      // Sync cast button glow state & visibility with SDK connection state
+      const updateCastButtons = (state) => {
+        const isCasting = state === cast.framework.CastState.CONNECTED;
+        const hasDevices = state !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
+
+        document.querySelectorAll('#action-cast, #vp-cast-btn, #vp-top-cast-btn')
+          .forEach(el => {
+            if (el) {
+              el.classList.toggle('casting-active', isCasting);
+              
+              // Bottom cast button is only for mobile (< 768px). Desktop uses the top bar cast button.
+              if (el.id === 'vp-cast-btn') {
+                if (window.innerWidth <= 767) {
+                  el.style.display = hasDevices ? 'inline-block' : 'none';
+                } else {
+                  el.style.display = 'none';
+                }
+              } else {
+                el.style.display = hasDevices ? 'inline-block' : 'none';
+              }
+            }
+          });
+      };
+
       ctx.addEventListener(
         cast.framework.CastContextEventType.CAST_STATE_CHANGED,
         (event) => {
-          const isCasting = event.castState === cast.framework.CastState.CONNECTED;
-          document.querySelectorAll('#action-cast, #vp-cast-btn')
-            .forEach(el => el && el.classList.toggle('casting-active', isCasting));
+          updateCastButtons(event.castState);
         }
       );
+
+      // Perform initial check immediately
+      setTimeout(() => updateCastButtons(ctx.getCastState()), 100);
 
       console.log('[Cast SDK] Initialized â€” Default Media Receiver (CC1AD845) â€” Android TV / Chromecast discovery enabled');
     } catch (err) {
@@ -3031,128 +3162,7 @@ async function renderMobileLayout({
   // Bind rotation check to global hook for episode row plays
   window._checkAndTriggerRotation = checkAndTriggerRotation;
 
-  // Initialize the Google Cast SDK (registers __onGCastApiAvailable before script injection)
-  loadGoogleCastSDK();
 
-  // Expose for VideoPlayer component's cast button
-  window._triggerCastingFlow = () => triggerCastDialog();
-
-  /**
-   * Entry point for the Cast button.
-   * Checks preconditions â†’ calls SDK requestSession() â†’ loads media on TV.
-   */
-  function triggerCastDialog() {
-    // 1. Iframe player is active â€” cast requires the custom HLS player
-    if (document.getElementById('player-iframe')) {
-      showCastUnsupportedToast('Switch to Custom Player to cast to your TV.');
-      return;
-    }
-
-    // 2. Cast SDK not ready yet (fast click before SDK script finished loading)
-    if (!window.cast || !cast.framework) {
-      showCastUnsupportedToast(
-        navigator.userAgent.includes('Chrome')
-          ? 'Cast is loading \u2014 please try again in a moment.'
-          : 'Casting requires Google Chrome or the PlayerIQ Android app.'
-      );
-      return;
-    }
-
-    const ctx = cast.framework.CastContext.getInstance();
-
-    // 3. Already connected â†’ load the current content into the existing session
-    const existingSession = ctx.getCurrentSession();
-    if (existingSession) {
-      _loadMediaOnCast(existingSession);
-      return;
-    }
-
-    // 4. Request a new cast session â€” shows the NATIVE Chrome device picker
-    //    (lists all Cast-enabled devices on the local network: Chromecast, Android TV, Google TVâ€¦)
-    ctx.requestSession()
-      .then(() => {
-        const session = ctx.getCurrentSession();
-        if (session) _loadMediaOnCast(session);
-      })
-      .catch((err) => {
-        if (err === chrome.cast.ErrorCode.CANCEL) return; // User dismissed â€” not an error
-        console.error('[Cast] requestSession failed:', err);
-        showCastUnsupportedToast("Could not connect. Make sure you're on the same WiFi as your TV.");
-      });
-  }
-
-  /**
-   * Sends the current content to the connected cast device via loadMedia().
-   *
-   * - Pauses local video and resumes on the TV from the exact same timestamp.
-   * - Sends HLS stream URL from the production proxy (publicly accessible).
-   * - Attaches title, season/episode, and poster art as Cast metadata.
-   * - Creates a RemotePlayerController for real-time play/pause/stop sync.
-   * - When the user disconnects from the TV, local video resumes where cast left off.
-   *
-   * @param {cast.framework.CastSession} castSession
-   */
-  function _loadMediaOnCast(castSession) {
-    const videoEl   = document.getElementById('vp-video');
-    const resumeTime = videoEl ? videoEl.currentTime : 0;
-    if (videoEl && !videoEl.paused) videoEl.pause();
-
-    // Always use the production proxy URL (must be publicly accessible for Cast Receiver)
-    const PROD_PROXY = 'https://playerapi.suyogmahagaonkar.me';
-    const streamPath = isTV
-      ? `/api/stream/tv/${activeTmdbId || id}/${currentSeason}/${currentEpisode}`
-      : `/api/stream/movie/${activeTmdbId || id}`;
-    const streamUrl = `${PROD_PROXY}${streamPath}`;
-
-    // Build ChromeCast MediaInfo with HLS stream
-    const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegURL');
-    mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
-
-    // Rich metadata shown on the TV screen
-    const metadata = isTV
-      ? new chrome.cast.media.TvShowMediaMetadata()
-      : new chrome.cast.media.MovieMediaMetadata();
-    metadata.title = title;
-    if (isTV) {
-      metadata.season  = currentSeason;
-      metadata.episode = currentEpisode;
-    }
-    if (posterPath) {
-      metadata.images = [new chrome.cast.Image(`https://image.tmdb.org/t/p/w500${posterPath}`)];
-    }
-    mediaInfo.metadata = metadata;
-
-    const request = new chrome.cast.media.LoadRequest(mediaInfo);
-    request.currentTime = resumeTime; // Seamless timestamp handoff
-
-    castSession.loadMedia(request)
-      .then(() => {
-        // Wire up the real RemotePlayerController for live state sync
-        _castRemotePlayer = new cast.framework.RemotePlayer();
-        _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
-
-        // When session ends from TV side: resume local video from cast position
-        _castOnSessionEnd = () => {
-          const vid = document.getElementById('vp-video');
-          if (vid && _castRemotePlayer && _castRemotePlayer.currentTime > 0) {
-            vid.currentTime = _castRemotePlayer.currentTime;
-          }
-          if (vid) vid.play().catch(() => {});
-        };
-
-        // Friendly device name from SDK (e.g. "Living Room TV", "Suyog's Android TV")
-        const deviceName = castSession.getCastDevice()?.friendlyName || 'TV';
-        mountGlobalCastBar(deviceName, title, backdropPath || posterPath);
-        pushTelemetry('cast_session_started', { deviceName, mediaId: id, resumeTime });
-
-        console.log(`[Cast] Streaming to "${deviceName}" â€” ${isTV ? `S${currentSeason}E${currentEpisode}` : ''} t=${resumeTime.toFixed(1)}s`);
-      })
-      .catch((err) => {
-        console.error('[Cast] loadMedia failed:', err);
-        showCastUnsupportedToast('Failed to start cast. The stream may still be loading \u2014 try again shortly.');
-        if (videoEl) videoEl.play().catch(() => {}); // Restore local playback
-      });
-  }
 
   const playBtn = document.getElementById('action-play');
   if (playBtn) {

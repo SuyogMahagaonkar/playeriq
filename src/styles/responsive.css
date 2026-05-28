@@ -3834,13 +3834,11 @@
      🎬 PREMIUM NETFLIX MOBILE PLAYER INTERFACE REDESIGN (≤768px ONLY)
      ========================================================================== */
   
-  /* 1. Hide desktop buttons/selectors that we don't want or will customize */
   .mobile-player-container #vp-volume,
   .mobile-player-container .vp-volume-slider,
   .mobile-player-container .vp-volume-group,
   .mobile-player-container #vp-diag-btn,
-  .mobile-player-container #vp-pip-btn,
-  .mobile-player-container #vp-cast-btn {
+  .mobile-player-container #vp-pip-btn {
     display: none !important;
   }
 
