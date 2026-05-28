@@ -274,6 +274,7 @@ function initApp() {
   bottomNav.className = 'mobile-bottom-nav';
   bottomNav.setAttribute('id', 'mobile-bottom-nav');
   bottomNav.innerHTML = `
+    <div class="nav-active-bubble" id="nav-active-bubble"></div>
     <a href="#/" class="bottom-nav-item" data-path="/">
       <span class="bottom-nav-icon"><i data-lucide="home"></i></span>
       <span class="bottom-nav-text">Home</span>
@@ -300,19 +301,44 @@ function initApp() {
 
   function updateMobileBottomNavActive() {
     const currentPath = window.location.hash.slice(1) || '/';
+    let activeItem = null;
     document.querySelectorAll('.bottom-nav-item').forEach(item => {
       const path = item.dataset.path;
       const isActive = path === '/' 
         ? (currentPath === '/' || currentPath === '')
         : currentPath.startsWith(path);
       item.classList.toggle('active', isActive);
+      if (isActive) {
+        activeItem = item;
+      }
     });
+
+    // Translate the liquid active bubble dynamically to center over the active item!
+    const bubble = document.getElementById('nav-active-bubble');
+    if (bubble) {
+      if (activeItem) {
+        bubble.style.display = 'block';
+        const itemWidth = activeItem.offsetWidth;
+        const itemLeft = activeItem.offsetLeft;
+        const bubbleWidth = 52; // Exact diameter in CSS
+        const shiftX = itemLeft + (itemWidth - bubbleWidth) / 2;
+        bubble.style.transform = `translate3d(${shiftX}px, 0, 0)`;
+      } else {
+        bubble.style.display = 'none';
+      }
+    }
   }
 
   window.addEventListener('hashchange', () => {
     updateMobileBottomNavActive();
     if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
   });
+  window.addEventListener('resize', () => {
+    updateMobileBottomNavActive();
+  });
+  
+  // Schedule a small delay to align bubble precisely after DOM elements fully compute layouts
+  setTimeout(updateMobileBottomNavActive, 100);
   updateMobileBottomNavActive();
   if (window._syncFloatingCastCardVisibility) window._syncFloatingCastCardVisibility();
 

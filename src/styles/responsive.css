@@ -6260,10 +6260,11 @@
     right: 0 !important;
     width: 100% !important;
     height: 64px !important;
-    background: linear-gradient(180deg, rgba(10, 0, 26, 0.95) 0%, rgba(10, 0, 26, 0.6) 100%) !important;
-    backdrop-filter: blur(15px) !important;
-    -webkit-backdrop-filter: blur(15px) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: transparent !important; /* Completely translucent welcome overlay! */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: none !important; /* Borderless bottom edge! */
+    box-shadow: none !important;
     animation: topBarFadeIn 0.4s ease-out forwards !important;
     z-index: var(--z-navbar) !important;
   }
@@ -6425,16 +6426,16 @@
     perspective: 1000px !important; /* Enable 3D perspective space! */
   }
 
-  /* Soft radial glow underlay directly behind the centered active card */
+  /* Massive glowing radial canvas bleeding up behind top bar navbar and carousel banner */
   .hero-banner::before {
     content: '' !important;
     position: absolute !important;
-    top: 50% !important;
+    top: -50px !important; /* Position high enough to bleed under top navbar */
     left: 50% !important;
-    width: 320px !important;
-    height: 320px !important;
-    background: radial-gradient(circle, rgba(160, 32, 240, 0.4) 0%, transparent 70%) !important;
-    transform: translate(-50%, -50%) !important;
+    width: 450px !important;
+    height: 400px !important;
+    background: radial-gradient(circle, rgba(160, 32, 240, 0.38) 0%, rgba(106, 0, 255, 0.12) 50%, transparent 80%) !important;
+    transform: translateX(-50%) !important;
     z-index: 1 !important;
     pointer-events: none !important;
   }
@@ -6645,18 +6646,60 @@
     left: 16px !important;
     right: 16px !important;
     height: 64px !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(15px) !important;
-    -webkit-backdrop-filter: blur(15px) !important;
+    background: rgba(16, 18, 30, 0.85) !important; /* Solid-feel glassmorphism backdrop supporting liquid shoulders */
+    backdrop-filter: blur(25px) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
     border-radius: 40px !important;
     padding: 0 15px !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
     box-shadow: 0 8px 24px rgba(160, 32, 240, 0.2) !important; /* neon purple glow shadow */
     z-index: 9500 !important;
     justify-content: space-between !important;
     align-items: center !important;
     box-sizing: border-box !important;
     margin: 0 !important;
+  }
+
+  /* Sliding active bubble container */
+  .nav-active-bubble {
+    position: absolute !important;
+    top: -12px !important; /* Rises up above the top edge of the tab bar */
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #A020F0 0%, #6A00FF 100%) !important;
+    box-shadow: 0 0 18px rgba(160, 32, 240, 0.7) !important;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  /* Left fluid concave shoulder */
+  .nav-active-bubble::before {
+    content: '' !important;
+    position: absolute !important;
+    left: -20px !important;
+    bottom: -12px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: transparent !important;
+    border-bottom-right-radius: 20px !important;
+    box-shadow: 10px 10px 0 10px rgba(16, 18, 30, 0.85) !important; /* Blends liquid curve with capsule bar */
+    pointer-events: none !important;
+  }
+
+  /* Right fluid concave shoulder */
+  .nav-active-bubble::after {
+    content: '' !important;
+    position: absolute !important;
+    right: -20px !important;
+    bottom: -12px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: transparent !important;
+    border-bottom-left-radius: 20px !important;
+    box-shadow: -10px 10px 0 10px rgba(16, 18, 30, 0.85) !important; /* Blends liquid curve with capsule bar */
+    pointer-events: none !important;
   }
 
   /* Inactive circular icons exactly as shown in reference */
@@ -6673,7 +6716,8 @@
     flex: none !important;
     gap: 0 !important;
     color: rgba(255, 255, 255, 0.7) !important;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 2 !important; /* Sits above active bubble */
   }
 
   .bottom-nav-icon {
@@ -6686,30 +6730,31 @@
     width: 18px !important;
     height: 18px !important;
     color: currentColor !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
-  /* Active item - bright purple circle with glow, slightly shifted up */
+  /* Active item - transparent background so that the sliding bubble shows behind it, rises slightly */
   .bottom-nav-item.active {
-    background: linear-gradient(135deg, #A020F0 0%, #6A00FF 100%) !important;
-    border-color: #A020F0 !important;
+    background: transparent !important;
+    border-color: transparent !important;
     color: #FFFFFF !important;
     width: 46px !important;
     height: 46px !important;
-    box-shadow: 0 0 15px rgba(160, 32, 240, 0.8), 0 0 5px rgba(160, 32, 240, 0.4) !important;
-    transform: translateY(-4px) !important;
+    box-shadow: none !important;
+    transform: translateY(-8px) !important; /* Rise up slightly above the bar centered on bubble */
   }
 
-  /* Subtle bounce animation for active items */
+  /* Snappy bounce animation for active item icon */
   @keyframes activeBounce {
     0% { transform: scale(1); }
-    50% { transform: scale(1.15); }
+    50% { transform: scale(1.3); }
     100% { transform: scale(1); }
   }
 
   .bottom-nav-item.active .bottom-nav-icon i,
   .bottom-nav-item.active .bottom-nav-icon svg {
     color: #FFFFFF !important;
-    animation: activeBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+    animation: activeBounce 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   }
 
   .bottom-nav-text {
