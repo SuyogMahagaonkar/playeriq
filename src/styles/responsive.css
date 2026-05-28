@@ -6348,41 +6348,36 @@
 
   /* Magnifying glass and notifications on top-right exactly as shown in reference */
   .search-container {
-    order: 1 !important;
-    margin: 0 !important;
-    display: flex !important;
+    display: none !important; /* Hide old search container on mobile */
   }
 
-  .search-input-wrapper {
+  #navbar-search-btn {
+    display: flex !important; /* Show dedicated search button on mobile */
+    order: 1 !important;
     width: 38px !important;
     height: 38px !important;
     border-radius: 50% !important;
-    padding: 0 !important;
-    justify-content: center !important;
-    align-items: center !important;
     background: rgba(255, 255, 255, 0.08) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15) !important;
-    cursor: pointer !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
     transition: transform 0.2s, box-shadow 0.2s !important;
   }
 
-  .search-input-wrapper:active {
+  #navbar-search-btn:active {
     transform: scale(0.95) !important;
     box-shadow: 0 8px 16px rgba(160, 32, 240, 0.3) !important;
   }
 
-  .search-input-wrapper i, .search-input-wrapper svg {
+  #navbar-search-btn i, #navbar-search-btn svg {
     margin: 0 !important;
     color: #FFFFFF !important;
     width: 18px !important;
     height: 18px !important;
-  }
-
-  .search-input-wrapper input, .search-voice, .search-clear {
-    display: none !important;
   }
 
   #navbar-notif {

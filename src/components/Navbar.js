@@ -59,7 +59,10 @@ export function createNavbar() {
       ` : ''}
 
       <!-- Notifications Wrapper -->
-      <div style="position: relative; display: flex; align-items: center;">
+      <div style="position: relative; display: flex; align-items: center; gap: 8px;">
+        <button class="navbar-btn" id="navbar-search-btn" title="Search" style="display: none;">
+          <i data-lucide="search"></i>
+        </button>
         <button class="navbar-btn" id="navbar-notif" title="Notifications">
           <i data-lucide="bell"></i>
         </button>
@@ -359,6 +362,12 @@ export function updateNavbarAvatar(user) {
 
 // ---- Setup All Navbar Events ----
 export function setupNavbarEvents() {
+  const searchBtnMobile = document.getElementById('navbar-search-btn');
+  searchBtnMobile?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.location.hash = '/search';
+  });
+
   const hamburgerBtn = document.getElementById('navbar-hamburger-btn');
   hamburgerBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
