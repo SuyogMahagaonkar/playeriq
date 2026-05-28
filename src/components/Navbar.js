@@ -32,11 +32,18 @@ export function createNavbar() {
         <div class="search-input-wrapper">
           <i data-lucide="search"></i>
           <input type="text" class="search-input" id="search-input" placeholder="Search movies, shows..." autocomplete="off" />
-          <button class="search-voice" id="search-voice" title="Voice Search" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;margin-right:4px;">
-            <i data-lucide="mic"></i>
+          <button class="search-voice" id="search-voice" title="Voice Search">
+            <svg class="search-voice-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
           </button>
-          <button class="search-clear" id="search-clear" style="display:none">
-            <i data-lucide="x"></i>
+          <button class="search-clear" id="search-clear" style="display:none" title="Clear Search">
+            <svg class="search-clear-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
         <div class="search-suggestions" id="search-suggestions" style="display:none"></div>

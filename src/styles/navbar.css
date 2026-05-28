@@ -95,21 +95,70 @@ body.sidebar-collapsed .navbar {
   color: var(--text-dim);
 }
 
+/* Premium Search Actions (Voice & Clear Buttons) */
+.search-voice,
 .search-clear {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--text-dim) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 0 !important;
 }
 
+.search-voice:hover,
 .search-clear:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15) !important;
+}
+
+.search-voice:active,
+.search-clear:active {
+  transform: scale(0.92) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Beautiful custom vector icons */
+.search-voice svg,
+.search-clear svg {
+  width: 12px;
+  height: 12px;
+  color: inherit;
+  transition: transform 0.3s ease;
+}
+
+.search-voice svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Clear cancel default layout gaps */
+.search-input-wrapper svg:first-child {
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  margin-right: var(--space-xs);
+}
+
+/* Globally disable messy browser default search Cancel buttons */
+input::-webkit-search-decoration,
+input::-webkit-search-cancel-button,
+input::-webkit-search-results-button,
+input::-webkit-search-results-decoration {
+  display: none !important;
+  -webkit-appearance: none !important;
 }
 
 /* Search Suggestions */
