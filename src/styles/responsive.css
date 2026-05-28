@@ -6479,25 +6479,13 @@
     margin-bottom: 6px !important;
   }
 
-  /* ---- Home Page 5-Item Category Grid ---- */
+  /* ---- Home Page 6-Item Category Grid ---- */
   .home-category-grid {
     display: grid !important;
-    grid-template-columns: repeat(6, 1fr) !important; /* using 6-span logic to center 4th and 5th items */
+    grid-template-columns: repeat(3, 1fr) !important; /* EXACT 3 Columns */
     gap: 12px !important;
     padding: 16px var(--space-md) !important;
     margin-bottom: 10px !important;
-  }
-
-  .home-category-grid .category-grid-item {
-    grid-column: span 2 !important;
-  }
-
-  /* Centered bottom row elements for 5-item list */
-  .home-category-grid .category-grid-item:nth-child(4) {
-    grid-column: 2 / span 2 !important;
-  }
-  .home-category-grid .category-grid-item:nth-child(5) {
-    grid-column: 4 / span 2 !important;
   }
 
   .category-grid-item {
@@ -6555,19 +6543,59 @@
     bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important; /* Floating position + safe area Notch padding */
     left: 16px !important;
     right: 16px !important;
-    height: 60px !important;
+    height: 64px !important;
     background: rgba(255, 255, 255, 0.08) !important;
     backdrop-filter: blur(15px) !important;
     -webkit-backdrop-filter: blur(15px) !important;
     border-radius: 40px !important;
-    padding: 10px 20px !important;
+    padding: 0 15px !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.25) !important; /* neon purple glow shadow */
+    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.2) !important; /* neon purple glow shadow */
     z-index: 9500 !important;
-    justify-content: space-around !important;
+    justify-content: space-between !important;
     align-items: center !important;
     box-sizing: border-box !important;
     margin: 0 !important;
+  }
+
+  /* Inactive circular icons exactly as shown in reference */
+  .bottom-nav-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 0 !important;
+    flex: none !important;
+    gap: 0 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+
+  .bottom-nav-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .bottom-nav-icon i, .bottom-nav-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: currentColor !important;
+  }
+
+  /* Active item - bright purple circle with glow, slightly shifted up */
+  .bottom-nav-item.active {
+    background: linear-gradient(135deg, #A020F0 0%, #6A00FF 100%) !important;
+    border-color: #A020F0 !important;
+    color: #FFFFFF !important;
+    width: 46px !important;
+    height: 46px !important;
+    box-shadow: 0 0 15px rgba(160, 32, 240, 0.8), 0 0 5px rgba(160, 32, 240, 0.4) !important;
+    transform: translateY(-4px) !important;
   }
 
   /* Subtle bounce animation for active items */
@@ -6577,21 +6605,9 @@
     100% { transform: scale(1); }
   }
 
-  .bottom-nav-item {
-    padding: 0 !important;
-    height: 100% !important;
-    gap: 0 !important;
-    color: rgba(255, 255, 255, 0.45) !important;
-  }
-
-  .bottom-nav-item.active {
-    color: #A020F0 !important;
-  }
-
   .bottom-nav-item.active .bottom-nav-icon i,
   .bottom-nav-item.active .bottom-nav-icon svg {
-    color: #A020F0 !important;
-    filter: drop-shadow(0 0 8px #A020F0) !important; /* Active glowing highlight */
+    color: #FFFFFF !important;
     animation: activeBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
   }
 

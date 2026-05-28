@@ -286,10 +286,6 @@ function initApp() {
       <span class="bottom-nav-icon"><i data-lucide="tv"></i></span>
       <span class="bottom-nav-text">TV</span>
     </a>
-    <a href="#/search" class="bottom-nav-item" data-path="/search">
-      <span class="bottom-nav-icon"><i data-lucide="search"></i></span>
-      <span class="bottom-nav-text">Search</span>
-    </a>
     <a href="#/downloads" class="bottom-nav-item bottom-nav-downloads" data-path="/downloads">
       <span class="bottom-nav-icon"><i data-lucide="download"></i></span>
       <span class="bottom-nav-text">Downloads</span>

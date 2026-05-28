@@ -34,10 +34,6 @@ export async function renderHomePage({ container }) {
       
       <!-- Mobile Category Grid -->
       <div id="home-category-grid-container" class="home-category-grid">
-        <div class="category-grid-item" data-route="/">
-          <div class="category-grid-icon"><i data-lucide="home"></i></div>
-          <div class="category-grid-label">Home</div>
-        </div>
         <div class="category-grid-item" data-route="/movies">
           <div class="category-grid-icon"><i data-lucide="film"></i></div>
           <div class="category-grid-label">Movies</div>
@@ -46,13 +42,21 @@ export async function renderHomePage({ container }) {
           <div class="category-grid-icon"><i data-lucide="tv"></i></div>
           <div class="category-grid-label">Series</div>
         </div>
-        <div class="category-grid-item" data-route="/downloads">
-          <div class="category-grid-icon"><i data-lucide="download"></i></div>
-          <div class="category-grid-label">Downloads</div>
+        <div class="category-grid-item" data-route="/category?title=Originals">
+          <div class="category-grid-icon"><i data-lucide="video"></i></div>
+          <div class="category-grid-label">Originals</div>
         </div>
-        <div class="category-grid-item" data-route="/settings">
-          <div class="category-grid-icon"><i data-lucide="user"></i></div>
-          <div class="category-grid-label">Profile</div>
+        <div class="category-grid-item" data-route="/category?title=Short Films">
+          <div class="category-grid-icon"><i data-lucide="clapperboard"></i></div>
+          <div class="category-grid-label">Short Films</div>
+        </div>
+        <div class="category-grid-item" data-route="/category?title=Live TV">
+          <div class="category-grid-icon"><i data-lucide="monitor-play"></i></div>
+          <div class="category-grid-label">Live TV</div>
+        </div>
+        <div class="category-grid-item" data-route="/ranking">
+          <div class="category-grid-icon"><i data-lucide="layout-grid"></i></div>
+          <div class="category-grid-label">View All</div>
         </div>
       </div>
       
