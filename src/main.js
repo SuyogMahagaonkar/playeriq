@@ -444,6 +444,12 @@ function initApp() {
     return await renderRankingPage(ctx);
   });
 
+  addRoute('/studios', async (ctx) => {
+    updateSidebarActive();
+    const { renderStudiosPage } = await import('./pages/StudiosPage.js');
+    return await renderStudiosPage(ctx);
+  });
+
   addRoute('/history', async (ctx) => {
     updateSidebarActive();
     const { renderWatchHistoryPage } = await import('./pages/WatchHistoryPage.js');
