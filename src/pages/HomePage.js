@@ -32,6 +32,30 @@ export async function renderHomePage({ container }) {
         <div style="height:600px;background:var(--bg-secondary);animation:shimmer 2s infinite;background-size:200% 100%;background-image:linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);"></div>
       </div>
       
+      <!-- Mobile Category Grid -->
+      <div id="home-category-grid-container" class="home-category-grid">
+        <div class="category-grid-item" data-route="/">
+          <div class="category-grid-icon"><i data-lucide="home"></i></div>
+          <div class="category-grid-label">Home</div>
+        </div>
+        <div class="category-grid-item" data-route="/movies">
+          <div class="category-grid-icon"><i data-lucide="film"></i></div>
+          <div class="category-grid-label">Movies</div>
+        </div>
+        <div class="category-grid-item" data-route="/tv">
+          <div class="category-grid-icon"><i data-lucide="tv"></i></div>
+          <div class="category-grid-label">Series</div>
+        </div>
+        <div class="category-grid-item" data-route="/downloads">
+          <div class="category-grid-icon"><i data-lucide="download"></i></div>
+          <div class="category-grid-label">Downloads</div>
+        </div>
+        <div class="category-grid-item" data-route="/settings">
+          <div class="category-grid-icon"><i data-lucide="user"></i></div>
+          <div class="category-grid-label">Profile</div>
+        </div>
+      </div>
+      
       <!-- Continue Watching Row Mount -->
       <div id="continue-watching-row-container"></div>
       
@@ -485,6 +509,14 @@ export async function renderHomePage({ container }) {
 
     // Wire up static Studio card clicks
     container.querySelectorAll('.studio-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const route = card.dataset.route;
+        if (route) window.location.hash = route;
+      });
+    });
+
+    // Wire up category grid clicks
+    container.querySelectorAll('.category-grid-item').forEach(card => {
       card.addEventListener('click', () => {
         const route = card.dataset.route;
         if (route) window.location.hash = route;

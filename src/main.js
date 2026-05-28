@@ -498,6 +498,13 @@ if (document.readyState === 'loading') {
   initApp();
 }
 
+// Mobile parallax background shift on scroll
+window.addEventListener('scroll', () => {
+  if (window.innerWidth <= 768) {
+    document.body.style.backgroundPositionY = `${window.scrollY * 0.15}px`;
+  }
+}, { passive: true });
+
 // Register PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

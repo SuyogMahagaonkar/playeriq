@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 /* ========================================
    PlayerIQ — Responsive Design System
    Breakpoints:
@@ -6164,3 +6166,500 @@
     box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
   }
 }
+
+/* ==========================================================================
+   🚀 PLAYERIQ FUTURISTIC PURPLE GLASSMORPHIC MOBILE REDESIGN OVERRIDES
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* ---- Google Fonts & Typography Override ---- */
+  :root {
+    --font-display: 'Poppins', sans-serif !important;
+    --font-body: 'Poppins', sans-serif !important;
+    --accent: #A020F0 !important;
+    --accent-hover: #c084fc !important;
+    --accent-glow: rgba(160, 32, 240, 0.25) !important;
+    --accent-soft: rgba(160, 32, 240, 0.12) !important;
+    --gradient-accent: linear-gradient(135deg, #A020F0 0%, #6A00FF 100%) !important;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif !important;
+    background: radial-gradient(circle at top, #1A0033 0%, #0A001A 100%) !important;
+    background-attachment: fixed !important;
+    color: #FFFFFF !important;
+  }
+
+  /* ---- Page Transitions (Fade + Slide) ---- */
+  @keyframes mobilePageTransition {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .homepage-container, 
+  .movie-grid-page, 
+  .detail-page-container, 
+  .player-page-container, 
+  .search-page-container, 
+  .ranking-page-container, 
+  .downloads-page-container, 
+  .settings-page-container {
+    animation: mobilePageTransition 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    border-radius: 30px !important;
+    overflow: hidden;
+    background: transparent !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    color: #FFFFFF !important;
+  }
+
+  p, .text-secondary, .text-muted {
+    font-weight: 400 !important;
+    opacity: 0.8 !important;
+    color: #CFCFCF !important;
+  }
+
+  /* ---- Glassmorphism Translucent Panels & Cards ---- */
+  .movie-card, 
+  .studio-card, 
+  .profile-dropdown, 
+  .notif-dropdown, 
+  .settings-panel, 
+  .login-panel, 
+  .piq-offline-card-inner, 
+  .vp-control-bar, 
+  .floating-cast-card {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.25) !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+  }
+
+  /* Movie card nested images */
+  .movie-card-img-wrapper img {
+    border-radius: 18px !important;
+  }
+
+  /* ---- Premium Glass Top Bar (Navbar) ---- */
+  @keyframes topBarFadeIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .navbar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 12px 20px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    background: linear-gradient(180deg, rgba(10, 0, 26, 0.95) 0%, rgba(10, 0, 26, 0.6) 100%) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    animation: topBarFadeIn 0.4s ease-out forwards !important;
+    z-index: var(--z-navbar) !important;
+  }
+
+  .navbar-left {
+    display: none !important;
+  }
+
+  .navbar-right {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+
+  /* Reposition avatar to the far left */
+  .profile-wrapper {
+    order: -2 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .navbar-avatar {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 12px rgba(160, 32, 240, 0.5) !important;
+    border: 2px solid #A020F0 !important;
+    padding: 0 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .navbar-avatar-inner {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
+  }
+
+  .navbar-avatar-inner img {
+    border-radius: 50% !important;
+  }
+
+  .chevron-icon {
+    display: none !important; /* Hide small arrow next to avatar */
+  }
+
+  /* Stacked welcome stack beside avatar */
+  .navbar-mobile-welcome {
+    display: flex !important;
+    flex-direction: column !important;
+    text-align: left !important;
+  }
+
+  .welcome-text-small {
+    font-size: 11px !important;
+    color: #CFCFCF !important;
+    opacity: 0.8 !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+  }
+
+  .welcome-text-name {
+    font-size: 14px !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  /* Magnifying glass and notifications on top-right exactly as shown in reference */
+  .search-container {
+    order: 1 !important;
+    margin: 0 !important;
+    display: flex !important;
+  }
+
+  .search-input-wrapper {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15) !important;
+    cursor: pointer !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+  }
+
+  .search-input-wrapper:active {
+    transform: scale(0.95) !important;
+    box-shadow: 0 8px 16px rgba(160, 32, 240, 0.3) !important;
+  }
+
+  .search-input-wrapper i, .search-input-wrapper svg {
+    margin: 0 !important;
+    color: #FFFFFF !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .search-input-wrapper input, .search-voice, .search-clear {
+    display: none !important;
+  }
+
+  #navbar-notif {
+    display: flex !important; /* Force render */
+    order: 2 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin-left: 10px !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
+  }
+
+  #navbar-notif:active {
+    transform: scale(0.95) !important;
+    box-shadow: 0 8px 16px rgba(160, 32, 240, 0.3) !important;
+  }
+
+  #navbar-notif i, #navbar-notif svg {
+    color: #FFFFFF !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* ---- Hero 3:4 Cards Carousel ---- */
+  .hero-banner {
+    padding-top: 15px !important;
+    padding-bottom: 25px !important;
+    background: transparent !important;
+  }
+
+  .hero-slide.active .hero-mobile-poster-container {
+    width: 240px !important;
+    height: 320px !important; /* EXACT 3:4 Aspect ratio! */
+    border-radius: 20px !important;
+    position: relative !important;
+    margin: 15px auto !important;
+    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.25) !important; /* glowing purple shadow */
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+    overflow: hidden !important;
+    transform: scale(1) !important;
+  }
+
+  .hero-mobile-poster-container:active {
+    transform: scale(1.03) !important;
+    box-shadow: 0 12px 32px rgba(160, 32, 240, 0.45) !important;
+  }
+
+  .hero-mobile-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.85) 100%) !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+  }
+
+  /* Translucent rating and views badges on card */
+  .hero-mobile-badges {
+    position: absolute !important;
+    bottom: 12px !important;
+    left: 12px !important;
+    right: 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    z-index: 3 !important;
+  }
+
+  .hero-mobile-badge-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 6px 12px !important;
+    border-radius: 12px !important;
+    background: rgba(160, 32, 240, 0.3) !important; /* translucent color */
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+  }
+
+  .hero-content {
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+  }
+
+  .hero-title {
+    font-size: var(--text-2xl) !important;
+    font-weight: 700 !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* ---- Home Page 5-Item Category Grid ---- */
+  .home-category-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important; /* using 6-span logic to center 4th and 5th items */
+    gap: 12px !important;
+    padding: 16px var(--space-md) !important;
+    margin-bottom: 10px !important;
+  }
+
+  .home-category-grid .category-grid-item {
+    grid-column: span 2 !important;
+  }
+
+  /* Centered bottom row elements for 5-item list */
+  .home-category-grid .category-grid-item:nth-child(4) {
+    grid-column: 2 / span 2 !important;
+  }
+  .home-category-grid .category-grid-item:nth-child(5) {
+    grid-column: 4 / span 2 !important;
+  }
+
+  .category-grid-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px 8px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 12px rgba(160, 32, 240, 0.1) !important;
+    cursor: pointer !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+  }
+
+  .category-grid-item:active {
+    transform: scale(1.05) !important;
+    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.25) !important;
+  }
+
+  .category-grid-icon {
+    font-size: 28px !important;
+    height: 28px !important;
+    margin-bottom: 8px !important;
+    color: #FFFFFF !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: filter 0.3s ease !important;
+  }
+
+  .category-grid-icon svg, .category-grid-icon i {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .category-grid-item:active .category-grid-icon svg,
+  .category-grid-item:active .category-grid-icon i {
+    filter: drop-shadow(0 0 6px #A020F0) !important; /* Icon glow animation */
+  }
+
+  .category-grid-label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #CFCFCF !important;
+  }
+
+  /* ---- Floating Pill-Shaped Translucent Bottom Navigation Bar ---- */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important; /* Floating position + safe area Notch padding */
+    left: 16px !important;
+    right: 16px !important;
+    height: 60px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border-radius: 40px !important;
+    padding: 10px 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 24px rgba(160, 32, 240, 0.25) !important; /* neon purple glow shadow */
+    z-index: 9500 !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+
+  /* Subtle bounce animation for active items */
+  @keyframes activeBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .bottom-nav-item {
+    padding: 0 !important;
+    height: 100% !important;
+    gap: 0 !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+  }
+
+  .bottom-nav-item.active {
+    color: #A020F0 !important;
+  }
+
+  .bottom-nav-item.active .bottom-nav-icon i,
+  .bottom-nav-item.active .bottom-nav-icon svg {
+    color: #A020F0 !important;
+    filter: drop-shadow(0 0 8px #A020F0) !important; /* Active glowing highlight */
+    animation: activeBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+  }
+
+  .bottom-nav-text {
+    display: none !important; /* Hide labels for floating pill minimalist look */
+  }
+
+  /* Offline WiFi alert card anchor position adjusting */
+  .piq-offline-card {
+    bottom: 90px !important;
+  }
+
+  /* ---- Page Layout & Element Scaling ---- */
+  .page-content {
+    padding-bottom: 95px !important; /* Avoid overlap with floating bottom nav bar */
+  }
+
+  /* Smaller landscape thumbnails for continue watching */
+  #continue-watching-row-container .movie-card {
+    width: 110px !important;
+  }
+  #continue-watching-row-container .movie-card-img-wrapper {
+    height: 62px !important;
+  }
+
+  /* ---- Dynamic Entry Row Animations ---- */
+  @keyframes slideInLeft {
+    from { transform: translateX(-50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  
+  .studios-section {
+    animation: slideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+  
+  .top10-movies-section, .top10-shows-section {
+    animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  /* ---- Ripple Pressed Animation Effect ---- */
+  .category-grid-item, .hero-btn, .genre-pill, .navbar-btn, .navbar-profile-btn, .bottom-nav-item {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .category-grid-item::after, .hero-btn::after, .genre-pill::after, .navbar-btn::after, .navbar-profile-btn::after, .bottom-nav-item::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: 80px !important;
+    height: 80px !important;
+    background: rgba(160, 32, 240, 0.25) !important;
+    border-radius: 50% !important;
+    transform: translate(-50%, -50%) scale(0) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out !important;
+  }
+
+  .category-grid-item:active::after, .hero-btn:active::after, .genre-pill:active::after, .navbar-btn:active::after, .navbar-profile-btn:active::after, .bottom-nav-item:active::after {
+    transform: translate(-50%, -50%) scale(2.2) !important;
+    opacity: 1 !important;
+    transition: 0s !important;
+  }
+}
+

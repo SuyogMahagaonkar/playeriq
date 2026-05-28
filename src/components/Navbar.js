@@ -82,6 +82,10 @@ export function createNavbar() {
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </button>
+        <div class="navbar-mobile-welcome" id="navbar-mobile-welcome">
+          <span class="welcome-text-small">Welcome Back</span>
+          <span class="welcome-text-name" id="navbar-welcome-name">Guest</span>
+        </div>
         <div class="profile-dropdown" id="profile-dropdown" role="menu">
           <!-- filled by JS -->
         </div>
@@ -325,6 +329,11 @@ export function updateNavbarAvatar(user) {
 
   const inner = avatar.querySelector('.navbar-avatar-inner') || avatar;
 
+  const welcomeName = document.getElementById('navbar-welcome-name');
+  if (welcomeName) {
+    welcomeName.textContent = user ? (user.displayName || user.email?.split('@')[0] || 'User') : 'Guest';
+  }
+
   if (user) {
     if (user.photoURL) {
       inner.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName ?? 'User'}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
@@ -354,6 +363,18 @@ export function setupNavbarEvents() {
   hamburgerBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleSidebar(true);
+  });
+
+  const searchContainer = document.getElementById('search-container');
+  searchContainer?.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768) {
+      const currentPath = window.location.hash || '#/';
+      if (!currentPath.includes('/search')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.hash = '/search';
+      }
+    }
   });
 
   const input = document.getElementById('search-input');
