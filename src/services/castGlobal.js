@@ -105,11 +105,8 @@ window._syncFloatingCastCardVisibility = function() {
   const isOnPlayerPage = hash.includes('/watch/');
 
   if (isOnPlayerPage) {
-    // Hide the floating card since the player page handles control directly
-    const card = document.getElementById('piq-floating-cast-card');
-    if (card) {
-      card.style.display = 'none';
-    }
+    // Completely unmount/dissolve the floating card when on the watch page to keep only one active player control interface
+    destroyFloatingCastCard();
   } else {
     // We are on another page, mount and show the floating control card!
     mountFloatingRemoteCard();
@@ -203,11 +200,13 @@ function updateCardProgress(currentTime, duration) {
   const liveThumb = document.querySelector('#piq-floating-cast-card #floating-cast-slider-thumb');
   const liveCurrent = document.querySelector('#piq-floating-cast-card #floating-cast-current-time');
   const liveDuration = document.querySelector('#piq-floating-cast-card #floating-cast-duration');
+  const headerProgress = document.querySelector('#piq-floating-cast-card #floating-cast-header-progress');
 
   if (liveFill) liveFill.style.setProperty('width', `${pct}%`, 'important');
   if (liveThumb) liveThumb.style.setProperty('left', `${pct}%`, 'important');
   if (liveCurrent) liveCurrent.textContent = formatTime(currentTime);
   if (liveDuration) liveDuration.textContent = formatTime(duration);
+  if (headerProgress) headerProgress.style.setProperty('width', `${pct}%`, 'important');
 }
 
 /**
@@ -281,11 +280,21 @@ export function mountFloatingRemoteCard() {
     return;
   }
 
+  // Broadcast active tab ownership claim to other tabs to prevent duplicate cards
+  if ('BroadcastChannel' in window) {
+    try {
+      const claimChannel = new BroadcastChannel('piq_cast_channel');
+      claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP' });
+      claimChannel.close();
+    } catch (e) {}
+  }
+
   // Retrieve saved placement/geometry coordinates
   const savedX = localStorage.getItem('piq_cast_card_x');
   const savedY = localStorage.getItem('piq_cast_card_y');
   const savedW = localStorage.getItem('piq_cast_card_w') || '340';
   const savedH = localStorage.getItem('piq_cast_card_h') || 'auto';
+  const isInitiallyCollapsed = localStorage.getItem('piq_cast_card_collapsed') === 'true';
 
   // Calculate default viewport centering if no coordinates are stored
   let posX = window.innerWidth - parseInt(savedW) - 40;
@@ -299,15 +308,17 @@ export function mountFloatingRemoteCard() {
 
   card = document.createElement('div');
   card.id = 'piq-floating-cast-card';
-  card.className = 'piq-floating-cast-card';
+  card.className = 'piq-floating-cast-card' + (isInitiallyCollapsed ? ' collapsed' : '');
   
+  const initialH = isInitiallyCollapsed ? '52px' : (savedH === 'auto' ? 'auto' : `${savedH}px`);
+
   // Inline placement coordinates
   card.style.cssText = `
     position: fixed !important;
     left: ${posX}px !important;
     top: ${posY}px !important;
     width: ${savedW}px !important;
-    height: ${savedH}px !important;
+    height: ${initialH}px !important;
     right: auto !important;
     bottom: auto !important;
     display: flex !important;
@@ -328,11 +339,12 @@ export function mountFloatingRemoteCard() {
         <h4 class="floating-cast-title">${title}</h4>
         <span class="floating-cast-device">Casting to ${deviceName}</span>
       </div>
-      <button class="floating-cast-close-btn" id="floating-cast-hide-btn" title="Hide Remote Overlay">
+      <button class="floating-cast-close-btn" id="floating-cast-hide-btn" title="Toggle Remote Size">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;">
           <polyline points="4 9 12 17 20 9"/>
         </svg>
       </button>
+      <div class="floating-cast-header-progress" id="floating-cast-header-progress"></div>
     </div>
 
     <!-- Body Artwork Card -->
@@ -546,8 +558,31 @@ export function mountFloatingRemoteCard() {
 
   if (hideBtn) {
     hideBtn.addEventListener('click', () => {
-      // Minimize floating remote, store collapsed preference
-      card.style.display = 'none';
+      const isCollapsed = card.classList.contains('collapsed');
+      if (isCollapsed) {
+        // Expand!
+        card.classList.remove('collapsed');
+        localStorage.setItem('piq_cast_card_collapsed', 'false');
+        
+        // Restore expanded height
+        const savedH = localStorage.getItem('piq_cast_card_h') || 'auto';
+        if (savedH && savedH !== 'auto') {
+          card.style.setProperty('height', `${savedH}px`, 'important');
+        } else {
+          card.style.setProperty('height', 'auto', 'important');
+        }
+      } else {
+        // Collapse!
+        // Save current expanded height to piq_cast_card_h before collapsing
+        const rect = card.getBoundingClientRect();
+        if (!card.classList.contains('resizing')) {
+          localStorage.setItem('piq_cast_card_h', Math.round(rect.height));
+        }
+        
+        card.classList.add('collapsed');
+        localStorage.setItem('piq_cast_card_collapsed', 'true');
+        card.style.setProperty('height', '52px', 'important');
+      }
     });
   }
 
@@ -777,6 +812,40 @@ if ('BroadcastChannel' in window) {
           });
         }
       }
+    } else if (e.data.type === 'CLAIM_CAST_CARD_OWNERSHIP') {
+      console.log('[Global Cast] Another tab claimed ownership. Unmounting card from this tab.');
+      destroyFloatingCastCard();
     }
   });
 }
+
+function claimCardOwnership() {
+  const hash = window.location.hash || '';
+  const isOnPlayerPage = hash.includes('/watch/');
+  if (isOnPlayerPage) return; // Watch page handles controls directly and doesn't show the card
+
+  if (window.cast && cast.framework) {
+    try {
+      const ctx = cast.framework.CastContext.getInstance();
+      const session = ctx.getCurrentSession();
+      if (session) {
+        // Send claim message to other tabs
+        if ('BroadcastChannel' in window) {
+          const claimChannel = new BroadcastChannel('piq_cast_channel');
+          claimChannel.postMessage({ type: 'CLAIM_CAST_CARD_OWNERSHIP' });
+          claimChannel.close();
+        }
+        // Mount/recreate card locally on the active tab
+        mountFloatingRemoteCard();
+      }
+    } catch (err) {}
+  }
+}
+
+// Wire active tab focus/visibility handlers
+window.addEventListener('focus', claimCardOwnership);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    claimCardOwnership();
+  }
+});

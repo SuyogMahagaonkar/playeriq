@@ -5409,7 +5409,7 @@
   min-height: 180px !important;
   max-height: 480px !important;
   user-select: none !important;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 
 .piq-floating-cast-card.dragging {
@@ -5849,4 +5849,54 @@
     border-color: rgba(255, 255, 255, 0.08) !important;
     box-shadow: none !important;
   }
+}
+
+/* Collapsed remote card transitions & states */
+.piq-floating-cast-card.collapsed {
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+}
+
+.piq-floating-cast-card .floating-cast-body {
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.piq-floating-cast-card.collapsed .floating-cast-body {
+  opacity: 0 !important;
+  transform: translateY(-10px) !important;
+  pointer-events: none !important;
+}
+
+.piq-floating-cast-card.collapsed .floating-cast-resize-handle {
+  display: none !important;
+}
+
+/* Chevron arrow toggle rotation micro-animation */
+.floating-cast-close-btn svg {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transform: none !important;
+}
+
+.piq-floating-cast-card.collapsed .floating-cast-close-btn svg {
+  transform: rotate(180deg) !important;
+}
+
+/* Premium Collapsed Header Progress bar */
+.floating-cast-header-progress {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  height: 2.5px !important;
+  background: linear-gradient(90deg, #a855f7 0%, #c084fc 100%) !important;
+  width: 0%;
+  display: none !important;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.6) !important;
+  transition: width 0.15s linear !important;
+}
+
+.piq-floating-cast-card.collapsed .floating-cast-header-progress {
+  display: block !important;
 }
