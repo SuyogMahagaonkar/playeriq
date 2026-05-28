@@ -1259,6 +1259,88 @@ app.get('/api/validate/sources', async (req, res) => {
   }
 });
 
+// /api/validate/sources/stream — SSE endpoint for live per-server validation updates
+// Each source check fires in parallel; results are streamed back individually as they resolve.
+app.get('/api/validate/sources/stream', async (req, res) => {
+  const { tmdbId, imdbId, type = 'movie', season = '1', episode = '1' } = req.query;
+  if (!tmdbId) return res.status(400).json({ error: 'Missing tmdbId' });
+
+  // SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx response buffering
+  res.flushHeaders();
+
+  // Helper to send SSE data frame
+  const send = (data) => {
+    try {
+      if (!res.destroyed && !res.writableEnded) {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      }
+    } catch (e) {}
+  };
+
+  // Keep-alive ping every 15 s so the connection isn't dropped by proxies
+  const pingInterval = setInterval(() => send({ type: 'ping' }), 15000);
+  req.on('close', () => clearInterval(pingInterval));
+
+  // Check server-side cache first — serve instantly, still via SSE format
+  const cacheKey = `src-validate-${type}-${tmdbId}-${season}-${episode}`;
+  const entry = cache.get(cacheKey);
+  if (entry && Date.now() - entry.ts < 60 * 60 * 1000) {
+    clearInterval(pingInterval);
+    // Push each cached result individually (simulates live feel on repeat views)
+    for (const result of entry.data) {
+      send({ type: 'result', result });
+    }
+    send({ type: 'complete', results: entry.data, cached: true });
+    res.end();
+    return;
+  }
+
+  try {
+    const allResults = [];
+
+    // Run all source checks in parallel — push each result the moment it resolves
+    const promises = VALIDATE_SOURCES.map(async (src) => {
+      const result = await checkSource(src, tmdbId, imdbId || null, type, parseInt(season), parseInt(episode));
+      allResults.push(result);
+      send({ type: 'result', result });
+      return result;
+    });
+
+    await Promise.all(promises);
+    clearInterval(pingInterval);
+
+    // Sort: available > uncertain > unavailable, then score desc
+    allResults.sort((a, b) => {
+      const aVal = a.available === true ? 2 : a.available === null ? 1 : 0;
+      const bVal = b.available === true ? 2 : b.available === null ? 1 : 0;
+      if (bVal !== aVal) return bVal - aVal;
+      return b.score - a.score;
+    });
+
+    // Mark the top available source as recommended
+    const topAvailable = allResults.find(r => r.available === true);
+    if (topAvailable) topAvailable.badge = 'recommended';
+
+    // Persist in server cache for 1 hour
+    cache.set(cacheKey, { data: allResults, ts: Date.now() });
+
+    console.log(`[SourceValidator/SSE] ${type} ${tmdbId}: ${allResults.filter(r => r.available === true).length} available, ${allResults.filter(r => r.available === null).length} uncertain, ${allResults.filter(r => r.available === false).length} unavailable`);
+
+    send({ type: 'complete', results: allResults, cached: false });
+    if (!res.writableEnded) res.end();
+  } catch (err) {
+    clearInterval(pingInterval);
+    console.error('[SourceValidator/SSE] Error:', err.message);
+    send({ type: 'error', message: err.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
 // ---- Start server ----
 app.listen(PORT, () => {
   console.log(`\n  ⚡ PlayerIQ Proxy Server running at http://localhost:${PORT}`);

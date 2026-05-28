@@ -154,3 +154,94 @@ export const SOURCE_ID_TO_INDEX = {
   multiembed:   7,
   autoembed:    8,
 };
+
+/**
+ * Streams validation results using Server-Sent Events.
+ * Calls `onSourceResult` for EACH source individually as it finishes checking
+ * (in whatever order servers respond — fastest first).
+ * Calls `onComplete` with the full sorted & ranked list when all are done.
+ *
+ * Returns the EventSource instance so the caller can close it early if needed,
+ * or null if the result was served from cache.
+ *
+ * @param {string|number} tmdbId
+ * @param {string|null}   imdbId
+ * @param {string}        type            'movie' | 'tv'
+ * @param {number}        season
+ * @param {number}        episode
+ * @param {Function}      onSourceResult  (result) => void  — called per server
+ * @param {Function}      onComplete      (results) => void — called when all done
+ * @returns {EventSource|null}
+ */
+export function streamValidateSources(tmdbId, imdbId, type = 'movie', season = 1, episode = 1, onSourceResult, onComplete) {
+  const cacheKey = `piq_sv_${type}_${tmdbId}_${season}_${episode}`;
+
+  // Serve from sessionStorage cache instantly if available
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const results = JSON.parse(cached);
+      results.forEach(r => onSourceResult(r));
+      onComplete(results);
+      return null;
+    }
+  } catch (e) {}
+
+  // If EventSource is not supported, fall back to batch fetch
+  if (typeof EventSource === 'undefined') {
+    validateSources(tmdbId, imdbId, type, season, episode)
+      .then(results => { results.forEach(r => onSourceResult(r)); onComplete(results); })
+      .catch(() => { const fb = getFallbackSources(); fb.forEach(r => onSourceResult(r)); onComplete(fb); });
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    tmdbId: String(tmdbId),
+    imdbId: imdbId || '',
+    type,
+    season: String(season),
+    episode: String(episode),
+  });
+
+  let es;
+  try {
+    es = new EventSource(`${NODE_PROXY}/api/validate/sources/stream?${params}`);
+  } catch (e) {
+    console.warn('[streamValidateSources] EventSource failed, batch fallback:', e.message);
+    validateSources(tmdbId, imdbId, type, season, episode)
+      .then(results => { results.forEach(r => onSourceResult(r)); onComplete(results); })
+      .catch(() => { const fb = getFallbackSources(); fb.forEach(r => onSourceResult(r)); onComplete(fb); });
+    return null;
+  }
+
+  es.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'result') {
+        onSourceResult(data.result);
+      } else if (data.type === 'complete') {
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(data.results)); } catch (e) {}
+        onComplete(data.results);
+        es.close();
+      } else if (data.type === 'error') {
+        console.warn('[streamValidateSources] Server signalled error, falling back');
+        const fb = getFallbackSources();
+        fb.forEach(r => onSourceResult(r));
+        onComplete(fb);
+        es.close();
+      }
+      // 'ping' frames are intentionally ignored
+    } catch (e) {}
+  };
+
+  es.onerror = () => {
+    console.warn('[streamValidateSources] SSE connection lost, batch fallback');
+    es.close();
+    validateSources(tmdbId, imdbId, type, season, episode)
+      .then(results => { results.forEach(r => onSourceResult(r)); onComplete(results); })
+      .catch(() => { const fb = getFallbackSources(); fb.forEach(r => onSourceResult(r)); onComplete(fb); });
+  };
+
+  return es;
+}
+

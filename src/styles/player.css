@@ -1408,7 +1408,6 @@
 
 /* ---- Item Name ---- */
 .sv-item-name {
-  flex: 1;
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-primary);
@@ -1417,6 +1416,42 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---- Per-server info column (name + status text) ---- */
+.sv-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Live status text shown under each server name */
+.sv-item-status {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  color: rgba(255,255,255,0.35);
+  transition: color 0.35s ease, opacity 0.35s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pulsing "Checking…" animation while check is in flight */
+.sv-item-checking .sv-item-status {
+  animation: svStatusPulse 1.5s ease-in-out infinite;
+}
+@keyframes svStatusPulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.85; }
+}
+
+/* Colour overrides once result is known */
+.sv-item-recommended .sv-item-status { color: #c4b5fd; }
+.sv-item-available   .sv-item-status { color: #22c55e; }
+.sv-item-uncertain   .sv-item-status { color: #f59e0b; }
+.sv-item-unavailable .sv-item-status { color: rgba(255,255,255,0.28); }
 
 /* ---- Badge Strips ---- */
 .sv-item-badges {

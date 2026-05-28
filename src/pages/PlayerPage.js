@@ -10,7 +10,7 @@ import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { saveProgress, getWatchHistory, getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
-import { validateSources, onValidationUpdate, getCachedResults, getFallbackSources, BADGE_CONFIG, SOURCE_ID_TO_INDEX } from '../services/SourceValidator.js';
+import { validateSources, onValidationUpdate, getCachedResults, getFallbackSources, BADGE_CONFIG, SOURCE_ID_TO_INDEX, streamValidateSources } from '../services/SourceValidator.js';
 
 // Embed sources — using TMDB ID
 // Nontongo is the primary working source (user-verified)
@@ -775,65 +775,69 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         }
 
         // ---- Background Source Validation (fires AFTER player is ready) ----
-        // Non-blocking: player is already playing. Validation runs silently,
-        // results appear automatically in the server dropdown when ready.
+        // Non-blocking: player is already playing. Validation runs silently via SSE.
+        // Each server result streams in individually — the dropdown updates in real time
+        // as each source check completes (fastest servers appear first).
         setTimeout(() => {
-          const svCacheKey = `piq_sv_${isTV ? 'tv' : 'movie'}_${activeTmdbId || id}_${season}_${episode}`;
-          const _applyValidationResults = (results) => {
-            if (!results || !results.length) return;
+          // ── Helper: update a single server item in the dropdown ──────────────────
+          const _updateSourceItem = (r) => {
             const list = document.getElementById('sv-list');
+            if (!list) return;
+            const item = list.querySelector(`.sv-item[data-id="${r.id}"]`);
+            if (!item) return;
+
+            item.classList.remove('sv-item-checking', 'sv-item-available', 'sv-item-uncertain', 'sv-item-unavailable', 'sv-item-recommended');
+            const dot  = item.querySelector('.sv-item-dot');
+            const stat = item.querySelector('.sv-item-status');
+
+            if (r.available === true) {
+              const cls = r.badge === 'recommended' ? 'sv-item-recommended' : 'sv-item-available';
+              item.classList.add(cls);
+              if (dot)  dot.className  = 'sv-item-dot sv-dot-available';
+              if (stat) stat.textContent = r.badge === 'recommended' ? 'Recommended' : 'Available';
+            } else if (r.available === null) {
+              item.classList.add('sv-item-uncertain');
+              if (dot)  dot.className  = 'sv-item-dot sv-dot-uncertain';
+              if (stat) stat.textContent = 'Uncertain';
+            } else {
+              item.classList.add('sv-item-unavailable');
+              if (dot)  dot.className  = 'sv-item-dot sv-dot-unavailable';
+              if (stat) stat.textContent = 'Unavailable';
+            }
+
+            // Render badge chips
+            const badgesEl = document.getElementById(`sv-badges-${r.id}`);
+            if (badgesEl && BADGE_CONFIG[r.badge]) {
+              const bc = BADGE_CONFIG[r.badge];
+              const speedBadge = (r.responseMs && r.responseMs < 2000 && r.available)
+                ? `<span class="sv-badge sv-badge-fast"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Fast</span>`
+                : '';
+              badgesEl.innerHTML = `<span class="sv-badge ${bc.colorClass}">${bc.label}</span>${speedBadge}`;
+            }
+          };
+
+          // ── Helper: finalise — re-sort list, update trigger button ───────────────
+          const _applyFinalSort = (results) => {
+            const list         = document.getElementById('sv-list');
             const triggerLabel = document.getElementById('sv-trigger-label');
-            const triggerDot = document.getElementById('sv-trigger-dot');
+            const triggerDot   = document.getElementById('sv-trigger-dot');
             const checkingPill = document.getElementById('sv-checking-pill');
+
+            if (checkingPill) checkingPill.style.display = 'none';
             if (!list) return;
 
-            // Hide checking pill
-            if (checkingPill) checkingPill.style.display = 'none';
+            // Re-apply any badge changes that came from the sorted final list
+            results.forEach(r => _updateSourceItem(r));
 
-            // Build an index: sourceId → result
-            const resultMap = {};
-            results.forEach(r => { resultMap[r.id] = r; });
-
-            // Update each list item in place
-            list.querySelectorAll('.sv-item').forEach(item => {
-              const srcId = item.dataset.id;
-              const r = resultMap[srcId];
-              if (!r) return;
-
-              // Update status class
-              item.classList.remove('sv-item-checking', 'sv-item-available', 'sv-item-uncertain', 'sv-item-unavailable', 'sv-item-recommended');
-              const dot = item.querySelector('.sv-item-dot');
-
-              if (r.available === true) {
-                item.classList.add(r.badge === 'recommended' ? 'sv-item-recommended' : 'sv-item-available');
-                if (dot) dot.className = 'sv-item-dot sv-dot-available';
-              } else if (r.available === null) {
-                item.classList.add('sv-item-uncertain');
-                if (dot) dot.className = 'sv-item-dot sv-dot-uncertain';
-              } else {
-                item.classList.add('sv-item-unavailable');
-                if (dot) dot.className = 'sv-item-dot sv-dot-unavailable';
-              }
-
-              // Render badges
-              const badgesEl = document.getElementById(`sv-badges-${srcId}`);
-              if (badgesEl && BADGE_CONFIG[r.badge]) {
-                const bc = BADGE_CONFIG[r.badge];
-                const speedBadge = (r.responseMs && r.responseMs < 2000 && r.available) ? `<span class="sv-badge sv-badge-fast"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Fast</span>` : '';
-                badgesEl.innerHTML = `<span class="sv-badge ${bc.colorClass}">${bc.label}</span>${speedBadge}`;
-              }
-            });
-
-            // Re-order DOM elements in the dropdown based on the sorted validation results
+            // Re-order DOM elements to match sorted order
             results.forEach(r => {
               const item = list.querySelector(`.sv-item[data-id="${r.id}"]`);
               if (item) list.appendChild(item);
             });
 
-            // Update trigger button to show top source
+            // Update trigger button label & dot colour
             const topSource = results.find(r => r.available === true) || results[0];
             if (topSource && triggerLabel) {
-              const bc = BADGE_CONFIG[topSource.badge];
               triggerLabel.textContent = topSource.name;
               if (triggerDot) {
                 triggerDot.className = topSource.available === true
@@ -845,21 +849,23 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             }
           };
 
-          // Check if already cached (instant)
-          const cached = getCachedResults(activeTmdbId || id, isTV ? 'tv' : 'movie', season, episode);
-          if (cached) { _applyValidationResults(cached); }
-          else {
-            // Show checking pill
-            const checkingPill = document.getElementById('sv-checking-pill');
-            if (checkingPill) checkingPill.style.display = 'flex';
-            // Subscribe to live updates
-            onValidationUpdate(svCacheKey, ({ results, status }) => {
-              if (status === 'checking') return;
-              _applyValidationResults(results);
-            });
-            // Fire validation
-            validateSources(activeTmdbId || id, imdbId, isTV ? 'tv' : 'movie', season, episode);
-          }
+          // ── Start validation ────────────────────────────────────────────────────
+          // streamValidateSources handles cache detection internally.
+          // For fresh checks it opens an SSE connection and calls:
+          //   onSourceResult(r)  — for each server the moment its check resolves
+          //   onComplete(all)    — once every server is done, with sorted results
+          const checkingPill = document.getElementById('sv-checking-pill');
+          if (checkingPill) checkingPill.style.display = 'flex';
+
+          streamValidateSources(
+            activeTmdbId || id,
+            imdbId,
+            isTV ? 'tv' : 'movie',
+            season,
+            episode,
+            _updateSourceItem,   // per-server live update
+            _applyFinalSort      // final sort + trigger update
+          );
         }, 0);
 
         return; // Success!
@@ -1359,7 +1365,10 @@ export async function renderPlayerPage({ params, container }) {
                   ${SOURCES.map((s, i) => `
                     <li class="sv-item sv-item-checking" data-idx="${i}" data-id="${s.id}" role="option" aria-selected="${i === currentSourceIndex}" tabindex="0">
                       <span class="sv-item-dot"></span>
-                      <span class="sv-item-name">${s.name}</span>
+                      <div class="sv-item-info">
+                        <span class="sv-item-name">${s.name}</span>
+                        <span class="sv-item-status">Checking…</span>
+                      </div>
                       <span class="sv-item-badges" id="sv-badges-${s.id}"></span>
                     </li>
                   `).join('')}
