@@ -6171,6 +6171,11 @@
    🚀 PLAYERIQ FUTURISTIC PURPLE GLASSMORPHIC MOBILE REDESIGN OVERRIDES
    ========================================================================== */
 @media (max-width: 768px) {
+  /* Hide the redundant Featured Studios Carousel Row in Mobile View */
+  #featured-studios-row-container {
+    display: none !important;
+  }
+
   /* ---- Google Fonts & Typography Override ---- */
   :root {
     --font-display: 'Poppins', sans-serif !important;
