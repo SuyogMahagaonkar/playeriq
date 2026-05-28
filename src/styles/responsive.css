@@ -3204,99 +3204,7 @@
     color: #10b981 !important;
   }
 
-  /* Global Sticky Casting Session Bar */
-  .cast-session-bar {
-    position: fixed !important;
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
-    left: 8px !important;
-    right: 8px !important;
-    height: 60px !important;
-    background: rgba(168, 85, 247, 0.15) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-    border: 1px solid rgba(168, 85, 247, 0.3) !important;
-    border-radius: 12px !important;
-    z-index: 299 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: 0 10px !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(168, 85, 247, 0.15) !important;
-    overflow: hidden !important;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    cursor: default !important;
-  }
-
-  .cast-session-details {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    flex: 1 !important;
-    min-width: 0 !important;
-  }
-
-  .cast-session-thumb {
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 6px !important;
-    object-fit: cover !important;
-    background: #000 !important;
-    flex-shrink: 0 !important;
-  }
-
-  .cast-session-info {
-    display: flex !important;
-    flex-direction: column !important;
-    min-width: 0 !important;
-  }
-
-  .cast-session-title {
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    margin: 0 !important;
-  }
-
-  .cast-session-status {
-    font-size: 9px !important;
-    color: #c084fc !important;
-    font-weight: 600 !important;
-    margin-top: 1px !important;
-  }
-
-  .cast-session-controls {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-  }
-
-  .cast-session-btn {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: #ffffff !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    padding: 0 !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
-  }
-
-  .cast-session-btn.disconnect {
-    border-color: rgba(239, 68, 68, 0.4) !important;
-    color: #f87171 !important;
-  }
-
-  .cast-session-btn.disconnect:active {
-    background: rgba(239, 68, 68, 0.2) !important;
-  }
+  /* Global Sticky Casting Session Bar styles have been refactored and relocated globally at the bottom of the stylesheet. */
 
   /* ---- Cast button active state (glows when streaming) ---- */
   #action-cast.casting-active svg,
@@ -4950,6 +4858,154 @@
   width: 0% !important;
   border-radius: 0 10px 10px 0 !important;
 }
+
+/* ==========================================================================
+   🎬 GLOBAL STICKY CASTING SESSION BAR (RESPONSIVE OVER OVERPORTS)
+   ========================================================================== */
+.cast-session-bar {
+  position: fixed !important;
+  bottom: 24px !important; /* Elegant floating card for desktop (>768px) */
+  left: 24px !important;
+  width: 380px !important; /* Beautiful Spotify-style remote card */
+  right: auto !important;
+  height: 68px !important;
+  background: rgba(15, 15, 22, 0.7) !important;
+  backdrop-filter: blur(25px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  border-radius: 14px !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(168, 85, 247, 0.18) !important;
+  overflow: hidden !important;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+  transition: transform 0.25s ease, border-color 0.25s ease !important;
+}
+
+.cast-session-bar:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+}
+
+.cast-session-details {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.cast-session-thumb {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 8px !important;
+  object-fit: cover !important;
+  background: #000 !important;
+  flex-shrink: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.cast-session-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+.cast-session-title {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+}
+
+.cast-session-status {
+  font-size: 10px !important;
+  color: #c084fc !important;
+  font-weight: 700 !important;
+  margin-top: 2px !important;
+  letter-spacing: 0.2px !important;
+}
+
+.cast-session-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.cast-session-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  transition: all 0.2s ease !important;
+}
+
+.cast-session-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: scale(1.08) !important;
+}
+
+.cast-session-btn:active {
+  transform: scale(0.92) !important;
+}
+
+.cast-session-btn.disconnect {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #f87171 !important;
+}
+
+.cast-session-btn.disconnect:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+.cast-session-btn.disconnect:active {
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Adjustments for Mobile Screens (≤767px) */
+@media (max-width: 767px) {
+  .cast-session-bar {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    height: 60px !important;
+    border-radius: 12px !important;
+    padding: 0 10px !important;
+  }
+  
+  .cast-session-thumb {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 6px !important;
+  }
+  
+  .cast-session-title {
+    font-size: 11px !important;
+  }
+  
+  .cast-session-status {
+    font-size: 9px !important;
+  }
+}
+
 
 
 
