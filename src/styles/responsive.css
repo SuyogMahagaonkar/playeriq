@@ -6520,44 +6520,44 @@
     display: none !important; /* Hide text detail summaries under the carousel exactly like the clean reference image! */
   }
 
-  /* Custom Translucent Capsule indicators Box centered under the carousel */
+  /* Custom indicators container centered directly under the carousel */
   .hero-indicators {
     position: absolute !important;
-    bottom: 8px !important;
+    bottom: 12px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     display: flex !important;
-    gap: 6px !important;
+    gap: 8px !important;
     align-items: center !important;
     justify-content: center !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    padding: 8px 14px !important;
-    border-radius: 30px !important;
-    box-shadow: 0 4px 12px rgba(160, 32, 240, 0.15) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
     z-index: 10 !important;
   }
 
+  /* Inactive dots: circular and moderately large */
   .hero-indicator {
-    width: 6px !important;
-    height: 6px !important;
+    width: 10px !important;
+    height: 10px !important;
     border-radius: 50% !important;
-    background: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(160, 32, 240, 0.35) !important;
     border: none !important;
     padding: 0 !important;
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     cursor: pointer !important;
   }
 
-  /* Stretch active indicator into a wide purple capsule matching reference */
+  /* Active pill: rounded capsule with a nested outline border and offset gap tailored in purple accent */
   .hero-indicator.active {
-    width: 28px !important;
-    height: 6px !important;
-    border-radius: 3px !important;
+    width: 38px !important;
+    height: 10px !important;
+    border-radius: 5px !important;
     background: linear-gradient(90deg, #A020F0, #6A00FF) !important;
-    box-shadow: 0 0 10px rgba(160, 32, 240, 0.8) !important;
+    outline: 1.5px solid rgba(160, 32, 240, 0.7) !important;
+    outline-offset: 2.5px !important;
+    box-shadow: 0 0 10px rgba(160, 32, 240, 0.6) !important;
   }
 
   /* ---- Home Page 6-Item Category Grid ---- */
