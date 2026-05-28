@@ -340,10 +340,62 @@ async function getSavedPlaybackTime(id, isTV, season, episode) {
   return 0;
 }
 
-// ---- Player Loader (Custom + Fallback) ----
-async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null, goToEpisode = null) {
+async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath = null, backdropPath = null, onEnded = null, onNextEpisodeClick = null, goToEpisode = null, customStartTime = null, bypassCast = false) {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
+
+  // 1. If actively casting this exact video/episode on TV, directly render the In-Player Cast Remote UI
+  if (!bypassCast && window.cast && cast.framework) {
+    try {
+      const ctx = cast.framework.CastContext.getInstance();
+      const session = ctx.getCurrentSession();
+      if (session) {
+        const activeDeviceName = session.getCastDevice()?.friendlyName || 'TV';
+        const media = session.getSessionObj().media?.[0];
+        const tvTitle = media?.media?.metadata?.title;
+        
+        // Match the casting video title to see if it matches current page content
+        if (tvTitle && title && tvTitle.toLowerCase() === title.toLowerCase()) {
+          console.log(`[Playback] Active casting session detected playing "${title}" on "${activeDeviceName}". Seamlessly rendering Cast Remote UI without interrupting TV playback.`);
+          
+          if (!_castRemotePlayer) {
+            _castRemotePlayer = new cast.framework.RemotePlayer();
+            _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
+          }
+          
+          _castOnSessionEnd = () => {
+            const tvTime = (_castRemotePlayer && _castRemotePlayer.currentTime > 0)
+              ? _castRemotePlayer.currentTime
+              : 0;
+            console.log(`[Cast] TV playback stopped. Resuming locally at t=${tvTime.toFixed(1)}s...`);
+            loadPlayer(id, isTV, season, episode, title, imdbId, posterPath, backdropPath, onEnded, onNextEpisodeClick, goToEpisode, tvTime);
+          };
+
+          // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
+          const hashChangeHandler = () => {
+            const hash = window.location.hash || '';
+            const isOnPlayerPage = hash.includes('/watch/');
+            if (!isOnPlayerPage) {
+              if (_castRemotePlayer && _castController) {
+                mountGlobalCastBar(activeDeviceName, title, backdropPath || posterPath);
+              }
+              window.removeEventListener('hashchange', hashChangeHandler);
+            }
+          };
+          window.addEventListener('hashchange', hashChangeHandler);
+
+          if (typeof window._triggerInPlayerRemoteUI === 'function') {
+            window._triggerInPlayerRemoteUI(activeDeviceName);
+            return;
+          }
+
+        }
+      }
+    } catch (e) {
+      console.warn('[Cast Page Check] Failed checking active session state:', e);
+    }
+  }
+
 
   if (!navigator.onLine || isOfflinePlayback) {
     currentPlayerMode = 'custom';
@@ -353,7 +405,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
   clearIframeTracker();
 
-  const startTime = await getSavedPlaybackTime(id, isTV, season, episode);
+  const startTime = customStartTime !== null ? customStartTime : await getSavedPlaybackTime(id, isTV, season, episode);
   if (startTime > 0) {
     console.log(`[Playback Restore] Resuming playback from ${startTime}s...`);
   }
@@ -635,6 +687,88 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             url: toAbsolute(s.url),
           }));
         }
+
+        // 2. If casting is active, automatically load the new media on the TV and render in-player remote UI
+        if (!bypassCast && window.cast && cast.framework) {
+          try {
+            const ctx = cast.framework.CastContext.getInstance();
+            const session = ctx.getCurrentSession();
+            if (session) {
+              const activeDeviceName = session.getCastDevice()?.friendlyName || 'TV';
+              console.log(`[Playback] Cast session active. Automatically loading new media "${title}" on "${activeDeviceName}"...`);
+              
+              if (!_castRemotePlayer) {
+                _castRemotePlayer = new cast.framework.RemotePlayer();
+                _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
+              }
+              
+              _castOnSessionEnd = () => {
+                const tvTime = (_castRemotePlayer && _castRemotePlayer.currentTime > 0)
+                  ? _castRemotePlayer.currentTime
+                  : startTime;
+                console.log(`[Cast] TV playback stopped. Resuming locally at t=${tvTime.toFixed(1)}s...`);
+                loadPlayer(id, isTV, season, episode, title, imdbId, posterPath, backdropPath, onEnded, onNextEpisodeClick, goToEpisode, tvTime);
+              };
+
+              // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
+              const hashChangeHandler = () => {
+                const hash = window.location.hash || '';
+                const isOnPlayerPage = hash.includes('/watch/');
+                if (!isOnPlayerPage) {
+                  if (_castRemotePlayer && _castController) {
+                    mountGlobalCastBar(activeDeviceName, title, backdropPath || posterPath);
+                  }
+                  window.removeEventListener('hashchange', hashChangeHandler);
+                }
+              };
+              window.addEventListener('hashchange', hashChangeHandler);
+
+
+              const isHls = activeStreamType === 'hls' || activeStreamUrl.includes('m3u8') || activeStreamUrl.includes('mpegURL');
+              const contentType = isHls ? 'application/x-mpegURL' : 'video/mp4';
+              const mediaInfo = new chrome.cast.media.MediaInfo(activeStreamUrl, contentType);
+              mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+              
+              const metadata = isTV
+                ? new chrome.cast.media.TvShowMediaMetadata()
+                : new chrome.cast.media.MovieMediaMetadata();
+              metadata.title = title;
+              if (isTV) {
+                metadata.season  = season;
+                metadata.episode = episode;
+              }
+              if (posterPath) {
+                metadata.images = [new chrome.cast.Image(`https://image.tmdb.org/t/p/w500${posterPath}`)];
+              }
+              mediaInfo.metadata = metadata;
+              
+              const request = new chrome.cast.media.LoadRequest(mediaInfo);
+              request.currentTime = startTime; // Start from current elapsed time
+
+              // Update loading text
+              const loadingText = document.getElementById('player-loading-text');
+              if (loadingText) {
+                loadingText.textContent = `Loading on ${activeDeviceName}...`;
+              }
+
+              session.loadMedia(request)
+                .then(() => {
+                  console.log(`[Cast] Successfully auto-loaded new media on "${activeDeviceName}"`);
+                  if (typeof window._triggerInPlayerRemoteUI === 'function') {
+                    window._triggerInPlayerRemoteUI(activeDeviceName);
+                  }
+                })
+                .catch(err => {
+                  console.error('[Cast] Auto-load failed, falling back to local playback:', err);
+                  loadPlayer(id, isTV, season, episode, title, imdbId, posterPath, backdropPath, onEnded, onNextEpisodeClick, goToEpisode, startTime, true);
+                });
+              return; // Bypasses local player initialization!
+            }
+          } catch (e) {
+            console.warn('[Cast Auto-Load Check] Failed checking session state:', e);
+          }
+        }
+
 
         const loadIframeFallback = async () => {
           console.warn('[Player] Loading fallback iframe embed...');
@@ -1069,6 +1203,13 @@ export async function renderPlayerPage({ params, container }) {
 
   enableRedirectGuard();
 
+  // Clean up any global cast session bar / remote overlay when entering watch page
+  const existingBar = document.getElementById('global-cast-session-bar');
+  if (existingBar) existingBar.remove();
+  const existingOverlay = document.getElementById('global-cast-remote-overlay');
+  if (existingOverlay) existingOverlay.remove();
+
+
   // Parse season/episode from hash query
   const hashQuery = window.location.hash.split('?')[1] || '';
   const urlParams = new URLSearchParams(hashQuery);
@@ -1360,28 +1501,391 @@ export async function renderPlayerPage({ params, container }) {
           _castRemotePlayer = new cast.framework.RemotePlayer();
           _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
 
-          // When session ends from TV side: resume local video from cast position
-          _castOnSessionEnd = () => {
-            const vid = document.getElementById('vp-video');
-            if (vid && _castRemotePlayer && _castRemotePlayer.currentTime > 0) {
-              vid.currentTime = _castRemotePlayer.currentTime;
-            }
-            if (vid) vid.play().catch(() => {});
-          };
-
           // Friendly device name from SDK (e.g. "Living Room TV", "Suyog's Android TV")
           const deviceName = castSession.getCastDevice()?.friendlyName || 'TV';
-          mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
           pushTelemetry('cast_session_started', { deviceName, mediaId: id, resumeTime });
 
           console.log(`[Cast] Streaming to "${deviceName}" — ${isTV ? `S${currentSeason}E${currentEpisode}` : ''} t=${resumeTime.toFixed(1)}s`);
+
+          // When session ends from TV side: resume local video from cast position
+          _castOnSessionEnd = () => {
+            const tvTime = (_castRemotePlayer && _castRemotePlayer.currentTime > 0)
+              ? _castRemotePlayer.currentTime
+              : resumeTime;
+            
+            console.log(`[Cast] TV playback stopped. Seamlessly resuming locally at t=${tvTime.toFixed(1)}s...`);
+            loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode, tvTime);
+          };
+
+          // Hook global trigger for page restores
+          window._triggerInPlayerRemoteUI = (devName) => renderInPlayerRemoteUI(devName);
+
+          // If currently on player watch page, replace player wrapper with remote controller immediately
+          const wrapper = document.getElementById('video-wrapper');
+          if (wrapper) {
+            if (activePlayer) {
+              const wasFullscreen = !!document.fullscreenElement;
+              activePlayer.destroy(false, wasFullscreen);
+              activePlayer = null;
+            }
+            renderInPlayerRemoteUI(deviceName);
+          } else {
+            // Otherwise show global sticky cast control bar at the bottom
+            mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
+          }
+
+          // Setup hashchange listener to mount sticky cast control bar when navigating away from player page
+          const hashChangeHandler = () => {
+            const hash = window.location.hash || '';
+            const isOnPlayerPage = hash.includes('/watch/');
+            if (!isOnPlayerPage) {
+              if (_castRemotePlayer && _castController) {
+                mountGlobalCastBar(deviceName, title, data.backdrop_path || poster_path);
+              }
+              window.removeEventListener('hashchange', hashChangeHandler);
+            }
+          };
+          window.addEventListener('hashchange', hashChangeHandler);
         })
+
         .catch((err) => {
           console.error('[Cast] loadMedia failed:', err);
           showCastUnsupportedToast('Failed to start cast. The stream may still be loading \u2014 try again shortly.');
           if (videoEl) videoEl.play().catch(() => {}); // Restore local playback
         });
     }
+
+    function renderInPlayerRemoteUI(deviceName) {
+      const wrapper = document.getElementById('video-wrapper');
+      if (!wrapper) return;
+
+      const thumbSrc = data.backdrop_path ? img.backdrop(data.backdrop_path) : (data.poster_path ? img.poster(data.poster_path) : '');
+
+      wrapper.innerHTML = `
+        <div class="in-player-cast-remote animate-fade-in">
+          <div class="in-player-cast-ambient" style="background-image: url('${thumbSrc}')"></div>
+          
+          <div class="in-player-cast-content">
+            <div class="in-player-cast-status-container">
+              <div class="in-player-cast-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="in-player-cast-icon" style="width:14px;height:14px;">
+                  <path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8A14 14 0 0 1 14 20M2 20h.01"/>
+                </svg>
+              </div>
+              <div class="in-player-cast-status-text">Playing on ${deviceName || 'TV'}</div>
+            </div>
+            
+            <h3 class="in-player-cast-title">${title}</h3>
+            
+            <!-- Timeline Scrubbing -->
+            <div class="in-player-cast-timeline">
+              <div class="in-player-cast-slider-container" id="in-player-slider-container">
+                <div class="in-player-cast-slider-track">
+                  <div class="in-player-cast-slider-fill" id="in-player-slider-fill" style="width: 0%;"></div>
+                </div>
+                <div class="in-player-cast-slider-thumb" id="in-player-slider-thumb" style="left: 0%;"></div>
+              </div>
+              <div class="in-player-cast-time-labels">
+                <span id="in-player-current-time">00:00</span>
+                <span id="in-player-duration">00:00</span>
+              </div>
+            </div>
+            
+            <!-- Controls Row -->
+            <div class="in-player-cast-playback-controls">
+              <button class="in-player-cast-btn skip-back" id="in-player-skip-back" title="Rewind 10s">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <polyline points="3 3 3 8 8 8"/>
+                  <text x="12" y="15" font-size="8" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none" style="font-family:system-ui">10</text>
+                </svg>
+              </button>
+              <button class="in-player-cast-btn playpause-btn" id="in-player-playpause" title="Play/Pause">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+              <button class="in-player-cast-btn skip-forward" id="in-player-skip-forward" title="Forward 10s">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <polyline points="21 3 21 8 16 8"/>
+                  <text x="12" y="15" font-size="8" font-weight="900" text-anchor="middle" fill="currentColor" stroke="none" style="font-family:system-ui">10</text>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Bottom Row: Volume + Disconnect -->
+            <div class="in-player-cast-bottom-row">
+              <div class="in-player-cast-volume">
+                <button class="in-player-cast-volume-btn" id="in-player-volume-btn" title="Mute/Unmute">
+                  <svg id="in-player-volume-icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  </svg>
+                  <svg id="in-player-volume-icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;display:none;">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <line x1="22" y1="9" x2="16" y2="15"/>
+                    <line x1="16" y1="9" x2="22" y2="15"/>
+                  </svg>
+                </button>
+                <div class="in-player-cast-volume-slider-wrapper" id="in-player-volume-slider-wrapper">
+                  <div class="in-player-cast-volume-track">
+                    <div class="in-player-cast-volume-fill" id="in-player-volume-fill" style="width: 80%;"></div>
+                  </div>
+                  <div class="in-player-cast-volume-thumb" id="in-player-volume-thumb" style="left: 80%;"></div>
+                </div>
+              </div>
+              
+              <button class="in-player-cast-disconnect-btn" id="in-player-disconnect-btn">
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const remotePlayPauseBtn = wrapper.querySelector('#in-player-playpause');
+      const disconnectBtn     = wrapper.querySelector('#in-player-disconnect-btn');
+      const skipBackBtn         = wrapper.querySelector('#in-player-skip-back');
+      const skipForwardBtn      = wrapper.querySelector('#in-player-skip-forward');
+      
+      const sliderContainer     = wrapper.querySelector('#in-player-slider-container');
+      const sliderFill          = wrapper.querySelector('#in-player-slider-fill');
+      const sliderThumb         = wrapper.querySelector('#in-player-slider-thumb');
+      const currentTimeLabel     = wrapper.querySelector('#in-player-current-time');
+      const durationLabel       = wrapper.querySelector('#in-player-duration');
+      
+      const volumeBtn           = wrapper.querySelector('#in-player-volume-btn');
+      const volumeSliderWrapper = wrapper.querySelector('#in-player-volume-slider-wrapper');
+      const volumeFill          = wrapper.querySelector('#in-player-volume-fill');
+      const volumeThumb         = wrapper.querySelector('#in-player-volume-thumb');
+      const volIconUnmuted       = wrapper.querySelector('#in-player-volume-icon-unmuted');
+      const volIconMuted         = wrapper.querySelector('#in-player-volume-icon-muted');
+
+      // ---- Event Handlers ----
+
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', () => {
+          stopCastingFlow(false);
+        });
+      }
+
+      if (remotePlayPauseBtn && _castController) {
+        remotePlayPauseBtn.addEventListener('click', () => {
+          _castController.playOrPause();
+        });
+      }
+
+      if (skipBackBtn && _castController && _castRemotePlayer) {
+        skipBackBtn.addEventListener('click', () => {
+          const newTime = Math.max(0, _castRemotePlayer.currentTime - 10);
+          _castRemotePlayer.currentTime = newTime;
+          _castController.seek();
+        });
+      }
+
+      if (skipForwardBtn && _castController && _castRemotePlayer) {
+        skipForwardBtn.addEventListener('click', () => {
+          const duration = _castRemotePlayer.duration || 0;
+          const newTime = Math.min(duration, _castRemotePlayer.currentTime + 10);
+          _castRemotePlayer.currentTime = newTime;
+          _castController.seek();
+        });
+      }
+
+      // Progress Slider / Scrubbing (Drag-seeking)
+      let isDraggingSlider = false;
+
+      function updateInPlayerProgress(currentTime, duration) {
+        if (isDraggingSlider) return;
+        const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+        
+        const liveFill = document.querySelector('#video-wrapper #in-player-slider-fill') || sliderFill;
+        const liveThumb = document.querySelector('#video-wrapper #in-player-slider-thumb') || sliderThumb;
+        const liveCurrent = document.querySelector('#video-wrapper #in-player-current-time') || currentTimeLabel;
+        const liveDuration = document.querySelector('#video-wrapper #in-player-duration') || durationLabel;
+
+        if (liveFill) liveFill.style.setProperty('width', `${pct}%`, 'important');
+        if (liveThumb) liveThumb.style.setProperty('left', `${pct}%`, 'important');
+        if (liveCurrent) liveCurrent.textContent = formatTime(currentTime);
+        if (liveDuration) liveDuration.textContent = formatTime(duration);
+      }
+
+      if (sliderContainer) {
+        const handleSliderDrag = (e, shouldSeek = false) => {
+          if (!_castRemotePlayer || !_castController) return;
+          const rect = sliderContainer.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const width = rect.width;
+          const pct = Math.min(1.0, Math.max(0.0, clickX / width));
+          const duration = _castRemotePlayer.duration || 0;
+          
+          const newTime = duration * pct;
+          const liveFill = document.querySelector('#video-wrapper #in-player-slider-fill') || sliderFill;
+          const liveThumb = document.querySelector('#video-wrapper #in-player-slider-thumb') || sliderThumb;
+          const liveCurrent = document.querySelector('#video-wrapper #in-player-current-time') || currentTimeLabel;
+
+          if (liveFill) liveFill.style.setProperty('width', `${pct * 100}%`, 'important');
+          if (liveThumb) liveThumb.style.setProperty('left', `${pct * 100}%`, 'important');
+          if (liveCurrent) liveCurrent.textContent = formatTime(newTime);
+          
+          if (shouldSeek) {
+            _castRemotePlayer.currentTime = newTime;
+            _castController.seek();
+          }
+        };
+        
+        sliderContainer.addEventListener('pointerdown', (e) => {
+          isDraggingSlider = true;
+          sliderContainer.setPointerCapture(e.pointerId);
+          handleSliderDrag(e);
+        });
+        
+        sliderContainer.addEventListener('pointermove', (e) => {
+          if (isDraggingSlider) handleSliderDrag(e);
+        });
+        
+        sliderContainer.addEventListener('pointerup', (e) => {
+          if (isDraggingSlider) {
+            isDraggingSlider = false;
+            sliderContainer.releasePointerCapture(e.pointerId);
+            handleSliderDrag(e, true /* shouldSeek */);
+          }
+        });
+      }
+
+      // Volume Controls (Drag-volume)
+      let isDraggingVolume = false;
+
+      function updateVolumeUI(level, isMuted) {
+        if (isDraggingVolume) return;
+        const displayLevel = isMuted ? 0 : level;
+        const liveFill = document.querySelector('#video-wrapper #in-player-volume-fill') || volumeFill;
+        const liveThumb = document.querySelector('#video-wrapper #in-player-volume-thumb') || volumeThumb;
+        const liveIconUnmuted = document.querySelector('#video-wrapper #in-player-volume-icon-unmuted') || volIconUnmuted;
+        const liveIconMuted = document.querySelector('#video-wrapper #in-player-volume-icon-muted') || volIconMuted;
+
+        if (liveFill) liveFill.style.setProperty('width', `${displayLevel * 100}%`, 'important');
+        if (liveThumb) liveThumb.style.setProperty('left', `${displayLevel * 100}%`, 'important');
+        
+        if (liveIconUnmuted && liveIconMuted) {
+          if (isMuted || level === 0) {
+            liveIconUnmuted.style.display = 'none';
+            liveIconMuted.style.display = 'block';
+          } else {
+            liveIconUnmuted.style.display = 'block';
+            liveIconMuted.style.display = 'none';
+          }
+        }
+      }
+
+      if (volumeSliderWrapper) {
+        const handleVolumeDrag = (e, shouldSet = false) => {
+          if (!_castRemotePlayer || !_castController) return;
+          const rect = volumeSliderWrapper.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const width = rect.width;
+          const pct = Math.min(1.0, Math.max(0.0, clickX / width));
+          
+          const liveFill = document.querySelector('#video-wrapper #in-player-volume-fill') || volumeFill;
+          const liveThumb = document.querySelector('#video-wrapper #in-player-volume-thumb') || volumeThumb;
+
+          if (liveFill) liveFill.style.setProperty('width', `${pct * 100}%`, 'important');
+          if (liveThumb) liveThumb.style.setProperty('left', `${pct * 100}%`, 'important');
+          
+          if (shouldSet) {
+            _castRemotePlayer.volumeLevel = pct;
+            _castController.setVolumeLevel();
+            if (_castRemotePlayer.isMuted && pct > 0) {
+              _castController.muteOrUnmute(); // Auto-unmute
+            }
+          }
+        };
+        
+        volumeSliderWrapper.addEventListener('pointerdown', (e) => {
+          isDraggingVolume = true;
+          volumeSliderWrapper.setPointerCapture(e.pointerId);
+          handleVolumeDrag(e);
+        });
+        
+        volumeSliderWrapper.addEventListener('pointermove', (e) => {
+          if (isDraggingVolume) handleVolumeDrag(e);
+        });
+        
+        volumeSliderWrapper.addEventListener('pointerup', (e) => {
+          if (isDraggingVolume) {
+            isDraggingVolume = false;
+            volumeSliderWrapper.releasePointerCapture(e.pointerId);
+            handleVolumeDrag(e, true /* shouldSet */);
+          }
+        });
+      }
+
+      if (volumeBtn && _castController) {
+        volumeBtn.addEventListener('click', () => {
+          _castController.muteOrUnmute();
+        });
+      }
+
+      // ---- Sync TV State to UI ----
+      if (_castController && _castRemotePlayer) {
+        _castController.addEventListener(
+          cast.framework.RemotePlayerEventType.IS_PAUSED_CHANGED,
+          () => {
+            if (!_castRemotePlayer) return;
+            const paused = _castRemotePlayer.isPaused;
+            if (remotePlayPauseBtn) {
+              remotePlayPauseBtn.innerHTML = paused
+                ? `<svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`
+                : `<svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+            }
+          }
+        );
+
+        _castController.addEventListener(
+          cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
+          () => {
+            if (!_castRemotePlayer) return;
+            updateInPlayerProgress(_castRemotePlayer.currentTime, _castRemotePlayer.duration || 1);
+          }
+        );
+
+        _castController.addEventListener(
+          cast.framework.RemotePlayerEventType.DURATION_CHANGED,
+          () => {
+            if (!_castRemotePlayer) return;
+            updateInPlayerProgress(_castRemotePlayer.currentTime, _castRemotePlayer.duration || 1);
+          }
+        );
+
+        _castController.addEventListener(
+          cast.framework.RemotePlayerEventType.VOLUME_LEVEL_CHANGED,
+          () => {
+            if (!_castRemotePlayer) return;
+            updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
+          }
+        );
+
+        _castController.addEventListener(
+          cast.framework.RemotePlayerEventType.IS_MUTED_CHANGED,
+          () => {
+            if (!_castRemotePlayer) return;
+            updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
+          }
+        );
+        
+        // Initial sync
+        updateInPlayerProgress(_castRemotePlayer.currentTime, _castRemotePlayer.duration || 1);
+        updateVolumeUI(_castRemotePlayer.volumeLevel, _castRemotePlayer.isMuted);
+      }
+    }
+
+    // Fresh hook for page restores / active casting detection
+    window._triggerInPlayerRemoteUI = (devName) => renderInPlayerRemoteUI(devName);
+    
+    window._triggerLocalPlaybackResume = (tvTime) => {
+      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode, tvTime);
+    };
+
+
 
     const isMobile = window.innerWidth <= 767;
     if (isMobile) {
@@ -2563,12 +3067,45 @@ function loadGoogleCastSDK() {
         resumeSavedSession:    false,
       });
 
-      // Session ended or failed (from TV side or connection drop) â†’ clean up
+      // Session lifecycle listener — handles active auto-joins, starts, and disconnect teardowns seamlessly
       ctx.addEventListener(
         cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
         (event) => {
-          const { SESSION_ENDED, SESSION_START_FAILED } = cast.framework.SessionState;
-          if (event.sessionState === SESSION_ENDED || event.sessionState === SESSION_START_FAILED) {
+          const { SESSION_STARTED, SESSION_RESUMED, SESSION_ENDED, SESSION_START_FAILED } = cast.framework.SessionState;
+          
+          if (event.sessionState === SESSION_STARTED || event.sessionState === SESSION_RESUMED) {
+            const session = ctx.getCurrentSession();
+            if (session) {
+              const deviceName = session.getCastDevice()?.friendlyName || 'TV';
+              console.log(`[Cast SDK] Connection established/resumed on "${deviceName}". Seamlessly hijacking playback and mounting Remote UI.`);
+              
+              if (!_castRemotePlayer) {
+                _castRemotePlayer = new cast.framework.RemotePlayer();
+                _castController   = new cast.framework.RemotePlayerController(_castRemotePlayer);
+              }
+              
+              _castOnSessionEnd = () => {
+                const tvTime = (_castRemotePlayer && _castRemotePlayer.currentTime > 0)
+                  ? _castRemotePlayer.currentTime
+                  : 0;
+                console.log(`[Cast] TV playback stopped. Seamlessly resuming locally at t=${tvTime.toFixed(1)}s...`);
+                if (window._triggerLocalPlaybackResume) {
+                  window._triggerLocalPlaybackResume(tvTime);
+                }
+              };
+
+              // Safely dismantle and destroy local video player immediately to prevent double-playback
+              if (activePlayer) {
+                const wasFullscreen = !!document.fullscreenElement;
+                activePlayer.destroy(false, wasFullscreen);
+                activePlayer = null;
+              }
+
+              if (typeof window._triggerInPlayerRemoteUI === 'function') {
+                window._triggerInPlayerRemoteUI(deviceName);
+              }
+            }
+          } else if (event.sessionState === SESSION_ENDED || event.sessionState === SESSION_START_FAILED) {
             if (typeof _castOnSessionEnd === 'function') {
               try { _castOnSessionEnd(); } catch (e) {}
             }
@@ -2895,10 +3432,15 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
     if (isDraggingSlider) return;
     
     const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
-    if (sliderFill) sliderFill.style.width = `${pct}%`;
-    if (sliderThumb) sliderThumb.style.left = `${pct}%`;
-    if (currentTimeLabel) currentTimeLabel.textContent = formatTime(currentTime);
-    if (durationLabel) durationLabel.textContent = formatTime(duration);
+    const liveFill = document.querySelector('#global-cast-remote-overlay #cast-remote-slider-fill') || sliderFill;
+    const liveThumb = document.querySelector('#global-cast-remote-overlay #cast-remote-slider-thumb') || sliderThumb;
+    const liveCurrent = document.querySelector('#global-cast-remote-overlay #cast-remote-current-time') || currentTimeLabel;
+    const liveDuration = document.querySelector('#global-cast-remote-overlay #cast-remote-duration') || durationLabel;
+
+    if (liveFill) liveFill.style.setProperty('width', `${pct}%`, 'important');
+    if (liveThumb) liveThumb.style.setProperty('left', `${pct}%`, 'important');
+    if (liveCurrent) liveCurrent.textContent = formatTime(currentTime);
+    if (liveDuration) liveDuration.textContent = formatTime(duration);
   }
 
   if (sliderContainer) {
@@ -2911,9 +3453,13 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
       const duration = _castRemotePlayer.duration || 0;
       
       const newTime = duration * pct;
-      if (sliderFill) sliderFill.style.width = `${pct * 100}%`;
-      if (sliderThumb) sliderThumb.style.left = `${pct * 100}%`;
-      if (currentTimeLabel) currentTimeLabel.textContent = formatTime(newTime);
+      const liveFill = document.querySelector('#global-cast-remote-overlay #cast-remote-slider-fill') || sliderFill;
+      const liveThumb = document.querySelector('#global-cast-remote-overlay #cast-remote-slider-thumb') || sliderThumb;
+      const liveCurrent = document.querySelector('#global-cast-remote-overlay #cast-remote-current-time') || currentTimeLabel;
+
+      if (liveFill) liveFill.style.setProperty('width', `${pct * 100}%`, 'important');
+      if (liveThumb) liveThumb.style.setProperty('left', `${pct * 100}%`, 'important');
+      if (liveCurrent) liveCurrent.textContent = formatTime(newTime);
       
       if (shouldSeek) {
         _castRemotePlayer.currentTime = newTime;
@@ -2947,16 +3493,21 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
     if (isDraggingVolume) return;
     
     const displayLevel = isMuted ? 0 : level;
-    if (volumeFill) volumeFill.style.width = `${displayLevel * 100}%`;
-    if (volumeThumb) volumeThumb.style.left = `${displayLevel * 100}%`;
+    const liveFill = document.querySelector('#global-cast-remote-overlay #cast-remote-volume-fill') || volumeFill;
+    const liveThumb = document.querySelector('#global-cast-remote-overlay #cast-remote-volume-thumb') || volumeThumb;
+    const liveIconUnmuted = document.querySelector('#global-cast-remote-overlay #volume-icon-unmuted') || volIconUnmuted;
+    const liveIconMuted = document.querySelector('#global-cast-remote-overlay #volume-icon-muted') || volIconMuted;
+
+    if (liveFill) liveFill.style.setProperty('width', `${displayLevel * 100}%`, 'important');
+    if (liveThumb) liveThumb.style.setProperty('left', `${displayLevel * 100}%`, 'important');
     
-    if (volIconUnmuted && volIconMuted) {
+    if (liveIconUnmuted && liveIconMuted) {
       if (isMuted || level === 0) {
-        volIconUnmuted.style.display = 'none';
-        volIconMuted.style.display = 'block';
+        liveIconUnmuted.style.display = 'none';
+        liveIconMuted.style.display = 'block';
       } else {
-        volIconUnmuted.style.display = 'block';
-        volIconMuted.style.display = 'none';
+        liveIconUnmuted.style.display = 'block';
+        liveIconMuted.style.display = 'none';
       }
     }
   }
@@ -2969,8 +3520,11 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
       const width = rect.width;
       const pct = Math.min(1.0, Math.max(0.0, clickX / width));
       
-      if (volumeFill) volumeFill.style.width = `${pct * 100}%`;
-      if (volumeThumb) volumeThumb.style.left = `${pct * 100}%`;
+      const liveFill = document.querySelector('#global-cast-remote-overlay #cast-remote-volume-fill') || volumeFill;
+      const liveThumb = document.querySelector('#global-cast-remote-overlay #cast-remote-volume-thumb') || volumeThumb;
+
+      if (liveFill) liveFill.style.setProperty('width', `${pct * 100}%`, 'important');
+      if (liveThumb) liveThumb.style.setProperty('left', `${pct * 100}%`, 'important');
       
       if (shouldSet) {
         _castRemotePlayer.volumeLevel = pct;
@@ -3048,8 +3602,8 @@ function mountGlobalCastBar(deviceName, title, imagePath) {
         const pct = (cur / dur) * 100;
         
         // Mini timeline indicator
-        const miniProgress = bar.querySelector('#cast-bar-progress-fill');
-        if (miniProgress) miniProgress.style.width = `${pct}%`;
+        const miniProgress = document.querySelector('#global-cast-session-bar #cast-bar-progress-fill') || bar.querySelector('#cast-bar-progress-fill');
+        if (miniProgress) miniProgress.style.setProperty('width', `${pct}%`, 'important');
         
         // Full timeline indicator
         updateOverlayProgress(cur, dur);
@@ -3738,9 +4292,22 @@ async function renderMobileLayout({
   if (!reusedVideo) {
     const piqAutoplay = localStorage.getItem('piq_autoplay');
     
-    if (piqAutoplay === 'true') {
+    // Check if casting is active to bypass the tap-to-play overlay
+    let isCastingActive = false;
+    if (window.cast && cast.framework) {
+      try {
+        const ctx = cast.framework.CastContext.getInstance();
+        if (ctx.getCurrentSession()) isCastingActive = true;
+      } catch (e) {}
+    }
+    if (!isCastingActive && _castRemotePlayer && _castController) {
+      isCastingActive = true;
+    }
+
+    if (piqAutoplay === 'true' || isCastingActive) {
       startPlayback(0);
     } else {
+
       const wrapper = document.getElementById('video-wrapper');
       if (wrapper) {
         const loaderEl = document.getElementById('player-loading');

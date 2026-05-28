@@ -2352,10 +2352,19 @@ export function createVideoPlayer(container, streamData, {
         clearInterval(playInterval);
         playInterval = null;
       }
+      if (video && !preserveVideo) {
+        try {
+          video.pause();
+          video.src = '';
+          video.removeAttribute('src');
+          video.load();
+        } catch (e) {}
+      }
       if (hls && !preserveVideo) {
         hls.destroy();
         hls = null;
       }
+
       window.removeEventListener('keydown', onKeyDown);
       clearTimeout(controlsTimeout);
       clearTimeout(watchdogTimeout);
