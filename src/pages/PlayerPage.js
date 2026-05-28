@@ -36,6 +36,9 @@ let isOfflinePlayback = false;
 let activeLogoUrl = null;
 let activeTmdbId = null; // Persisted TMDB ID for background validation
 
+let activeStreamUrl = null;
+let activeStreamType = null;
+
 // ---- Mini-player state (mobile only) ----
 let _miniPlayerRoute = null;  // route string e.g. '/watch/movie/12345'
 let _miniPlayerTitle = '';
@@ -1065,9 +1068,6 @@ export async function renderPlayerPage({ params, container }) {
   activeTmdbId = id; // Sync original numerical TMDB ID for background validator
 
   enableRedirectGuard();
-
-  let activeStreamUrl = null;
-  let activeStreamType = null;
 
   // Parse season/episode from hash query
   const hashQuery = window.location.hash.split('?')[1] || '';
