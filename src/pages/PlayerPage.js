@@ -492,6 +492,9 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         streamData.duration = tmdbRuntimeSeconds;
       }
 
+      activeStreamUrl = streamData.url;
+      activeStreamType = streamData.type;
+
       // Clear wrapper and init custom player
       wrapper.innerHTML = '';
       activePlayer = createVideoPlayer(
@@ -620,6 +623,9 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           return url;
         };
         streamData.url = toAbsolute(streamData.url);
+        
+        activeStreamUrl = streamData.url;
+        activeStreamType = streamData.type;
         if (Array.isArray(streamData.all_streams)) {
           streamData.all_streams = streamData.all_streams.map(s => ({
             ...s,
@@ -1060,6 +1066,9 @@ export async function renderPlayerPage({ params, container }) {
 
   enableRedirectGuard();
 
+  let activeStreamUrl = null;
+  let activeStreamType = null;
+
   // Parse season/episode from hash query
   const hashQuery = window.location.hash.split('?')[1] || '';
   const urlParams = new URLSearchParams(hashQuery);
@@ -1314,15 +1323,18 @@ export async function renderPlayerPage({ params, container }) {
       const resumeTime = videoEl ? videoEl.currentTime : 0;
       if (videoEl && !videoEl.paused) videoEl.pause();
 
-      // Always use the production proxy URL (must be publicly accessible for Cast Receiver)
-      const PROD_PROXY = 'https://playerapi.suyogmahagaonkar.me';
-      const streamPath = isTV
-        ? `/api/stream/tv/${activeTmdbId || id}/${currentSeason}/${currentEpisode}`
-        : `/api/stream/movie/${activeTmdbId || id}`;
-      const streamUrl = `${PROD_PROXY}${streamPath}`;
+      // Retrieve the actual direct streaming URL
+      const streamUrl = activeStreamUrl || (videoEl ? videoEl.src : '');
+      if (!streamUrl) {
+        showCastUnsupportedToast('No stream loaded to cast yet.');
+        return;
+      }
 
-      // Build ChromeCast MediaInfo with HLS stream
-      const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegURL');
+      const isHls = activeStreamType === 'hls' || streamUrl.includes('m3u8') || streamUrl.includes('mpegURL');
+      const contentType = isHls ? 'application/x-mpegURL' : 'video/mp4';
+
+      // Build ChromeCast MediaInfo with the direct verified streaming URL
+      const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, contentType);
       mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
 
       // Rich metadata shown on the TV screen
@@ -3301,6 +3313,9 @@ async function renderMobileLayout({
 
       const streamData = activeVideo._streamData || { url: activeVideo.src, type: type === 'hls' ? 'hls' : 'mp4' };
       streamData.isTV = isTV;
+
+      activeStreamUrl = streamData.url;
+      activeStreamType = streamData.type;
 
       activePlayer = createVideoPlayer(
         wrapper,
