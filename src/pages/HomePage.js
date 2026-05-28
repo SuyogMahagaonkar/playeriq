@@ -36,37 +36,31 @@ export async function renderHomePage({ container }) {
       <div id="home-category-grid-container" class="home-category-grid">
         <div class="category-grid-item" data-route="/category?title=Disney%2B">
           <div class="category-grid-icon">
-            <img class="studio-logo" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
-          <div class="category-grid-label">Disney+</div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Netflix">
           <div class="category-grid-icon">
-            <img class="studio-logo" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
-          <div class="category-grid-label">Netflix</div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Amazon%20Prime%20Video">
           <div class="category-grid-icon">
-            <img class="studio-logo" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
-          <div class="category-grid-label">Prime</div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Marvel">
           <div class="category-grid-icon">
-            <img class="studio-logo" src="/marvel-logo-white.svg" alt="Marvel" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="/marvel-logo-white.svg" alt="Marvel" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
-          <div class="category-grid-label">Marvel</div>
         </div>
         <div class="category-grid-item" data-route="/category?title=HBO%20Max">
           <div class="category-grid-icon">
-            <img class="studio-logo" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
-          <div class="category-grid-label">HBO Max</div>
         </div>
         <div class="category-grid-item" data-route="/studios">
           <div class="category-grid-icon"><i data-lucide="layout-grid"></i></div>
-          <div class="category-grid-label">View All</div>
         </div>
       </div>
       
