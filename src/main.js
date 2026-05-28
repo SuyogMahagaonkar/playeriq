@@ -274,7 +274,12 @@ function initApp() {
   bottomNav.className = 'mobile-bottom-nav';
   bottomNav.setAttribute('id', 'mobile-bottom-nav');
   bottomNav.innerHTML = `
-    <div class="nav-active-bubble" id="nav-active-bubble"></div>
+    <div class="nav-active-bubble" id="nav-active-bubble">
+      <div class="nav-active-circle"></div>
+      <svg class="nav-wave-bridge" width="90" height="20" viewBox="0 0 90 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 0,16 C 22.5,16 30,0 45,0 C 60,0 67.5,16 90,16 L 90,20 L 0,20 Z" fill="#10121e" />
+      </svg>
+    </div>
     <a href="#/" class="bottom-nav-item" data-path="/">
       <span class="bottom-nav-icon"><i data-lucide="home"></i></span>
       <span class="bottom-nav-text">Home</span>
@@ -320,7 +325,7 @@ function initApp() {
         bubble.style.display = 'block';
         const itemWidth = activeItem.offsetWidth;
         const itemLeft = activeItem.offsetLeft;
-        const bubbleWidth = 52; // Exact diameter in CSS
+        const bubbleWidth = 90; // Centered 90px container including the wave bridge
         const shiftX = itemLeft + (itemWidth - bubbleWidth) / 2;
         bubble.style.transform = `translate3d(${shiftX}px, 0, 0)`;
       } else {
