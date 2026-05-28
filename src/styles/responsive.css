@@ -6665,6 +6665,7 @@
   .nav-active-bubble {
     position: absolute !important;
     top: -16px !important; /* Rises up above the top edge of the tab bar */
+    left: 0 !important; /* Explicitly anchor at absolute 0 to align translate3d shifts */
     width: 90px !important;
     height: 80px !important;
     background: transparent !important; /* Container itself is transparent */
@@ -6689,7 +6690,7 @@
   /* SVG fluid wave bridge */
   .nav-wave-bridge {
     position: absolute !important;
-    top: 16px !important; /* Align exactly with the top edge of the tab bar */
+    top: 0 !important; /* Align with top of container to rise 16px above the tab bar edge */
     left: 0 !important;
     width: 90px !important;
     height: 20px !important;
