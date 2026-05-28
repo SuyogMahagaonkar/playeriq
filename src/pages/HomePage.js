@@ -127,9 +127,9 @@ export async function renderHomePage({ container }) {
   const top10Style = document.createElement('style');
   top10Style.innerHTML = `
     .top10-card:hover .top10-number {
-      -webkit-text-stroke: 4px #ff0055 !important;
-      color: rgba(255, 0, 85, 0.1) !important;
-      filter: drop-shadow(0 0 15px rgba(255, 0, 85, 0.6)) !important;
+      -webkit-text-stroke: 4px var(--accent, #a855f7) !important;
+      color: var(--accent-soft, rgba(168, 85, 247, 0.12)) !important;
+      filter: drop-shadow(0 0 15px var(--accent-glow, rgba(168, 85, 247, 0.35))) !important;
     }
   `;
   container.appendChild(top10Style);
@@ -363,7 +363,7 @@ export async function renderHomePage({ container }) {
       topMoviesMount.innerHTML = `
         <section class="content-row top10-movies-section">
           <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#ff0055;"></i> Top 10 Movies Today</h2>
+            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color: var(--accent);"></i> Top 10 Movies Today</h2>
             <a href="#/ranking" class="top10-see-all-desktop" style="color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-right: 45px;">See All <i data-lucide="chevron-right" style="width:16px;height:16px;"></i></a>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
@@ -434,7 +434,7 @@ export async function renderHomePage({ container }) {
       topSeriesMount.innerHTML = `
         <section class="content-row top10-shows-section">
           <div class="content-row-header" style="padding-left: 45px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color:#00a8e1;"></i> Top 10 Shows Today</h2>
+            <h2 class="content-row-title"><i data-lucide="trending-up" class="search-section-icon" style="color: var(--accent);"></i> Top 10 Shows Today</h2>
             <a href="#/ranking" class="top10-see-all-desktop" style="color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-right: 45px;">See All <i data-lucide="chevron-right" style="width:16px;height:16px;"></i></a>
           </div>
           <div class="content-row-scroll-wrapper" style="position: relative;">
