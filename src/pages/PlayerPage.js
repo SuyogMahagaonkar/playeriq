@@ -1185,6 +1185,27 @@ export async function renderPlayerPage({ params, container }) {
       } catch (err) {
         console.warn('[PlayerPage] Matching failed:', err);
       }
+    } else if (String(id).startsWith('mb_') && navigator.onLine) {
+      const title = data.title || data.name;
+      const year = (data.release_date || data.first_air_date || '').slice(0, 4);
+      try {
+        const apiKey = '8e4ad9e56e31ab079517b5be6965b477';
+        const cleanTitle = title.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+        const searchType = isTV ? 'tv' : 'movie';
+        const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${apiKey}&query=${encodeURIComponent(cleanTitle)}${year ? `&year=${year}` : ''}`;
+        const searchRes = await fetch(url);
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const results = searchData.results || [];
+          if (results.length > 0) {
+            const resolvedTmdbId = results[0].id;
+            activeTmdbId = resolvedTmdbId;
+            console.log(`[PlayerPage] Resolved MovieBox ID ${id} ("${title}") to TMDB ID ${resolvedTmdbId}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[PlayerPage] MovieBox to TMDB ID resolution failed:', err);
+      }
     }
 
     // Re-check completed downloads list with the newly resolved activeId
