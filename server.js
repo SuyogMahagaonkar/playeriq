@@ -1023,6 +1023,242 @@ app.post('/api/download/revoke', (req, res) => {
   });
 });
 
+// ========================================
+// ---- Intelligent Source Validator ----
+// ========================================
+
+// Source definitions mirrored from PlayerPage.js
+const VALIDATE_SOURCES = [
+  { id: 'nontongo',      name: 'Nontongo',                  tag: 'General' },
+  { id: 'streamimdb',   name: 'StreamIMDB',                 tag: 'General' },
+  { id: 'vidsrc_to',    name: 'VidSrc TO',                  tag: 'Dual Audio' },
+  { id: 'smashystream', name: 'SmashyStream',               tag: 'Indian' },
+  { id: 'superembed',   name: 'SuperEmbed',                  tag: 'General' },
+  { id: 'vidsrc_cc',    name: 'VidSrc CC',                  tag: 'General' },
+  { id: 'embed_su',     name: 'Embed SU',                   tag: 'General' },
+  { id: 'multiembed',   name: 'MultiEmbed',                 tag: 'General' },
+  { id: 'autoembed',    name: 'AutoEmbed',                  tag: 'General' },
+];
+
+function buildSourceUrl(sourceId, tmdbId, imdbId, type, season, episode) {
+  const id = tmdbId;
+  const iid = imdbId || id;
+  const s = season || 1;
+  const e = episode || 1;
+  if (type === 'tv') {
+    switch (sourceId) {
+      case 'nontongo':      return `https://www.nontongo.win/embed/tv/${id}/${s}/${e}`;
+      case 'streamimdb':    return `https://streamimdb.ru/embed/tv/${iid}/${s}/${e}`;
+      case 'vidsrc_to':     return `https://vidsrc.to/embed/tv/${id}/${s}/${e}`;
+      case 'smashystream':  return `https://embed.smashystream.com/playere.php?tmdb=${id}&season=${s}&episode=${e}`;
+      case 'superembed':    return `https://multiembed.mov/direct/super.php?video_id=${id}&tmdb=1&s=${s}&e=${e}`;
+      case 'vidsrc_cc':     return `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+      case 'embed_su':      return `https://embed.su/embed/tv/${id}/${s}/${e}`;
+      case 'multiembed':    return `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`;
+      case 'autoembed':     return `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`;
+    }
+  }
+  // Default: movie
+  switch (sourceId) {
+    case 'nontongo':      return `https://www.nontongo.win/embed/movie/${id}`;
+    case 'streamimdb':    return `https://streamimdb.ru/embed/movie/${iid}`;
+    case 'vidsrc_to':     return `https://vidsrc.to/embed/movie/${id}`;
+    case 'smashystream':  return `https://embed.smashystream.com/playere.php?tmdb=${id}`;
+    case 'superembed':    return `https://multiembed.mov/direct/super.php?video_id=${id}&tmdb=1`;
+    case 'vidsrc_cc':     return `https://vidsrc.cc/v2/embed/movie/${id}`;
+    case 'embed_su':      return `https://embed.su/embed/movie/${id}`;
+    case 'multiembed':    return `https://multiembed.mov/?video_id=${id}&tmdb=1`;
+    case 'autoembed':     return `https://player.autoembed.cc/embed/movie/${id}`;
+  }
+  return null;
+}
+
+async function checkSource(source, tmdbId, imdbId, type, season, episode) {
+  const url = buildSourceUrl(source.id, tmdbId, imdbId, type, season, episode);
+  if (!url) return { ...source, available: false, score: 0, badge: 'unavailable', reason: 'no_url' };
+
+  const startTime = Date.now();
+  const TIMEOUT = 5000;
+
+  try {
+    let available = false;
+    let badge = 'available';
+    let reason = 'ok';
+
+    // --- Per-source detection strategy ---
+    if (source.id === 'nontongo') {
+      // Fetch full HTML and check for explicit "Not Available" marker
+      const { data, status } = await axios.get(url, {
+        timeout: TIMEOUT,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        maxRedirects: 5,
+      });
+      if (status !== 200) { available = false; reason = `http_${status}`; }
+      else {
+        // Nontongo puts a gray "Not Available" span in the genre div when content is absent
+        const isNotAvailable = /Not Available/i.test(data) && /border:1px solid #666/i.test(data);
+        available = !isNotAvailable;
+        reason = isNotAvailable ? 'content_not_found' : 'player_ready';
+      }
+
+    } else if (source.id === 'streamimdb') {
+      // StreamIMDB needs IMDB ID — if no IMDB ID, skip it
+      if (!imdbId) {
+        return { ...source, url, available: false, score: 0, badge: 'unavailable', reason: 'no_imdb_id', responseMs: 0 };
+      }
+      const { status } = await axios.head(url, {
+        timeout: TIMEOUT,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        maxRedirects: 5,
+        validateStatus: () => true,
+      });
+      available = status === 200;
+      reason = `http_${status}`;
+
+    } else if (source.id === 'vidsrc_to') {
+      // VidSrc TO wraps vsembed.ru — fetch outer page, extract inner src, then HEAD it
+      const { data, status } = await axios.get(url, {
+        timeout: TIMEOUT,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        maxRedirects: 5,
+        validateStatus: () => true,
+      });
+      if (status !== 200) { available = false; reason = `outer_http_${status}`; }
+      else {
+        // Extract inner iframe src from the response
+        const innerMatch = data.match(/iframe[^>]+src=["']([^"']+vsembed[^"']+)["']/i)
+          || data.match(/iframe[^>]+src=["']([^"']+embed[^"']+)["']/i);
+        if (innerMatch) {
+          try {
+            const innerRes = await axios.head(innerMatch[1], {
+              timeout: 3000,
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+              validateStatus: () => true,
+            });
+            available = innerRes.status === 200;
+            reason = `inner_http_${innerRes.status}`;
+          } catch {
+            // inner HEAD failed — but outer page loaded. Mark uncertain.
+            available = null;
+            badge = 'uncertain';
+            reason = 'inner_check_failed';
+          }
+        } else {
+          // No inner iframe found — mark uncertain (JS-rendered?)
+          available = null;
+          badge = 'uncertain';
+          reason = 'no_inner_iframe';
+        }
+      }
+
+    } else if (source.id === 'smashystream') {
+      // SmashyStream is a React SPA — always returns 200. Cannot detect availability.
+      // Mark as Uncertain always.
+      const { status } = await axios.head(url, {
+        timeout: TIMEOUT,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        validateStatus: () => true,
+      });
+      available = status === 200 ? null : false; // null = uncertain (SPA)
+      badge = status === 200 ? 'uncertain' : 'unavailable';
+      reason = status === 200 ? 'spa_cannot_verify' : `http_${status}`;
+
+    } else {
+      // All others: simple HEAD request
+      const { status } = await axios.head(url, {
+        timeout: TIMEOUT,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        maxRedirects: 5,
+        validateStatus: () => true,
+      });
+      available = status === 200 || status === 206;
+      reason = `http_${status}`;
+      if (!available) badge = 'unavailable';
+    }
+
+    const responseMs = Date.now() - startTime;
+
+    // --- Scoring ---
+    let score = 0;
+    if (available === true)  score += 50;
+    else if (available === null) score += 20; // uncertain but reachable
+    else score = 0; // unavailable
+
+    if (source.id === 'smashystream') score += 20; // Indian content bonus
+    if (source.id === 'vidsrc_to')    score += 15; // Dual audio bonus
+    if (responseMs < 2000 && available) score += 10; // Fast bonus
+    else if (responseMs < 3500 && available) score += 5;
+
+    // Set badge based on final state
+    if (available === true) {
+      if (score >= 75) badge = 'recommended'; // Will be overridden on top-1 below
+      else badge = 'available';
+      if (source.id === 'smashystream') badge = 'indian';
+      if (source.id === 'vidsrc_to')    badge = 'dual_audio';
+    } else if (available === null) {
+      badge = 'uncertain';
+    } else {
+      badge = 'unavailable';
+    }
+
+    return { ...source, url, available, score, badge, reason, responseMs };
+
+  } catch (err) {
+    const responseMs = Date.now() - startTime;
+    let reason = 'error';
+    if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') reason = 'dns_failure';
+    else if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') reason = 'timeout';
+    else if (err.response?.status) reason = `http_${err.response.status}`;
+    return { ...source, url, available: false, score: 0, badge: 'unavailable', reason, responseMs };
+  }
+}
+
+async function validateAllSources(tmdbId, imdbId, type, season, episode) {
+  // Run all checks in parallel
+  const results = await Promise.all(
+    VALIDATE_SOURCES.map(src => checkSource(src, tmdbId, imdbId, type, season, episode))
+  );
+
+  // Sort: available > uncertain > unavailable, then by score desc
+  results.sort((a, b) => {
+    const aVal = a.available === true ? 2 : a.available === null ? 1 : 0;
+    const bVal = b.available === true ? 2 : b.available === null ? 1 : 0;
+    if (bVal !== aVal) return bVal - aVal;
+    return b.score - a.score;
+  });
+
+  // Mark the single top available source as 'recommended'
+  const topAvailable = results.find(r => r.available === true);
+  if (topAvailable) topAvailable.badge = 'recommended';
+
+  console.log(`[SourceValidator] Results for ${type} ${tmdbId}: ${results.filter(r => r.available === true).length} available, ${results.filter(r => r.available === null).length} uncertain, ${results.filter(r => r.available === false).length} unavailable`);
+  return results;
+}
+
+// /api/validate/sources endpoint — runs parallel iframe availability checks
+app.get('/api/validate/sources', async (req, res) => {
+  const { tmdbId, imdbId, type = 'movie', season = '1', episode = '1' } = req.query;
+  if (!tmdbId) return res.status(400).json({ error: 'Missing tmdbId' });
+
+  const cacheKey = `src-validate-${type}-${tmdbId}-${season}-${episode}`;
+
+  // Check cache (1-hour TTL for source validation results)
+  const entry = cache.get(cacheKey);
+  if (entry && Date.now() - entry.ts < 60 * 60 * 1000) {
+    return res.json({ results: entry.data, cached: true });
+  }
+
+  try {
+    const results = await validateAllSources(tmdbId, imdbId || null, type, parseInt(season), parseInt(episode));
+    // Cache for 1 hour
+    cache.set(cacheKey, { data: results, ts: Date.now() });
+    res.json({ results, cached: false });
+  } catch (err) {
+    console.error('[SourceValidator] Error:', err.message);
+    res.status(500).json({ error: 'Validation failed', message: err.message });
+  }
+});
+
 // ---- Start server ----
 app.listen(PORT, () => {
   console.log(`\n  ⚡ PlayerIQ Proxy Server running at http://localhost:${PORT}`);

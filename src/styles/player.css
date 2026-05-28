@@ -1155,3 +1155,346 @@
     padding: var(--space-lg) var(--space-2xl) !important;
   }
 }
+
+/* ==========================================================================
+   🤖 INTELLIGENT SOURCE VALIDATOR — Smart Server Dropdown
+   ========================================================================== */
+
+/* ---- Wrapper ---- */
+.sv-source-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Trigger Button ---- */
+.sv-source-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  user-select: none;
+  font-family: var(--font-display);
+}
+
+.sv-source-trigger:hover,
+.sv-source-trigger.sv-trigger-open {
+  background: rgba(147, 51, 234, 0.12);
+  border-color: rgba(147, 51, 234, 0.45);
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.2);
+}
+
+.sv-trigger-arrow {
+  opacity: 0.6;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+.sv-source-trigger.sv-trigger-open .sv-trigger-arrow {
+  transform: rotate(180deg);
+}
+
+/* ---- Status Dots (in trigger button) ---- */
+.sv-trigger-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.4s ease;
+}
+
+.sv-dot-checking {
+  background: rgba(255, 255, 255, 0.3);
+  animation: svDotPulse 1.2s ease-in-out infinite;
+}
+.sv-dot-available  { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+.sv-dot-uncertain  { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.sv-dot-unavailable{ background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+
+@keyframes svDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* ---- Dropdown Panel ---- */
+.sv-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: rgba(12, 12, 20, 0.92);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  transform-origin: top right;
+  transition:
+    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sv-dropdown.sv-dropdown-open {
+  pointer-events: all;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ---- Dropdown Header ---- */
+.sv-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sv-dropdown-header svg {
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ---- Checking Pill ---- */
+.sv-checking-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  color: rgba(168, 85, 247, 0.9);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sv-spin {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid rgba(168, 85, 247, 0.3);
+  border-top-color: rgba(168, 85, 247, 0.9);
+  border-radius: 50%;
+  animation: svSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes svSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Source List ---- */
+.sv-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.sv-list::-webkit-scrollbar { width: 3px; }
+.sv-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+/* ---- Source Item ---- */
+.sv-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  position: relative;
+  margin-bottom: 2px;
+}
+
+.sv-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.sv-item[aria-selected="true"] {
+  background: rgba(147, 51, 234, 0.1);
+  border-color: rgba(147, 51, 234, 0.2);
+}
+
+/* Per-state styling */
+.sv-item-checking {
+  opacity: 0.55;
+}
+.sv-item-checking::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: svShimmer 1.5s infinite;
+}
+
+@keyframes svShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sv-item-recommended {
+  background: rgba(147, 51, 234, 0.1) !important;
+  border-color: rgba(147, 51, 234, 0.35) !important;
+  box-shadow: 0 0 16px rgba(147, 51, 234, 0.1), 0 0 0 1px rgba(147, 51, 234, 0.15) inset;
+}
+
+.sv-item-recommended .sv-item-name {
+  color: #c4b5fd;
+  font-weight: 700;
+}
+
+.sv-item-available .sv-item-name { color: #f1f1f1; }
+.sv-item-uncertain .sv-item-name { color: rgba(255,255,255,0.7); }
+.sv-item-unavailable {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.sv-item-unavailable .sv-item-name { text-decoration: line-through; color: rgba(255,255,255,0.4); }
+.sv-item-unavailable:hover {
+  background: rgba(239, 68, 68, 0.04);
+  border-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Shake animation for clicking unavailable */
+@keyframes svShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.sv-item-shake { animation: svShake 0.4s ease; }
+
+/* ---- Status Dot (in list item) ---- */
+.sv-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.2);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+/* ---- Item Name ---- */
+.sv-item-name {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Badge Strips ---- */
+.sv-item-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.sv-badge-recommended {
+  background: rgba(147, 51, 234, 0.2);
+  color: #c4b5fd;
+  border: 1px solid rgba(147, 51, 234, 0.4);
+}
+.sv-badge-available {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.sv-badge-dual {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.sv-badge-indian {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fdba74;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+.sv-badge-uncertain {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.sv-badge-unavailable {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.sv-badge-fast {
+  background: rgba(6, 182, 212, 0.12);
+  color: #67e8f9;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+/* ---- Mobile overrides ---- */
+@media (max-width: 480px) {
+  .sv-dropdown {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0;
+    transform-origin: bottom center;
+    transform: translateY(10px) scale(0.98);
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  .sv-dropdown.sv-dropdown-open {
+    transform: translateY(0) scale(1);
+  }
+  .sv-source-trigger {
+    padding: 5px 10px !important;
+    font-size: 0.72rem !important;
+    gap: 5px !important;
+  }
+}

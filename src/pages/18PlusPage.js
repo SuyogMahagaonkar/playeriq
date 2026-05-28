@@ -29,17 +29,17 @@ export async function render18PlusPage({ container }) {
 
   container.innerHTML = `
     <div class="movie-grid-page adult-zone-page animate-fade-in">
-      <div class="movie-grid-header adult-header" style="background: linear-gradient(135deg, rgba(255, 0, 85, 0.15) 0%, rgba(102, 0, 34, 0.05) 100%); border: 1px solid rgba(255, 0, 85, 0.2); padding: 30px; border-radius: 16px; margin-bottom: 30px;">
+      <div class="movie-grid-header adult-header" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(88, 28, 135, 0.05) 100%); border: 1px solid rgba(168, 85, 247, 0.2); padding: 30px; border-radius: 16px; margin-bottom: 30px;">
         <div style="display:flex; align-items:center; gap: 15px; margin-bottom: 8px;">
-          <span style="background: #ff0055; color: #fff; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(255,0,85,0.4);">18+ ONLY</span>
-          <h1 class="movie-grid-title" style="margin:0; text-shadow: 0 0 10px rgba(255,0,85,0.3);">Adult Premium Zone</h1>
+          <span style="background: var(--accent); color: #fff; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(168,85,247,0.4);">18+ ONLY</span>
+          <h1 class="movie-grid-title" style="margin:0; text-shadow: 0 0 10px rgba(168,85,247,0.3);">Adult Premium Zone</h1>
         </div>
         <p style="color: var(--text-dim); margin: 0; font-size: 15px; line-height: 1.5;">Welcome to the premium adult streaming library. Access global erotic hits, Vivamax collections, Indian softcore, and JAV/Hentai releases uncensored.</p>
       </div>
 
       <div class="genre-pills" id="adult-tabs" style="display:flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px;">
         ${TABS.map(tab => `
-          <button class="genre-pill ${currentTab === tab.id ? 'active' : ''}" data-tab="${tab.id}" style="${currentTab === tab.id ? 'background: #ff0055 !important; border-color: #ff0055 !important;' : ''}">
+          <button class="genre-pill ${currentTab === tab.id ? 'active' : ''}" data-tab="${tab.id}" style="${currentTab === tab.id ? 'background: var(--accent) !important; border-color: var(--accent) !important;' : ''}">
             ${tab.name}
           </button>
         `).join('')}
@@ -54,9 +54,9 @@ export async function render18PlusPage({ container }) {
   const styleEl = document.createElement('style');
   styleEl.innerHTML = `
     .genre-pill.active {
-      background: #ff0055 !important;
-      border-color: #ff0055 !important;
-      box-shadow: 0 4px 15px rgba(255,0,85,0.4) !important;
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      box-shadow: 0 4px 15px rgba(168,85,247,0.4) !important;
     }
   `;
   container.appendChild(styleEl);

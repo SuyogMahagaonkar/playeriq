@@ -939,12 +939,12 @@ export async function renderSettingsPage({ container }) {
         transition: all 0.2s !important;
       }
       .pin-input-row input:focus {
-        border-color: #ff0055 !important;
-        background: rgba(255, 0, 85, 0.05) !important;
-        box-shadow: 0 0 10px rgba(255, 0, 85, 0.2) !important;
+        border-color: var(--accent) !important;
+        background: rgba(168, 85, 247, 0.05) !important;
+        box-shadow: 0 0 10px rgba(168, 85, 247, 0.2) !important;
       }
       .pin-error-msg {
-        color: #ff3366;
+        color: #ef4444;
         font-size: 13px;
         margin-bottom: 15px;
         min-height: 18px;
@@ -972,11 +972,11 @@ export async function renderSettingsPage({ container }) {
         background: rgba(255, 255, 255, 0.12) !important;
       }
       .pin-btn-confirm {
-        background: #ff0055 !important;
+        background: var(--accent) !important;
         color: #fff !important;
       }
       .pin-btn-confirm:hover {
-        background: #e6004c !important;
+        background: #9333ea !important;
       }
     `;
     document.head.appendChild(styleEl);
@@ -1104,7 +1104,7 @@ export async function renderSettingsPage({ container }) {
     const containerActions = container.querySelector('#parental-pin-actions');
     if (!containerActions) return;
     containerActions.innerHTML = parentalPin 
-      ? `<a href="#" id="change-parental-pin" style="color: #ff0055; text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block;">Change Parental PIN</a>`
+      ? `<a href="#" id="change-parental-pin" style="color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; display: inline-block;">Change Parental PIN</a>`
       : '';
     
     container.querySelector('#change-parental-pin')?.addEventListener('click', async (e) => {

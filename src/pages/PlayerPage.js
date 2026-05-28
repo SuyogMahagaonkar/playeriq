@@ -10,6 +10,7 @@ import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { saveProgress, getWatchHistory, getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
+import { validateSources, onValidationUpdate, getCachedResults, getFallbackSources, BADGE_CONFIG, SOURCE_ID_TO_INDEX } from '../services/SourceValidator.js';
 
 // Embed sources — using TMDB ID
 // Nontongo is the primary working source (user-verified)
@@ -33,6 +34,7 @@ let activePlayer = null;
 let iframeInterval = null;
 let isOfflinePlayback = false;
 let activeLogoUrl = null;
+let activeTmdbId = null; // Persisted TMDB ID for background validation
 
 // ---- Mini-player state (mobile only) ----
 let _miniPlayerRoute = null;  // route string e.g. '/watch/movie/12345'
@@ -246,7 +248,8 @@ async function cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes) {
 
 function getEmbedUrl(tmdbId, isTV, season = 1, episode = 1, imdbId = null) {
   const source = SOURCES[currentSourceIndex] || SOURCES[0];
-  return isTV ? source.getTVUrl(tmdbId, season, episode, imdbId) : source.getMovieUrl(tmdbId, imdbId);
+  const realId = activeTmdbId || tmdbId;
+  return isTV ? source.getTVUrl(realId, season, episode, imdbId) : source.getMovieUrl(realId, imdbId);
 }
 
 // ---- Redirect Protection ----
@@ -771,6 +774,94 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           _miniPlayerCleanup = () => window.removeEventListener('hashchange', hashChangeHandler);
         }
 
+        // ---- Background Source Validation (fires AFTER player is ready) ----
+        // Non-blocking: player is already playing. Validation runs silently,
+        // results appear automatically in the server dropdown when ready.
+        setTimeout(() => {
+          const svCacheKey = `piq_sv_${isTV ? 'tv' : 'movie'}_${activeTmdbId || id}_${season}_${episode}`;
+          const _applyValidationResults = (results) => {
+            if (!results || !results.length) return;
+            const list = document.getElementById('sv-list');
+            const triggerLabel = document.getElementById('sv-trigger-label');
+            const triggerDot = document.getElementById('sv-trigger-dot');
+            const checkingPill = document.getElementById('sv-checking-pill');
+            if (!list) return;
+
+            // Hide checking pill
+            if (checkingPill) checkingPill.style.display = 'none';
+
+            // Build an index: sourceId → result
+            const resultMap = {};
+            results.forEach(r => { resultMap[r.id] = r; });
+
+            // Update each list item in place
+            list.querySelectorAll('.sv-item').forEach(item => {
+              const srcId = item.dataset.id;
+              const r = resultMap[srcId];
+              if (!r) return;
+
+              // Update status class
+              item.classList.remove('sv-item-checking', 'sv-item-available', 'sv-item-uncertain', 'sv-item-unavailable', 'sv-item-recommended');
+              const dot = item.querySelector('.sv-item-dot');
+
+              if (r.available === true) {
+                item.classList.add(r.badge === 'recommended' ? 'sv-item-recommended' : 'sv-item-available');
+                if (dot) dot.className = 'sv-item-dot sv-dot-available';
+              } else if (r.available === null) {
+                item.classList.add('sv-item-uncertain');
+                if (dot) dot.className = 'sv-item-dot sv-dot-uncertain';
+              } else {
+                item.classList.add('sv-item-unavailable');
+                if (dot) dot.className = 'sv-item-dot sv-dot-unavailable';
+              }
+
+              // Render badges
+              const badgesEl = document.getElementById(`sv-badges-${srcId}`);
+              if (badgesEl && BADGE_CONFIG[r.badge]) {
+                const bc = BADGE_CONFIG[r.badge];
+                const speedBadge = (r.responseMs && r.responseMs < 2000 && r.available) ? `<span class="sv-badge sv-badge-fast"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Fast</span>` : '';
+                badgesEl.innerHTML = `<span class="sv-badge ${bc.colorClass}">${bc.label}</span>${speedBadge}`;
+              }
+            });
+
+            // Re-order DOM elements in the dropdown based on the sorted validation results
+            results.forEach(r => {
+              const item = list.querySelector(`.sv-item[data-id="${r.id}"]`);
+              if (item) list.appendChild(item);
+            });
+
+            // Update trigger button to show top source
+            const topSource = results.find(r => r.available === true) || results[0];
+            if (topSource && triggerLabel) {
+              const bc = BADGE_CONFIG[topSource.badge];
+              triggerLabel.textContent = topSource.name;
+              if (triggerDot) {
+                triggerDot.className = topSource.available === true
+                  ? 'sv-trigger-dot sv-dot-available'
+                  : topSource.available === null
+                    ? 'sv-trigger-dot sv-dot-uncertain'
+                    : 'sv-trigger-dot sv-dot-unavailable';
+              }
+            }
+          };
+
+          // Check if already cached (instant)
+          const cached = getCachedResults(activeTmdbId || id, isTV ? 'tv' : 'movie', season, episode);
+          if (cached) { _applyValidationResults(cached); }
+          else {
+            // Show checking pill
+            const checkingPill = document.getElementById('sv-checking-pill');
+            if (checkingPill) checkingPill.style.display = 'flex';
+            // Subscribe to live updates
+            onValidationUpdate(svCacheKey, ({ results, status }) => {
+              if (status === 'checking') return;
+              _applyValidationResults(results);
+            });
+            // Fire validation
+            validateSources(activeTmdbId || id, imdbId, isTV ? 'tv' : 'movie', season, episode);
+          }
+        }, 0);
+
         return; // Success!
       } else {
         console.warn('Backend stream extraction failed, falling back to iframe');
@@ -958,6 +1049,8 @@ function setupKeyboardShortcuts(config) {
 export async function renderPlayerPage({ params, container }) {
   const { type, id } = params;
   const isTV = type === 'tv';
+
+  activeTmdbId = id; // Sync original numerical TMDB ID for background validator
 
   enableRedirectGuard();
 
@@ -1226,11 +1319,32 @@ export async function renderPlayerPage({ params, container }) {
               <option value="custom" ${currentPlayerMode === 'custom' ? 'selected' : ''}>Custom Player</option>
               <option value="embed" ${currentPlayerMode === 'embed' ? 'selected' : ''}>Iframe Embed</option>
             </select>
-            <select class="player-source-select" id="source-select" title="Embed Source" style="display: ${currentPlayerMode === 'custom' ? 'none' : 'inline-block'}; margin-left: 8px;">
-              ${SOURCES.map((s, i) => `
-                <option value="${i}" ${i === currentSourceIndex ? 'selected' : ''}>${s.name}</option>
-              `).join('')}
-            </select>
+            <!-- Smart Source Selector — populated & updated by SourceValidator -->
+            <div class="sv-source-wrapper" id="sv-source-wrapper" style="display: ${currentPlayerMode === 'custom' ? 'none' : 'flex'}; margin-left: 8px; position: relative;">
+              <button class="sv-source-trigger" id="sv-source-trigger" title="Select Streaming Server">
+                <span class="sv-trigger-dot sv-dot-checking" id="sv-trigger-dot"></span>
+                <span id="sv-trigger-label">Checking servers…</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sv-trigger-arrow"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+              <div class="sv-dropdown" id="sv-dropdown" aria-hidden="true">
+                <div class="sv-dropdown-header">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07"/><path d="M4.93 4.93A10 10 0 0 0 19.07 19.07"/></svg>
+                  <span>Streaming Servers</span>
+                  <span class="sv-checking-pill" id="sv-checking-pill" style="display:none">
+                    <span class="sv-spin"></span> Checking…
+                  </span>
+                </div>
+                <ul class="sv-list" id="sv-list" role="listbox">
+                  ${SOURCES.map((s, i) => `
+                    <li class="sv-item sv-item-checking" data-idx="${i}" data-id="${s.id}" role="option" aria-selected="${i === currentSourceIndex}" tabindex="0">
+                      <span class="sv-item-dot"></span>
+                      <span class="sv-item-name">${s.name}</span>
+                      <span class="sv-item-badges" id="sv-badges-${s.id}"></span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1729,21 +1843,77 @@ export async function renderPlayerPage({ params, container }) {
     // Fullscreen button
     document.getElementById('player-fs-btn')?.addEventListener('click', toggleFullscreen);
 
-    // Source selector
-    document.getElementById('source-select')?.addEventListener('change', (e) => {
-      currentSourceIndex = parseInt(e.target.value);
-      localStorage.setItem('piq_source', currentSourceIndex);
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
-    });
+    // Smart Source Selector — dropdown toggle + item selection
+    (() => {
+      const wrapper = document.getElementById('sv-source-wrapper');
+      const trigger = document.getElementById('sv-source-trigger');
+      const dropdown = document.getElementById('sv-dropdown');
+      if (!trigger || !dropdown) return;
+
+      function openDropdown() {
+        dropdown.classList.add('sv-dropdown-open');
+        dropdown.setAttribute('aria-hidden', 'false');
+        trigger.classList.add('sv-trigger-open');
+      }
+      function closeDropdown() {
+        dropdown.classList.remove('sv-dropdown-open');
+        dropdown.setAttribute('aria-hidden', 'true');
+        trigger.classList.remove('sv-trigger-open');
+      }
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.contains('sv-dropdown-open') ? closeDropdown() : openDropdown();
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!wrapper?.contains(e.target)) closeDropdown();
+      });
+
+      // Source item click — select source & reload iframe
+      dropdown.querySelectorAll('.sv-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const idx = parseInt(item.dataset.idx);
+          if (isNaN(idx)) return;
+
+          // Skip if unavailable (show tooltip instead)
+          if (item.classList.contains('sv-item-unavailable')) {
+            item.classList.add('sv-item-shake');
+            setTimeout(() => item.classList.remove('sv-item-shake'), 500);
+            return;
+          }
+
+          currentSourceIndex = idx;
+          localStorage.setItem('piq_source', currentSourceIndex);
+
+          // Update active state visually
+          dropdown.querySelectorAll('.sv-item').forEach(el => el.setAttribute('aria-selected', 'false'));
+          item.setAttribute('aria-selected', 'true');
+
+          // Update trigger label to selected source name
+          const triggerLabel = document.getElementById('sv-trigger-label');
+          if (triggerLabel) triggerLabel.textContent = item.querySelector('.sv-item-name')?.textContent || '';
+
+          closeDropdown();
+          loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+        });
+
+        // Keyboard: Enter/Space to select
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+        });
+      });
+    })();
 
     // Mode selector
     document.getElementById('mode-select')?.addEventListener('change', (e) => {
       currentPlayerMode = e.target.value;
       localStorage.setItem('piq_player_mode', currentPlayerMode);
 
-      const sourceSelect = document.getElementById('source-select');
-      if (sourceSelect) {
-        sourceSelect.style.display = currentPlayerMode === 'custom' ? 'none' : 'inline-block';
+      const svWrapper = document.getElementById('sv-source-wrapper');
+      if (svWrapper) {
+        svWrapper.style.display = currentPlayerMode === 'custom' ? 'none' : 'flex';
       }
 
       loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);

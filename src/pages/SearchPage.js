@@ -503,7 +503,7 @@ export async function renderSearchPage({ query, container }) {
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
-          voiceBtn.style.color = '#ff0055';
+          voiceBtn.style.color = 'var(--accent)';
           input.placeholder = 'Listening...';
         };
 
