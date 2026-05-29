@@ -839,3 +839,55 @@
 .clear-day-filter-btn:active {
   transform: scale(0.95);
 }
+
+/* ========================================================
+   TIMELINE TIMELINE GROUPING & GRAPHICS
+   ======================================================== */
+.timeline-day-group {
+  display: flex;
+  gap: var(--space-md, 16px);
+  margin-bottom: var(--space-lg, 24px);
+  position: relative;
+  align-items: stretch;
+}
+
+.timeline-left-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 44px;
+  position: relative;
+}
+
+.timeline-connector-line {
+  position: absolute;
+  top: 50px;
+  bottom: -28px;
+  width: 2px;
+  background: linear-gradient(to bottom, rgba(168, 85, 247, 0.5), rgba(168, 85, 247, 0.05));
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+}
+
+.timeline-day-group:last-child .timeline-connector-line {
+  display: none;
+}
+
+.timeline-right-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 8px);
+}
+
+.list-movie-card.sub-card {
+  margin: 0;
+  border-radius: var(--radius-lg, 12px);
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.list-movie-card.sub-card .list-movie-poster {
+  width: 44px;
+  height: 66px;
+}

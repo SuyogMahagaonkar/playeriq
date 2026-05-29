@@ -790,29 +790,57 @@ export async function renderCalendarPage({ container }) {
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const paginatedItems = filtered.slice(startIndex, endIndex);
 
-    listContainer.innerHTML = paginatedItems.map(movie => {
-      const releaseDay = new Date(movie.date).getDate();
-      const isSelected = selectedMovieId === movie.id ? 'active' : '';
+    // Group paginated items by release date to form the timeline
+    const dateGroups = [];
+    paginatedItems.forEach(movie => {
+      const dateStr = movie.date;
+      let group = dateGroups.find(g => g.date === dateStr);
+      if (!group) {
+        group = { date: dateStr, movies: [] };
+        dateGroups.push(group);
+      }
+      group.movies.push(movie);
+    });
+
+    // Render grouped timeline layout
+    listContainer.innerHTML = dateGroups.map(group => {
+      const releaseDate = new Date(group.date);
+      const releaseDay = releaseDate.getDate();
+      const weekdayLabel = releaseDate.toLocaleDateString('en-US', { weekday: 'short' });
       
-      return `
-        <div class="list-movie-card ${isSelected} animate-fade-in" data-movie-id="${movie.id}">
-          <div class="list-day-badge">
-            <span class="day-num">${releaseDay}</span>
-            <span class="day-lbl">${new Date(movie.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+      const moviesHTML = group.movies.map(movie => {
+        const isSelected = selectedMovieId === movie.id ? 'active' : '';
+        return `
+          <div class="list-movie-card sub-card ${isSelected} animate-fade-in" data-movie-id="${movie.id}">
+            <img src="${movie.poster}" class="list-movie-poster" alt="${movie.title}" />
+            <div class="list-movie-details">
+              <div class="list-movie-header">
+                <h4 class="list-movie-title">${movie.title}</h4>
+                <span class="list-platform-tag ${movie.platform}">${movie.platformLabel}</span>
+              </div>
+              <p class="list-movie-genre">${movie.genres.join(' · ')}</p>
+              <div class="list-rating-row">
+                <svg class="bento-star-icon" viewBox="0 0 24 24" style="width:12px; height:12px; fill:#ffc107; stroke:none;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span>${movie.rating}</span>
+                <span class="list-meta-divider">·</span>
+                <span>${movie.runtime}</span>
+              </div>
+            </div>
           </div>
-          <img src="${movie.poster}" class="list-movie-poster" alt="${movie.title}" />
-          <div class="list-movie-details">
-            <div class="list-movie-header">
-              <h4 class="list-movie-title">${movie.title}</h4>
-              <span class="list-platform-tag ${movie.platform}">${movie.platformLabel}</span>
+        `;
+      }).join('');
+
+      return `
+        <div class="timeline-day-group">
+          <div class="timeline-left-badge">
+            <div class="list-day-badge">
+              <span class="day-num">${releaseDay}</span>
+              <span class="day-lbl">${weekdayLabel}</span>
             </div>
-            <p class="list-movie-genre">${movie.genres.join(' · ')}</p>
-            <div class="list-rating-row">
-              <svg class="bento-star-icon" viewBox="0 0 24 24" style="width:12px; height:12px; fill:#ffc107; stroke:none;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              <span>${movie.rating}</span>
-              <span class="list-meta-divider">·</span>
-              <span>${movie.runtime}</span>
-            </div>
+            <div class="timeline-connector-line"></div>
+          </div>
+          <div class="timeline-right-cards">
+            ${moviesHTML}
           </div>
         </div>
       `;
