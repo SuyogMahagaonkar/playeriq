@@ -42,6 +42,12 @@
   gap: var(--space-md);
 }
 
+.calendar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .calendar-main-title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
@@ -51,6 +57,54 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+.calendar-today-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 14px;
+  border-radius: 50px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.calendar-today-pill:hover {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.3);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.2), 0 0 10px rgba(168, 85, 247, 0.1);
+  transform: translateY(-1px);
+}
+
+.calendar-today-pill .pill-pulse {
+  width: 6px;
+  height: 6px;
+  background-color: #a855f7;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #a855f7;
+  animation: breathingPulse 2s infinite ease-in-out;
+}
+
+.calendar-today-pill .pill-text {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+@keyframes breathingPulse {
+  0% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
+  50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 12px rgba(168, 85, 247, 0.8); }
+  100% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
+}
+
 
 .month-selector-group {
   display: flex;
@@ -219,12 +273,95 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.cell-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .cell-day-num {
   font-family: var(--font-display);
   font-size: 14px;
   font-weight: 700;
   color: var(--text-secondary);
 }
+
+/* Today's Cell Unique Styles */
+.calendar-day-cell.is-today {
+  background: rgba(168, 85, 247, 0.08);
+  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 
+    0 0 15px rgba(168, 85, 247, 0.2),
+    inset 0 0 12px rgba(168, 85, 247, 0.08);
+  z-index: 2;
+}
+
+.calendar-day-cell.is-today::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(236, 72, 153, 0.75) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+}
+
+.calendar-day-cell.is-today:hover::after {
+  opacity: 1;
+}
+
+.calendar-day-cell.is-today .cell-day-num {
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+
+/* Today Badge */
+.today-badge {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2.5px 7px;
+  border-radius: 20px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 3.5px;
+  text-transform: uppercase;
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+.today-pulse {
+  width: 4px;
+  height: 4px;
+  background-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 4px #fff;
+  animation: badgeDotPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes badgeDotPulse {
+  0% { transform: scale(0.85); opacity: 0.6; }
+  50% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0.6; }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.35); }
+  50% { box-shadow: 0 0 14px rgba(168, 85, 247, 0.6); }
+  100% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.35); }
+}
+
 
 .calendar-day-cell.pad-day {
   opacity: 0.2;

@@ -302,7 +302,13 @@ export async function renderCalendarPage({ container }) {
         <div class="calendar-left-pane">
           <div class="calendar-header-card glass-panel">
             <div class="calendar-header-top">
-              <h1 class="calendar-main-title">Release Calendar</h1>
+              <div class="calendar-title-group">
+                <h1 class="calendar-main-title">Release Calendar</h1>
+                <div class="calendar-today-pill" title="Today's Current Date">
+                  <span class="pill-pulse"></span>
+                  <span class="pill-text">${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              </div>
               <div class="month-selector-group">
                 <button class="month-nav-btn" id="prev-month-btn" aria-label="Previous Month">
                   <i data-lucide="chevron-left"></i>
@@ -929,11 +935,16 @@ export async function renderCalendarPage({ container }) {
       gridHTML += `<div class="calendar-day-cell pad-day"><span>${dayNum}</span></div>`;
     }
 
+    const todayObj = new Date();
+    const isTodayActiveMonth = todayObj.getFullYear() === year && todayObj.getMonth() === month;
+
     // Render active month days
     for (let day = 1; day <= totalDays; day++) {
       const movies = getMovieOnDay(day);
       const isReleaseDay = movies.length > 0;
       const releaseClass = isReleaseDay ? 'has-release' : '';
+      const isToday = isTodayActiveMonth && day === todayObj.getDate();
+      const todayClass = isToday ? 'is-today' : '';
       
       let badgeHTML = '';
       if (isReleaseDay) {
@@ -946,9 +957,14 @@ export async function renderCalendarPage({ container }) {
         `;
       }
 
+      const todayBadgeHTML = isToday ? `<span class="today-badge"><span class="today-pulse"></span>TODAY</span>` : '';
+
       gridHTML += `
-        <div class="calendar-day-cell ${releaseClass}" data-day="${day}">
-          <span class="cell-day-num">${day}</span>
+        <div class="calendar-day-cell ${releaseClass} ${todayClass}" data-day="${day}">
+          <div class="cell-top-row">
+            <span class="cell-day-num">${day}</span>
+            ${todayBadgeHTML}
+          </div>
           ${badgeHTML}
         </div>
       `;
