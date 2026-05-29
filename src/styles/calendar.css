@@ -13,6 +13,15 @@
   animation: fadeInCalendar 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.glass-panel {
+  background: rgba(16, 18, 30, 0.45); /* Elegant translucent slate black-blue */
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.02);
+}
+
 .calendar-layout-wrapper {
   display: flex;
   gap: var(--space-xl);
@@ -649,12 +658,16 @@
   z-index: 5;
   transform: translate3d(100%, 0, 0);
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.85);
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   scrollbar-width: none;
+  background: rgba(16, 18, 30, 0.98); /* Solid premium midnight black to prevent background bleed-through */
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .drawer-content-pane::-webkit-scrollbar {
