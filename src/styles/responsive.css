@@ -266,7 +266,7 @@
     align-items: stretch !important;
     gap: 16px !important;
     width: 100% !important;
-    margin-bottom: 32px !important;
+    margin-bottom: 12px !important; /* Compressed margin to eliminate empty gap */
     justify-content: center !important;
     grid-column: span 2 !important;
   }
@@ -302,7 +302,7 @@
     width: 100% !important;
     gap: 8px !important;
     margin-top: 4px !important;
-    padding-bottom: 32px !important;
+    padding-bottom: 24px !important; /* Tight padding under button labels */
   }
 
   #details-btn {
@@ -329,6 +329,7 @@
     position: relative !important;
     cursor: pointer !important;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    overflow: visible !important; /* Crucial fix: Let text label sit visible below icon boundary! */
   }
 
   .detail-actions-row .detail-btn-trailer::before {
@@ -434,16 +435,10 @@
     border-radius: 12px !important;
   }
 
-  .bento-card-rating {
-    grid-column: span 1 !important;
-  }
-
-  .bento-card-meta {
-    grid-column: span 1 !important;
-  }
-
+  .bento-card-rating,
+  .bento-card-meta,
   .bento-card-genres {
-    grid-column: span 2 !important;
+    display: none !important; /* Hide rating, info, and genres card to declutter bento page */
   }
 
   .bento-card-providers {
@@ -479,12 +474,15 @@
     gap: 12px !important; /* Premium wide gap */
     padding: 10px var(--space-md) !important; /* Slightly more vertical padding */
     margin-bottom: 20px !important;
-    margin-top: 10px !important; /* Spacing breathing room */
+    margin-top: 4px !important; /* Tight margin under action row labels */
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
     box-sizing: border-box !important;
     grid-column: span 2 !important;
+    /* Carousel Fading Edge Overlay Mask */
+    mask-image: linear-gradient(to right, transparent, white 20px, white 90%, transparent) !important;
+    -webkit-mask-image: linear-gradient(to right, transparent, white 20px, white 90%, transparent) !important;
   }
 
   .detail-mobile-tabs::-webkit-scrollbar {
