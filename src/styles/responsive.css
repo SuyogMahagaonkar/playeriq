@@ -341,6 +341,134 @@
     margin-top: 6px !important;
   }
 
+  /* --- Premium Tabbed Bento Navigation --- */
+  .detail-mobile-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    scrollbar-width: none !important;
+    gap: 8px !important;
+    padding: 8px var(--space-md) !important;
+    margin-bottom: 16px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+
+  .detail-mobile-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .mobile-tab-btn {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    cursor: pointer !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    font-family: 'Poppins', sans-serif !important;
+  }
+
+  .mobile-tab-btn.active {
+    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
+    color: #fff !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3) !important;
+  }
+
+  /* Tabbed Content Switching rules */
+  .detail-bento-grid,
+  .detail-section,
+  #mobile-cast-section,
+  #similar-content-section {
+    display: none !important; /* Hide them on mobile by default */
+  }
+
+  /* Show only if it has tab-active class */
+  .detail-bento-grid.tab-active,
+  .detail-section.tab-active,
+  #mobile-cast-section.tab-active,
+  #similar-content-section.tab-active {
+    display: block !important;
+    animation: fadeInTab 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  /* Grid layout for active bento on mobile */
+  .detail-bento-grid.tab-active {
+    display: grid !important;
+  }
+
+  /* Grid layout for active cast on mobile */
+  #mobile-cast-section.tab-active {
+    display: block !important;
+  }
+
+  @keyframes fadeInTab {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Inline Cast Card grid for mobile view */
+  .mobile-bento-cast-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    padding-top: 8px !important;
+  }
+
+  .mobile-cast-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .mobile-cast-avatar {
+    width: 54px !important;
+    height: 54px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    border: 2px solid #a855f7 !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+    margin-bottom: 6px !important;
+  }
+
+  .mobile-cast-name {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 85px !important;
+  }
+
+  .mobile-cast-role {
+    font-size: 9px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 85px !important;
+    margin-top: 2px !important;
+  }
+
+  .bento-no-cast,
+  .bento-no-similar {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    padding: 12px 0 !important;
+  }
+
   /* ---- Player ---- */
   .player-info         { padding: var(--space-md); }
   .player-related      { padding: var(--space-md); }

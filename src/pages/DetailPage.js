@@ -244,6 +244,48 @@ export async function renderDetailPage({ params, container }) {
         : `<div class="detail-backdrop active" style="background:var(--bg-secondary)"></div>`;
     }
 
+    // Extract cast for mobile inline tab
+    let castHTML = '';
+    if (data.raw_data && data.raw_data.staffList && data.raw_data.staffList.length > 0) {
+      const staffList = data.raw_data.staffList;
+      const staffMap = new Map();
+      staffList.forEach(staff => {
+        if (!staff.name) return;
+        const role = staff.character || (staff.staffType === 1 ? 'Actor' : 'Director');
+        if (staffMap.has(staff.name)) {
+          const existing = staffMap.get(staff.name);
+          if (!existing.character.includes(role)) {
+            existing.character += `, ${role}`;
+          }
+        } else {
+          staffMap.set(staff.name, { ...staff, character: role });
+        }
+      });
+
+      const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <rect width="100" height="100" fill="var(--bg-tertiary, %230a0a0a)" />
+          <circle cx="50" cy="50" r="48" stroke="var(--accent, %23a855f7)" stroke-width="2" stroke-dasharray="4 2" fill="none" opacity="0.3" />
+          <circle cx="50" cy="38" r="16" fill="var(--accent, %23a855f7)" opacity="0.4" />
+          <path d="M22 82C22 65 34 56 50 56C66 56 78 65 78 82" fill="var(--accent, %23a855f7)" opacity="0.4" />
+        </svg>
+      `)}`;
+
+      castHTML = `
+        <div class="mobile-bento-cast-grid">
+          ${Array.from(staffMap.values()).slice(0, 9).map(staff => `
+            <div class="mobile-cast-card">
+              <img src="${staff.avatarUrl || fallbackImg}" class="mobile-cast-avatar" alt="${staff.name || ''}" />
+              <div class="mobile-cast-name">${staff.name || ''}</div>
+              <div class="mobile-cast-role">${staff.character || ''}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      castHTML = `<p class="bento-no-cast">No cast information available.</p>`;
+    }
+
     let seasonsHTML = '';
     if (isTV && data.seasons?.length) {
       const isMobile = window.innerWidth <= 767;
@@ -378,12 +420,27 @@ export async function renderDetailPage({ params, container }) {
                 ` : ''}
               </div>
             </div>
+            
+            <!-- Premium Mobile Tab Navigation -->
+            <div class="detail-mobile-tabs">
+              <button class="mobile-tab-btn active" data-tab="story">Story</button>
+              ${isTV ? `<button class="mobile-tab-btn" data-tab="episodes">Episodes</button>` : ''}
+              <button class="mobile-tab-btn" data-tab="cast">Cast</button>
+              <button class="mobile-tab-btn" data-tab="similar">More Like This</button>
+            </div>
           </div>
         </div>
  
         ${seasonsHTML}
+
+        <div id="mobile-cast-section" class="detail-section">
+          <h2 class="detail-section-title">Cast & Crew</h2>
+          ${castHTML}
+        </div>
  
-        ${similar.length ? createContentRow('You May Also Like', similar, type) : ''}
+        <div id="similar-content-section">
+          ${similar.length ? createContentRow('You May Also Like', similar, type) : ''}
+        </div>
         
         <div class="detail-modal" id="details-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
           <div style="background: var(--bg-card); max-width: 600px; width: 100%; border-radius: 12px; padding: 24px; max-height: 80vh; overflow-y: auto; position: relative;">
@@ -458,6 +515,13 @@ export async function renderDetailPage({ params, container }) {
     // Watch button
     document.getElementById('watch-btn')?.addEventListener('click', () => {
       if (isTV) {
+        // If on mobile, programmatically switch to the episodes tab first
+        if (window.innerWidth <= 767) {
+          const episodesTabBtn = document.querySelector('.mobile-tab-btn[data-tab="episodes"]');
+          if (episodesTabBtn) {
+            episodesTabBtn.click();
+          }
+        }
         const seasonsSection = document.querySelector('.detail-section');
         if (seasonsSection) {
           seasonsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -484,6 +548,40 @@ export async function renderDetailPage({ params, container }) {
         }
       });
     }
+
+    // Mobile Tab switching logic
+    const tabBtns = document.querySelectorAll('.mobile-tab-btn');
+    const overviewBento = document.querySelector('.detail-bento-grid');
+    const seasonsSection = document.querySelector('.detail-section'); // seasons container
+    const castSection = document.getElementById('mobile-cast-section');
+    const similarSection = document.getElementById('similar-content-section');
+
+    // Add active class by default on mobile load
+    if (overviewBento) overviewBento.classList.add('tab-active');
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const activeTab = btn.dataset.tab;
+        
+        // Hide all mobile sections
+        if (overviewBento) overviewBento.classList.remove('tab-active');
+        if (seasonsSection) seasonsSection.classList.remove('tab-active');
+        if (castSection) castSection.classList.remove('tab-active');
+        if (similarSection) similarSection.classList.remove('tab-active');
+
+        // Show selected mobile section
+        if (activeTab === 'story' && overviewBento) overviewBento.classList.add('tab-active');
+        if (activeTab === 'episodes' && seasonsSection) seasonsSection.classList.add('tab-active');
+        if (activeTab === 'cast' && castSection) castSection.classList.add('tab-active');
+        if (activeTab === 'similar' && similarSection) similarSection.classList.add('tab-active');
+        
+        // Track analytics event
+        trackTelemetryEvent('mobile_tab_selected', { tab: activeTab });
+      });
+    });
 
     // Watch Trailer button click listener
     document.getElementById('trailer-btn')?.addEventListener('click', () => {

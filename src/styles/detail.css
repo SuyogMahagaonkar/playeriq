@@ -704,3 +704,9 @@
 .bento-card-story .overview-toggle-btn {
   display: none;
 }
+
+/* Hide mobile specific elements on desktop widescreen */
+#mobile-cast-section,
+.detail-mobile-tabs {
+  display: none !important;
+}
