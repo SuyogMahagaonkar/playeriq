@@ -666,3 +666,8 @@ body.sidebar-collapsed .navbar-brand {
 .header-safesearch-toggle.locked .safesearch-label {
   color: #00e676;
 }
+
+/* Stacked welcome stack beside avatar - hidden on desktop by default */
+.navbar-mobile-welcome {
+  display: none;
+}

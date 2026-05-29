@@ -215,3 +215,8 @@ input, textarea, select {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Mobile Featured Studios grid - hidden on desktop */
+.home-category-grid {
+  display: none;
+}
