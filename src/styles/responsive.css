@@ -471,8 +471,8 @@
     overflow-x: auto !important;
     white-space: nowrap !important;
     scrollbar-width: none !important;
-    gap: 12px !important; /* Premium wide gap */
-    padding: 10px var(--space-md) !important; /* Slightly more vertical padding */
+    gap: 12px !important; /* Premium equal horizontal gap spacing */
+    padding: 10px 24px !important; /* Added side padding so active pill starts in opaque mask area */
     margin-bottom: 20px !important;
     margin-top: 4px !important; /* Tight margin under action row labels */
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -480,9 +480,9 @@
     width: 100% !important;
     box-sizing: border-box !important;
     grid-column: span 2 !important;
-    /* Carousel Fading Edge Overlay Mask */
-    mask-image: linear-gradient(to right, transparent, white 20px, white 90%, transparent) !important;
-    -webkit-mask-image: linear-gradient(to right, transparent, white 20px, white 90%, transparent) !important;
+    /* Carousel Fading Edge Overlay Mask synchronized with padding */
+    mask-image: linear-gradient(to right, transparent, white 24px, white calc(100% - 24px), transparent) !important;
+    -webkit-mask-image: linear-gradient(to right, transparent, white 24px, white calc(100% - 24px), transparent) !important;
   }
 
   .detail-mobile-tabs::-webkit-scrollbar {
@@ -490,24 +490,39 @@
   }
 
   .mobile-tab-btn {
-    padding: 8px 18px !important; /* Elegant pill size */
-    font-size: 13px !important; /* Highly readable font sizing */
-    font-weight: 600 !important;
-    border-radius: 24px !important; /* Pure round capsule pills */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 9px 24px !important; /* Increased internal padding inside pills for readability */
+    font-size: 13px !important; /* Clear premium font sizing */
+    font-weight: 600 !important; /* Consistent semi-bold weight */
+    letter-spacing: 0.8px !important; /* Slightly increased letter spacing for better legibility */
+    border-radius: 24px !important; /* Perfect capsule pill shape */
     background: rgba(255, 255, 255, 0.04) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    color: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important; /* Semi-transparent border for definition */
+    color: rgba(255, 255, 255, 0.6) !important; /* Soft but clear inactive visual weight */
     cursor: pointer !important;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; /* Polished smooth transition animation */
     font-family: 'Poppins', sans-serif !important;
   }
 
+  .mobile-tab-btn:hover,
+  .mobile-tab-btn:active {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important; /* Soft border hover state */
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
   .mobile-tab-btn.active {
-    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
-    color: #fff !important;
-    border-color: rgba(168, 85, 247, 0.4) !important;
-    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
-    transform: scale(1.03) !important;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.22) 0%, rgba(124, 58, 237, 0.22) 100%) !important; /* Subtle purple gradient fill */
+    color: #ffffff !important;
+    border-color: rgba(168, 85, 247, 0.6) !important; /* Purple border ring */
+    /* Soft inner shadow & gradient ring instead of outer glow blur bleed */
+    box-shadow: 
+      inset 0 1px 2px rgba(255, 255, 255, 0.2), 
+      inset 0 0 12px rgba(168, 85, 247, 0.25), 
+      0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    transform: scale(1.02) !important;
   }
 
   /* Tabbed Content Switching rules */
