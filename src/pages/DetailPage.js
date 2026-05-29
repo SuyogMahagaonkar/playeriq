@@ -291,32 +291,50 @@ export async function renderDetailPage({ params, container }) {
           <div class="detail-info">
             ${logoHTML}
             ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
-            <div class="detail-meta">
-              <span class="detail-rating">
-                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                ${rating}
-              </span>
-              <span class="detail-dot"></span>
-              <span>${year}</span>
-              ${runtime ? `<span class="detail-dot"></span><span>${runtime}</span>` : ''}
-              ${isTV && data.number_of_seasons ? `<span class="detail-dot"></span><span>${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}</span>` : ''}
-            </div>
-            <div class="detail-genres">
-              ${(data.genres || []).map(g => `<span class="detail-genre-tag">${g.name}</span>`).join('')}
-            </div>
-            
-            <!-- Watch Providers (Streaming Source) Badge -->
-            <div id="watch-providers-container" style="display: none; margin: 15px 0 20px 0;">
-              <span style="color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 8px;">Streaming Source</span>
-              <div id="watch-providers-list" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-            </div>
+            <div class="detail-bento-grid">
+              <!-- Bento Card 1: Rating -->
+              <div class="bento-card bento-card-rating">
+                <span class="bento-card-title">Rating</span>
+                <div class="bento-card-value rating-value">
+                  <svg class="bento-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span>${rating}</span>
+                </div>
+              </div>
 
-            <h3 class="detail-overview-title">Overview</h3>
-            <div class="detail-overview-wrapper">
-              <p class="detail-overview collapsed" id="detail-overview-text">${data.overview || 'No overview available.'}</p>
-              ${(data.overview && data.overview.length > 180) ? `
-                <button class="overview-toggle-btn" id="overview-toggle" aria-label="Toggle full description">More</button>
-              ` : ''}
+              <!-- Bento Card 2: Release & Duration -->
+              <div class="bento-card bento-card-meta">
+                <span class="bento-card-title">Info</span>
+                <div class="bento-card-value meta-value">
+                  <span class="meta-year">${year}</span>
+                  ${runtime ? `<span class="meta-divider">·</span><span class="meta-runtime">${runtime}</span>` : ''}
+                  ${isTV && data.number_of_seasons ? `<span class="meta-divider">·</span><span class="meta-seasons">${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Bento Card 3: Genres -->
+              <div class="bento-card bento-card-genres">
+                <span class="bento-card-title">Genres</span>
+                <div class="detail-genres">
+                  ${(data.genres || []).map(g => `<span class="detail-genre-tag">${g.name}</span>`).join('')}
+                </div>
+              </div>
+
+              <!-- Bento Card 4: Streaming Providers -->
+              <div class="bento-card bento-card-providers" id="watch-providers-container" style="display: none;">
+                <span class="bento-card-title">Streaming Source</span>
+                <div id="watch-providers-list" class="bento-providers-list"></div>
+              </div>
+
+              <!-- Bento Card 5: Storyline -->
+              <div class="bento-card bento-card-story">
+                <span class="bento-card-title">Storyline</span>
+                <div class="detail-overview-wrapper">
+                  <p class="detail-overview collapsed" id="detail-overview-text">${data.overview || 'No overview available.'}</p>
+                  ${(data.overview && data.overview.length > 180) ? `
+                    <button class="overview-toggle-btn" id="overview-toggle" aria-label="Toggle full description">More</button>
+                  ` : ''}
+                </div>
+              </div>
             </div>
             <div class="detail-actions">
               ${isMovieUnreleased ? `

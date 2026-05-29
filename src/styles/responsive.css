@@ -292,6 +292,55 @@
     color: #a855f7 !important;
   }
 
+  /* --- Premium Bento Grid overrides for Mobile --- */
+  .detail-bento-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: var(--space-md) !important;
+    margin-top: var(--space-sm) !important;
+  }
+
+  .bento-card {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .bento-card-rating {
+    grid-column: span 1 !important;
+  }
+
+  .bento-card-meta {
+    grid-column: span 1 !important;
+  }
+
+  .bento-card-genres {
+    grid-column: span 2 !important;
+  }
+
+  .bento-card-providers {
+    grid-column: span 2 !important;
+  }
+
+  .bento-card-story {
+    grid-column: span 2 !important;
+  }
+
+  .bento-card-story .detail-overview.collapsed {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  .bento-card-story .overview-toggle-btn {
+    display: inline-block !important;
+    margin-bottom: 0 !important;
+    margin-top: 6px !important;
+  }
+
   /* ---- Player ---- */
   .player-info         { padding: var(--space-md); }
   .player-related      { padding: var(--space-md); }

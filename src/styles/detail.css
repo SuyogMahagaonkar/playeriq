@@ -575,3 +575,132 @@
     margin-top: 0 !important;
   }
 }
+
+/* ========================================
+   Bento Grid Styling for Detail Info
+   ======================================== */
+.detail-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+.bento-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  text-align: left;
+}
+
+.bento-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(168, 85, 247, 0.25);
+  box-shadow: 0 8px 30px rgba(168, 85, 247, 0.1);
+}
+
+.bento-card-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.bento-card-value {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* Specific Cards layout */
+.bento-card-rating {
+  grid-column: span 1;
+}
+
+.bento-card-rating .rating-value {
+  color: #ffc107;
+  gap: 6px;
+}
+
+.bento-star-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.bento-card-meta {
+  grid-column: span 1;
+}
+
+.bento-card-meta .meta-value {
+  font-size: 15px;
+  font-weight: 600;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-divider {
+  opacity: 0.4;
+}
+
+.bento-card-genres {
+  grid-column: span 1;
+}
+
+.bento-card-genres .detail-genres {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.bento-card-genres .detail-genre-tag {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0;
+}
+
+.bento-card-providers {
+  grid-column: span 3;
+}
+
+.bento-providers-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bento-card-story {
+  grid-column: span 3;
+}
+
+.bento-card-story .detail-overview {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.bento-card-story .overview-toggle-btn {
+  display: none;
+}
