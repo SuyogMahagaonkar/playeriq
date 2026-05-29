@@ -288,6 +288,11 @@ export async function renderCalendarPage({ container }) {
   let monthlyReleases = [];
   let isLoading = false;
 
+  // Selected Day filter and Pagination parameters
+  let selectedDay = null;
+  let currentPage = 1;
+  const itemsPerPage = 8;
+
   // Initialize UI structure
   container.innerHTML = `
     <div class="calendar-page-container animate-fade-in-up">
@@ -350,10 +355,17 @@ export async function renderCalendarPage({ container }) {
         </div>
 
         <!-- Right Side: Release List Panel -->
-        <div class="calendar-right-pane glass-panel" style="position: relative;">
-          <h2 class="pane-side-title" id="side-list-title">Releases in May 2026</h2>
-          <div class="side-releases-list" id="side-releases-list">
+        <div class="calendar-right-pane glass-panel" style="position: relative; display: flex; flex-direction: column;">
+          <div class="calendar-right-pane-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px; gap: 8px;">
+            <h2 class="pane-side-title" id="side-list-title" style="margin: 0; border: none; padding: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Releases in May 2026</h2>
+            <button class="clear-day-filter-btn" id="clear-day-filter" style="display: none; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: var(--primary, #a855f7); padding: 5px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;">Show All</button>
+          </div>
+          <div class="side-releases-list" id="side-releases-list" style="flex: 1;">
             <!-- Dynamic list -->
+          </div>
+          <!-- Pagination controls row -->
+          <div class="calendar-pagination-controls" id="calendar-pagination" style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 12px;">
+            <!-- Dynamic pagination controls -->
           </div>
           <!-- Glassmorphic List Spinner Loader -->
           <div class="calendar-loader-overlay" id="calendar-list-loader" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(16, 18, 30, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 12px; justify-content: center; align-items: center; z-index: 100;">
@@ -501,10 +513,20 @@ export async function renderCalendarPage({ container }) {
 
   // Helper functions using active cache
   const getFilteredReleases = () => {
-    return monthlyReleases.filter(movie => {
+    let releases = monthlyReleases.filter(movie => {
       const isSamePlatform = activePlatform === 'all' || movie.platform === activePlatform;
       return isSamePlatform;
     });
+
+    if (selectedDay !== null) {
+      releases = releases.filter(movie => {
+        if (!movie.date) return false;
+        const movieDate = new Date(movie.date);
+        return movieDate.getDate() === selectedDay;
+      });
+    }
+
+    return releases;
   };
 
   const getMovieOnDay = (day) => {
@@ -725,19 +747,30 @@ export async function renderCalendarPage({ container }) {
   const renderReleasesList = () => {
     const listContainer = document.getElementById('side-releases-list');
     const listTitle = document.getElementById('side-list-title');
-    if (!listContainer) return;
+    const clearBtn = document.getElementById('clear-day-filter');
+    const paginationContainer = document.getElementById('calendar-pagination');
+    if (!listContainer || !listTitle) return;
 
     const filtered = getFilteredReleases();
     const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    listTitle.textContent = `Releases in ${monthName}`;
+    
+    // Update title and clear button state based on selectedDay filter
+    if (selectedDay !== null) {
+      listTitle.textContent = `Releases on ${currentDate.toLocaleDateString('en-US', { month: 'short' })} ${selectedDay}, ${currentDate.getFullYear()}`;
+      if (clearBtn) clearBtn.style.display = 'block';
+    } else {
+      listTitle.textContent = `Releases in ${monthName}`;
+      if (clearBtn) clearBtn.style.display = 'none';
+    }
 
     if (filtered.length === 0) {
       listContainer.innerHTML = `
         <div class="list-empty-state animate-fade-in">
           <i data-lucide="calendar-x" class="empty-list-icon"></i>
-          <p class="empty-list-text">No releases found for this month.</p>
+          <p class="empty-list-text">No releases found.</p>
         </div>
       `;
+      if (paginationContainer) paginationContainer.style.display = 'none';
       if (window.lucide) window.lucide.createIcons();
       return;
     }
@@ -745,7 +778,19 @@ export async function renderCalendarPage({ container }) {
     // Sort by release date ascending
     filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    listContainer.innerHTML = filtered.map(movie => {
+    // Pagination math
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    // Clamp currentPage
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const paginatedItems = filtered.slice(startIndex, endIndex);
+
+    listContainer.innerHTML = paginatedItems.map(movie => {
       const releaseDay = new Date(movie.date).getDate();
       const isSelected = selectedMovieId === movie.id ? 'active' : '';
       
@@ -773,13 +818,47 @@ export async function renderCalendarPage({ container }) {
       `;
     }).join('');
 
+    // Render pagination controls
+    if (paginationContainer) {
+      if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+      } else {
+        paginationContainer.style.display = 'flex';
+        paginationContainer.innerHTML = `
+          <button class="month-nav-btn" id="prev-page-btn" aria-label="Previous Page" ${currentPage === 1 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <span class="current-month-display" style="font-size: 13px; min-width: 80px; text-align: center;">${currentPage} / ${totalPages}</span>
+          <button class="month-nav-btn" id="next-page-btn" aria-label="Next Page" ${currentPage === totalPages ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        `;
+        
+        // Wire pagination events
+        document.getElementById('prev-page-btn')?.addEventListener('click', () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderReleasesList();
+          }
+        });
+        
+        document.getElementById('next-page-btn')?.addEventListener('click', () => {
+          if (currentPage < totalPages) {
+            currentPage++;
+            renderReleasesList();
+          }
+        });
+      }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+
     // Add list click events
     listContainer.querySelectorAll('.list-movie-card').forEach(card => {
       card.addEventListener('click', () => {
         const movieId = card.dataset.movieId;
         const movie = monthlyReleases.find(m => m.id === movieId);
         if (movie) {
-          // Highlight
           listContainer.querySelectorAll('.list-movie-card').forEach(c => c.classList.remove('active'));
           card.classList.add('active');
           openDrawer(movie);
@@ -861,16 +940,29 @@ export async function renderCalendarPage({ container }) {
       cell.addEventListener('click', () => {
         const day = parseInt(cell.dataset.day);
         const dayMovies = getMovieOnDay(day);
-        if (dayMovies.length > 0) {
-          // Open details for the first movie of that day
+        
+        // Remove selection from all cells first
+        gridBody.querySelectorAll('.calendar-day-cell').forEach(c => c.classList.remove('selected-day'));
+        
+        if (dayMovies.length === 1) {
+          // If single movie -> Directly show movie details drawer (current behavior)
+          selectedDay = null;
+          currentPage = 1;
+          renderReleasesList();
           openDrawer(dayMovies[0]);
           
-          // Scroll and select inside list
+          // Highlight card in list
           const listCard = document.querySelector(`.list-movie-card[data-movie-id="${dayMovies[0].id}"]`);
           if (listCard) {
             listCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             listCard.click();
           }
+        } else if (dayMovies.length > 1) {
+          // If multiple movies -> Filter sidebar to show only that day's releases with pagination
+          selectedDay = day;
+          currentPage = 1;
+          cell.classList.add('selected-day');
+          renderReleasesList();
         }
       });
     });
@@ -885,22 +977,42 @@ export async function renderCalendarPage({ container }) {
     renderReleasesList();
   };
 
+  // Wire clear day filter button
+  document.getElementById('clear-day-filter')?.addEventListener('click', () => {
+    selectedDay = null;
+    currentPage = 1;
+    
+    // Clear selected indicators in grid body
+    const gridBody = document.getElementById('calendar-grid-body');
+    if (gridBody) {
+      gridBody.querySelectorAll('.calendar-day-cell').forEach(c => c.classList.remove('selected-day'));
+    }
+    
+    renderReleasesList();
+  });
+
   // Wire controls and month selectors
   document.getElementById('prev-month-btn')?.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
     closeDrawer();
+    selectedDay = null;
+    currentPage = 1;
     loadAndRenderReleases();
   });
 
   document.getElementById('next-month-btn')?.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     closeDrawer();
+    selectedDay = null;
+    currentPage = 1;
     loadAndRenderReleases();
   });
 
   document.getElementById('today-btn')?.addEventListener('click', () => {
     currentDate = new Date(2026, 4, 1); // Jump back to May 2026 default
     closeDrawer();
+    selectedDay = null;
+    currentPage = 1;
     loadAndRenderReleases();
   });
 
@@ -913,6 +1025,8 @@ export async function renderCalendarPage({ container }) {
 
       activePlatform = tab.dataset.source;
       closeDrawer();
+      selectedDay = null;
+      currentPage = 1;
       renderCalendarGrid();
       renderReleasesList();
     });
