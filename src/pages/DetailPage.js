@@ -187,6 +187,14 @@ export async function renderDetailPage({ params, container }) {
     const similar = data.similar?.results?.slice(0, 12) || data.recommendations?.results?.slice(0, 12) || [];
     const type = isTV ? 'tv' : 'movie';
 
+    let mobileMetaInfo = year;
+    if (runtime) {
+      mobileMetaInfo += ` • ${runtime}`;
+    }
+    if (isTV && data.number_of_seasons) {
+      mobileMetaInfo += ` • ${data.number_of_seasons} season${data.number_of_seasons > 1 ? 's' : ''}`;
+    }
+
     const todayStr = new Date().toISOString().slice(0, 10);
     const isMovieUnreleased = !isTV && (
       (data.status && data.status !== 'Released') || 
@@ -350,13 +358,16 @@ export async function renderDetailPage({ params, container }) {
               ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
               
               <div class="detail-mobile-meta">
-                <span class="mobile-meta-rating">
-                  <svg class="mobile-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  <span>${rating}</span>
-                </span>
-                <span class="mobile-meta-genres">
-                  ${(data.genres || []).slice(0, 2).map(g => g.name).join(', ')}
-                </span>
+                <div class="mobile-meta-row-top">
+                  <span class="mobile-meta-rating">
+                    <svg class="mobile-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span>${rating}</span>
+                  </span>
+                  <span class="mobile-meta-info">${mobileMetaInfo}</span>
+                </div>
+                <div class="mobile-meta-genres">
+                  ${(data.genres || []).slice(0, 3).map(g => g.name).join(', ')}
+                </div>
               </div>
             </div>
             
@@ -379,7 +390,7 @@ export async function renderDetailPage({ params, container }) {
                       <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25a29 29 0 0 0-.46-5.33z"></path>
                       <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
                     </svg>
-                    <span>Watch Trailer</span>
+                    <span>Trailer</span>
                   </button>
                 ` : ''}
                 <button class="detail-btn detail-btn-secondary" id="details-btn">
