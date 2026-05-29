@@ -59,8 +59,9 @@ export async function renderHomePage({ container }) {
             <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
         </div>
-        <div class="category-grid-item" data-route="/studios">
+        <div class="category-grid-item category-grid-item-viewall" data-route="/studios">
           <div class="category-grid-icon"><i data-lucide="layout-grid"></i></div>
+          <div class="category-grid-label">View All</div>
         </div>
       </div>
       

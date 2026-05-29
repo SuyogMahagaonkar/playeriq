@@ -6672,6 +6672,27 @@
     display: none !important;
   }
 
+  /* Make View All label visible and elegantly styled */
+  .category-grid-item-viewall .category-grid-label {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #CFCFCF !important;
+    margin-top: 6px !important;
+    text-align: center !important;
+  }
+
+  .category-grid-item-viewall .category-grid-icon {
+    margin-bottom: 4px !important;
+    height: 28px !important;
+  }
+
+  .category-grid-item-viewall .category-grid-icon svg,
+  .category-grid-item-viewall .category-grid-icon i {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
   /* ---- Floating Pill-Shaped Translucent Bottom Navigation Bar ---- */
   /* ---- Floating Pill-Shaped Translucent Bottom Navigation Bar ---- */
   .mobile-bottom-nav {
