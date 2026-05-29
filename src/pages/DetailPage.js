@@ -312,7 +312,12 @@ export async function renderDetailPage({ params, container }) {
             </div>
 
             <h3 class="detail-overview-title">Overview</h3>
-            <p class="detail-overview">${data.overview || 'No overview available.'}</p>
+            <div class="detail-overview-wrapper">
+              <p class="detail-overview collapsed" id="detail-overview-text">${data.overview || 'No overview available.'}</p>
+              ${(data.overview && data.overview.length > 180) ? `
+                <button class="overview-toggle-btn" id="overview-toggle" aria-label="Toggle full description">More</button>
+              ` : ''}
+            </div>
             <div class="detail-actions">
               ${isMovieUnreleased ? `
                 <button class="detail-btn detail-btn-primary" id="watch-btn" disabled style="opacity: 0.65; cursor: not-allowed; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);">
@@ -325,33 +330,35 @@ export async function renderDetailPage({ params, container }) {
                   Watch Now
                 </button>
               `}
-              ${trailerKey ? `
-                <button class="detail-btn detail-btn-trailer" id="trailer-btn" aria-label="Watch Trailer">
-                  <svg class="trailer-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25a29 29 0 0 0-.46-5.33z"></path>
-                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
-                  </svg>
-                  <span>Watch Trailer</span>
+              <div class="detail-actions-row">
+                ${trailerKey ? `
+                  <button class="detail-btn detail-btn-trailer" id="trailer-btn" aria-label="Watch Trailer">
+                    <svg class="trailer-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25a29 29 0 0 0-.46-5.33z"></path>
+                      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+                    </svg>
+                    <span>Watch Trailer</span>
+                  </button>
+                ` : ''}
+                <button class="detail-btn detail-btn-secondary" id="details-btn">
+                  <i data-lucide="info" style="width:18px;height:18px"></i>
+                  <span>Details</span>
                 </button>
-              ` : ''}
-              <button class="detail-btn detail-btn-secondary" id="details-btn">
-                <i data-lucide="info" style="width:18px;height:18px"></i>
-                Details
-              </button>
-              <button class="detail-btn detail-btn-secondary" id="share-btn">
-                <i data-lucide="share-2" style="width:18px;height:18px"></i>
-                Share
-              </button>
-              <button class="detail-btn detail-btn-secondary detail-btn-watchlist" id="watchlist-btn">
-                <i data-lucide="bookmark" style="width:18px;height:18px"></i>
-                <span id="watchlist-btn-text">Watchlist</span>
-              </button>
-              ${!isTV && window.innerWidth <= 767 ? `
-                <button class="detail-btn detail-btn-secondary detail-btn-download" id="detail-download-btn">
-                  <i data-lucide="download" style="width:18px;height:18px"></i>
-                  <span id="detail-download-btn-text">Download</span>
+                <button class="detail-btn detail-btn-secondary" id="share-btn">
+                  <i data-lucide="share-2" style="width:18px;height:18px"></i>
+                  <span>Share</span>
                 </button>
-              ` : ''}
+                <button class="detail-btn detail-btn-secondary detail-btn-watchlist" id="watchlist-btn">
+                  <i data-lucide="bookmark" style="width:18px;height:18px"></i>
+                  <span id="watchlist-btn-text">Watchlist</span>
+                </button>
+                ${!isTV && window.innerWidth <= 767 ? `
+                  <button class="detail-btn detail-btn-secondary detail-btn-download" id="detail-download-btn">
+                    <i data-lucide="download" style="width:18px;height:18px"></i>
+                    <span id="detail-download-btn-text">Download</span>
+                  </button>
+                ` : ''}
+              </div>
             </div>
           </div>
         </div>
@@ -441,6 +448,24 @@ export async function renderDetailPage({ params, container }) {
         navigate(`/watch/${type}/${id}`);
       }
     });
+
+    // Overview More/Less Toggle
+    const overviewToggle = document.getElementById('overview-toggle');
+    const overviewText = document.getElementById('detail-overview-text');
+    if (overviewToggle && overviewText) {
+      overviewToggle.addEventListener('click', () => {
+        const isCollapsed = overviewText.classList.contains('collapsed');
+        if (isCollapsed) {
+          overviewText.classList.remove('collapsed');
+          overviewToggle.textContent = 'Less';
+          overviewToggle.setAttribute('aria-label', 'Show less description');
+        } else {
+          overviewText.classList.add('collapsed');
+          overviewToggle.textContent = 'More';
+          overviewToggle.setAttribute('aria-label', 'Show more description');
+        }
+      });
+    }
 
     // Watch Trailer button click listener
     document.getElementById('trailer-btn')?.addEventListener('click', () => {

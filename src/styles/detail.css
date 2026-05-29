@@ -125,10 +125,16 @@
   max-width: 700px;
   margin-bottom: var(--space-lg);
 }
+.overview-toggle-btn {
+  display: none;
+}
 .detail-actions {
   display: flex;
   gap: var(--space-md);
   margin-bottom: var(--space-2xl);
+}
+.detail-actions-row {
+  display: contents;
 }
 .detail-btn {
   display: inline-flex;

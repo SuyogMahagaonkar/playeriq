@@ -126,12 +126,171 @@
   .movie-grid      { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-xs); }
 
   /* ---- Detail Page ---- */
-  .detail-main           { margin-top: -100px; padding: 0 var(--space-md); }
-  .detail-poster-wrapper { width: 150px; }
+  .detail-page {
+    padding-top: calc(var(--navbar-height) + 12px) !important;
+  }
+  .detail-main           { margin-top: -80px; padding: 0 var(--space-md); }
+  .detail-poster-wrapper { width: 140px; }
   .detail-backdrop-container { height: 320px; }
   .detail-section        { padding: var(--space-md); }
   .trailer-container     { margin: var(--space-md); }
   .detail-cast-grid      { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+
+  /* --- Consolidated Action Bar --- */
+  .detail-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin-bottom: 24px !important;
+    justify-content: center !important;
+  }
+
+  #watch-btn {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 12px var(--space-md) !important;
+    border-radius: 24px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    background: linear-gradient(135deg, var(--accent, #a855f7) 0%, #7c3aed 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4) !important;
+    color: #fff !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  #watch-btn:active {
+    transform: scale(0.96) !important;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2) !important;
+  }
+
+  .detail-actions-row {
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+    padding-bottom: 28px !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary,
+  .detail-actions-row .detail-btn-trailer {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: relative !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .detail-actions-row .detail-btn-trailer::before {
+    display: none !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary i,
+  .detail-actions-row .detail-btn-secondary svg,
+  .detail-actions-row .detail-btn-trailer i,
+  .detail-actions-row .detail-btn-trailer svg {
+    margin: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex-shrink: 0 !important;
+    color: #ffffff !important;
+    fill: none !important;
+    stroke: #ffffff !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary.in-list i,
+  .detail-actions-row .detail-btn-secondary.in-list svg {
+    stroke: #c084fc !important;
+    fill: #c084fc !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary:active,
+  .detail-actions-row .detail-btn-trailer:active {
+    transform: scale(1.1) translateY(-2px) !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(168, 85, 247, 0.5) !important;
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.3) !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary span,
+  .detail-actions-row .detail-btn-trailer span {
+    position: absolute !important;
+    top: 50px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-family: 'Poppins', sans-serif !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+    opacity: 0.8 !important;
+    transition: color 0.3s ease, opacity 0.3s ease !important;
+  }
+
+  .detail-actions-row .detail-btn-secondary:active span,
+  .detail-actions-row .detail-btn-trailer:active span {
+    color: #c084fc !important;
+    opacity: 1 !important;
+  }
+
+  /* --- Overview Truncation & Toggle --- */
+  .detail-overview {
+    margin-bottom: 4px !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .detail-overview.collapsed {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    color: rgba(255, 255, 255, 0.65) !important;
+  }
+
+  .overview-toggle-btn {
+    display: inline-block !important;
+    background: none !important;
+    border: none !important;
+    color: #c084fc !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    font-family: 'Poppins', sans-serif !important;
+    cursor: pointer !important;
+    padding: 4px 0 !important;
+    margin-bottom: var(--space-md) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: color 0.2s ease !important;
+  }
+
+  .overview-toggle-btn:active {
+    color: #a855f7 !important;
+  }
 
   /* ---- Player ---- */
   .player-info         { padding: var(--space-md); }
@@ -199,8 +358,7 @@
   .detail-poster-wrapper     { width: 120px; }
   .detail-main               { margin-top: -80px; padding: 0 var(--space-sm); }
   .detail-title              { font-size: var(--text-xl); }
-  .detail-actions            { flex-direction: column; gap: var(--space-sm); }
-  .detail-actions .btn       { width: 100%; justify-content: center; padding: var(--space-xs) var(--space-md); font-size: var(--text-xs); }
+  /* Consolidated detail action layouts inherited cleanly from 767px query */
   .detail-section            { padding: var(--space-sm); }
 
   /* ---- Video Player Custom Touch Optimizations ---- */
@@ -2322,20 +2480,25 @@
   /* Compact Hotstar Season / Episode Row style */
   .mobile-episode-row {
     display: flex !important;
-    gap: 12px !important;
+    gap: 14px !important;
     padding: 12px !important;
-    border-radius: 12px !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.04) !important;
-    margin-bottom: 10px !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    margin-bottom: 12px !important;
     position: relative !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   .mobile-episode-row:active {
-    background: rgba(255, 255, 255, 0.06) !important;
-    transform: scale(0.99) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 6px 24px rgba(168, 85, 247, 0.15) !important;
+    transform: scale(0.985) translateY(-1px) !important;
   }
 
   .mobile-episode-row.unaired {
@@ -2345,12 +2508,13 @@
 
   .mobile-ep-thumb-wrapper {
     position: relative !important;
-    width: 120px !important;
-    height: 68px !important;
-    border-radius: 8px !important;
+    width: 110px !important;
+    height: 62px !important;
+    border-radius: 10px !important;
     overflow: hidden !important;
     flex-shrink: 0 !important;
-    background: var(--bg-tertiary) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   }
 
   .mobile-ep-thumb {
@@ -2363,12 +2527,12 @@
     position: absolute !important;
     bottom: 4px !important;
     right: 4px !important;
-    font-size: 9px !important;
+    font-size: 8px !important;
     font-weight: 700 !important;
     padding: 1px 4px !important;
-    background: rgba(0, 0, 0, 0.75) !important;
+    background: rgba(0, 0, 0, 0.8) !important;
     color: #fff !important;
-    border-radius: 4px !important;
+    border-radius: 3px !important;
   }
 
   .mobile-ep-lock {
@@ -2394,8 +2558,8 @@
 
   .episode-row-progress {
     height: 100% !important;
-    background: #a855f7 !important; /* glowing neon purple progress bar */
-    box-shadow: 0 0 4px rgba(168, 85, 247, 0.8) !important;
+    background: #a855f7 !important;
+    box-shadow: 0 0 6px rgba(168, 85, 247, 0.8) !important;
   }
 
   .mobile-ep-details {
@@ -2413,20 +2577,21 @@
   }
 
   .mobile-ep-title {
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    color: #fff !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     margin: 0 !important;
+    letter-spacing: 0.1px !important;
   }
 
   .mobile-ep-description {
     font-size: 11px !important;
-    color: var(--text-dim) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
     line-height: 1.4 !important;
-    margin-top: 2px !important;
+    margin-top: 4px !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
@@ -2435,35 +2600,50 @@
 
   .mobile-ep-actions {
     display: flex !important;
-    gap: 8px !important;
-    margin-top: 6px !important;
+    gap: 10px !important;
+    margin-top: 8px !important;
   }
 
   .mobile-ep-action-btn {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    min-height: 28px !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    min-height: 26px !important;
     border-radius: 50% !important;
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: var(--text-secondary) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
     padding: 0 !important;
+    transition: all 0.25s ease !important;
   }
 
   .mobile-ep-action-btn:active {
-    background: rgba(168, 85, 247, 0.2) !important;
-    color: white !important;
-    border-color: #a855f7 !important;
+    background: rgba(168, 85, 247, 0.15) !important;
+    color: #c084fc !important;
+    border-color: rgba(168, 85, 247, 0.4) !important;
+    transform: scale(1.1) !important;
   }
 
-  .mobile-ep-action-btn svg {
-    width: 12px !important;
-    height: 12px !important;
+  .mobile-ep-action-btn.ep-play-btn {
+    background: rgba(168, 85, 247, 0.1) !important;
+    border-color: rgba(168, 85, 247, 0.2) !important;
+    color: #c084fc !important;
+  }
+
+  .mobile-ep-action-btn.ep-play-btn:active {
+    background: rgba(168, 85, 247, 0.25) !important;
+    border-color: rgba(168, 85, 247, 0.6) !important;
+    color: #ffffff !important;
+  }
+
+  .mobile-ep-action-btn svg,
+  .mobile-ep-action-btn i {
+    width: 11px !important;
+    height: 11px !important;
   }
 
   /* Accordion hidden cards */
