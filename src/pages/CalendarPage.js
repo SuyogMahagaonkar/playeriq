@@ -485,6 +485,22 @@ export async function renderCalendarPage({ container }) {
           }
         }
 
+        // Precise keyword platform overrides
+        const titleStr = (item.title || item.name || '').toLowerCase();
+        if (titleStr.includes('punisher') || titleStr.includes('daredevil') || titleStr.includes('loki') || titleStr.includes('mandalorian') || titleStr.includes('grogu') || titleStr.includes('star wars') || titleStr.includes('disney+')) {
+          platform = 'disney';
+          platformLabel = 'Disney+';
+        } else if (titleStr.includes('stranger things') || titleStr.includes('wednesday') || titleStr.includes('squid game') || titleStr.includes('witcher') || titleStr.includes('knives out') || titleStr.includes('glass onion')) {
+          platform = 'netflix';
+          platformLabel = 'Netflix';
+        } else if (titleStr.includes('the boys') || titleStr.includes('jack ryan') || titleStr.includes('reacher') || titleStr.includes('fallout') || titleStr.includes('invincible')) {
+          platform = 'prime';
+          platformLabel = 'Prime Video';
+        } else if (titleStr.includes('batman') || titleStr.includes('dune') || titleStr.includes('house of the dragon') || titleStr.includes('game of thrones') || titleStr.includes('hbo') || titleStr.includes('max')) {
+          platform = 'hbo';
+          platformLabel = 'Max';
+        }
+
         return {
           id: `${item.media_type || 'movie'}_${item.id}`,
           tmdbId: item.id,
