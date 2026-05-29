@@ -2241,7 +2241,7 @@
   .mobile-search-page, 
   .watchlist-page, 
   .watch-history-page {
-    padding-top: calc(var(--navbar-height) + 16px) !important;
+    padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 24px) + 20px) !important;
   }
 
   /* --- Goal 2: Compact Segments for Slide Progress --- */
@@ -6294,11 +6294,11 @@
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    padding: 12px 20px !important;
+    padding: calc(env(safe-area-inset-top, 24px) + 12px) 20px 12px !important; /* Spacing to clear system status bar */
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    height: 64px !important;
+    height: auto !important; /* Fluid height based on padding */
     background: transparent !important; /* Completely translucent welcome overlay! */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -6865,7 +6865,7 @@
   /* --- Studios Page Circular Bubble Overrides --- */
   .studios-page-container {
     padding: 16px var(--space-md) !important;
-    padding-top: calc(var(--navbar-height) + 16px) !important;
+    padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 24px) + 20px) !important;
     padding-bottom: 95px !important;
     min-height: 100vh !important;
     box-sizing: border-box !important;
