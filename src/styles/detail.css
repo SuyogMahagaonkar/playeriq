@@ -710,3 +710,14 @@
 .detail-mobile-tabs {
   display: none !important;
 }
+
+/* Mobile meta grouping defaults (hidden/reset for desktop) */
+.detail-mobile-meta {
+  display: none !important;
+}
+
+.detail-logo-meta-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}

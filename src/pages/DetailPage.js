@@ -345,8 +345,20 @@ export async function renderDetailPage({ params, container }) {
             }
           </div>
           <div class="detail-info">
-            ${logoHTML}
-            ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
+            <div class="detail-logo-meta-group">
+              ${logoHTML}
+              ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
+              
+              <div class="detail-mobile-meta">
+                <span class="mobile-meta-rating">
+                  <svg class="mobile-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span>${rating}</span>
+                </span>
+                <span class="mobile-meta-genres">
+                  ${(data.genres || []).slice(0, 2).map(g => g.name).join(', ')}
+                </span>
+              </div>
+            </div>
             
             <div class="detail-actions">
               ${isMovieUnreleased ? `
