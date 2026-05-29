@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'TV Shows',    icon: 'tv',        path: '/tv' },
   { label: 'Animation',   icon: 'sparkles',  path: '/movies?genre=16' },
   { label: 'Most Watched',icon: 'trophy',    path: '/ranking' },
+  { label: 'Calendar',    icon: 'calendar',  path: '/calendar' },
 ];
 
 const SECONDARY_ITEMS = [

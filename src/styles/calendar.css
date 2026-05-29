@@ -1,0 +1,784 @@
+/* ========================================================
+   PlayerIQ — Release Calendar Stylesheet (Desktop-Only)
+   ======================================================== */
+
+.calendar-page-container {
+  padding: var(--space-xl) var(--space-2xl);
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - var(--navbar-height));
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  animation: fadeInCalendar 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.calendar-layout-wrapper {
+  display: flex;
+  gap: var(--space-xl);
+  align-items: flex-start;
+  margin-top: var(--space-md);
+  width: 100%;
+}
+
+/* Left Pane: Headers, filters, and dates grid */
+.calendar-left-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.calendar-header-card {
+  padding: 24px;
+}
+
+.calendar-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.calendar-main-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin: 0;
+  background: linear-gradient(135deg, #fff 40%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.month-selector-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.month-nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.month-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.month-nav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.current-month-display {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  min-width: 110px;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+.today-jump-btn {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: var(--primary, #a855f7);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.today-jump-btn:hover {
+  background: var(--gradient-purple);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+  transform: scale(1.03);
+}
+
+/* Platform Filtering Tabs Row */
+.platform-filters-row {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.platform-filters-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-tab {
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-tab:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.filter-tab.active {
+  background: var(--gradient-purple) !important;
+  color: white !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Platform indicators dots */
+.platform-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.platform-dot.netflix { color: #e50914; background: #e50914; }
+.platform-dot.disney  { color: #0063e5; background: #0063e5; }
+.platform-dot.prime   { color: #00a8e1; background: #00a8e1; }
+.platform-dot.apple   { color: #ffffff; background: #ffffff; }
+.platform-dot.hbo     { color: #7c3aed; background: #7c3aed; }
+.platform-dot.cinema  { color: #ffc107; background: #ffc107; }
+
+/* Grid panel for days */
+.calendar-grid-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calendar-days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.calendar-grid-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+/* Calendar grid cell card */
+.calendar-day-cell {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  height: 85px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-sizing: border-box;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cell-day-num {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.calendar-day-cell.pad-day {
+  opacity: 0.2;
+  cursor: default;
+  pointer-events: none;
+}
+
+.calendar-day-cell.has-release {
+  background: rgba(168, 85, 247, 0.04);
+  border-color: rgba(168, 85, 247, 0.15);
+  cursor: pointer;
+}
+
+.calendar-day-cell.has-release:hover {
+  transform: translateY(-3px) scale(1.03);
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(168, 85, 247, 0.15),
+    inset 0 0 10px rgba(168, 85, 247, 0.1);
+}
+
+.calendar-day-cell.has-release:hover .cell-day-num {
+  color: #fff;
+}
+
+.releases-dots-container {
+  display: flex;
+  gap: 4px;
+  align-self: stretch;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.platform-mini-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+}
+
+.platform-mini-dot.netflix { background: #e50914; box-shadow: 0 0 4px #e50914; }
+.platform-mini-dot.disney  { background: #0063e5; box-shadow: 0 0 4px #0063e5; }
+.platform-mini-dot.prime   { background: #00a8e1; box-shadow: 0 0 4px #00a8e1; }
+.platform-mini-dot.apple   { background: #ffffff; box-shadow: 0 0 4px #ffffff; }
+.platform-mini-dot.hbo     { background: #7c3aed; box-shadow: 0 0 4px #7c3aed; }
+.platform-mini-dot.cinema  { background: #ffc107; box-shadow: 0 0 4px #ffc107; }
+
+/* Right Pane: Vertical release list */
+.calendar-right-pane {
+  width: 380px;
+  min-width: 380px;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 600px;
+}
+
+.pane-side-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.side-releases-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+}
+
+.side-releases-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Movie Card in Vertical list */
+.list-movie-card {
+  display: flex;
+  gap: var(--space-sm);
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.list-day-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  margin-right: 4px;
+}
+
+.list-day-badge .day-num {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.list-day-badge .day-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.list-movie-poster {
+  width: 48px;
+  height: 72px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.list-movie-details {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.list-movie-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.list-movie-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-platform-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.list-platform-tag.netflix { color: #f87171; border-color: rgba(248, 113, 113, 0.2); background: rgba(229, 9, 20, 0.1); }
+.list-platform-tag.disney  { color: #60a5fa; border-color: rgba(96, 165, 250, 0.2); background: rgba(0, 99, 229, 0.1); }
+.list-platform-tag.prime   { color: #38bdf8; border-color: rgba(56, 189, 248, 0.2); background: rgba(0, 168, 225, 0.1); }
+.list-platform-tag.apple   { color: #e2e8f0; border-color: rgba(226, 232, 240, 0.2); background: rgba(255, 255, 255, 0.1); }
+.list-platform-tag.hbo     { color: #c084fc; border-color: rgba(192, 132, 252, 0.2); background: rgba(124, 58, 237, 0.1); }
+.list-platform-tag.cinema  { color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); background: rgba(255, 193, 7, 0.1); }
+
+.list-movie-genre {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.list-meta-divider {
+  opacity: 0.3;
+}
+
+/* Card hover & selection states */
+.list-movie-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.list-movie-card.active {
+  background: rgba(168, 85, 247, 0.06);
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 
+    inset 0 0 10px rgba(168, 85, 247, 0.1),
+    0 4px 15px rgba(0,0,0,0.2);
+}
+
+.list-movie-card.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: var(--gradient-purple);
+}
+
+/* List empty state */
+.list-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 12px;
+}
+
+.empty-list-icon {
+  width: 42px;
+  height: 42px;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+.empty-list-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* ========================================================
+   Macro Details Drawer Slider (Right Edge)
+   ======================================================== */
+.calendar-detail-drawer {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.drawer-content-pane {
+  position: relative;
+  width: 450px;
+  max-width: 90vw;
+  height: 100%;
+  z-index: 5;
+  transform: translate3d(100%, 0, 0);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.drawer-content-pane::-webkit-scrollbar {
+  display: none;
+}
+
+/* Active Drawer states */
+.calendar-detail-drawer.open {
+  pointer-events: auto;
+}
+
+.calendar-detail-drawer.open .drawer-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.calendar-detail-drawer.open .drawer-content-pane {
+  transform: translate3d(0, 0, 0);
+}
+
+.drawer-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(16, 18, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* Drawer Hero Backdrop art */
+.drawer-backdrop-hero {
+  height: 250px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.drawer-platform-tag {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid currentColor;
+}
+
+.drawer-platform-tag.netflix { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background: rgba(229, 9, 20, 0.2); }
+.drawer-platform-tag.disney  { color: #60a5fa; border-color: rgba(96, 165, 250, 0.3); background: rgba(0, 99, 229, 0.2); }
+.drawer-platform-tag.prime   { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); background: rgba(0, 168, 225, 0.2); }
+.drawer-platform-tag.apple   { color: #ffffff; border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.2); }
+.drawer-platform-tag.hbo     { color: #c084fc; border-color: rgba(192, 132, 252, 0.3); background: rgba(124, 58, 237, 0.2); }
+.drawer-platform-tag.cinema  { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background: rgba(255, 193, 7, 0.2); }
+
+/* Details Drawer contents layout */
+.drawer-info-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.drawer-movie-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.drawer-tagline {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.drawer-metadata-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.drawer-meta-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffc107;
+  font-weight: 700;
+}
+
+.drawer-meta-rating svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.drawer-meta-item {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drawer-genres-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.drawer-genre-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+
+.drawer-storyline-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 8px 0 0 0;
+}
+
+.drawer-overview {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Actions in Drawer */
+.drawer-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.drawer-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--gradient-purple);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.35);
+}
+
+.drawer-btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.55);
+}
+
+.drawer-btn-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.drawer-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.drawer-btn-secondary svg {
+  width: 16px;
+  height: 16px;
+}
+
+.drawer-btn-secondary.added {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.drawer-btn-secondary.added:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+/* ========================================================
+   MICRO & MACRO ANIMATIONS
+   ======================================================== */
+
+/* Macro Page Entrance */
+@keyframes fadeInCalendar {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Macro 3D Month Flip Transition */
+.calendar-grid-card.month-flip {
+  animation: calendar3DFlip 0.55s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes calendar3DFlip {
+  0% {
+    opacity: 0.7;
+    transform: perspective(1000px) rotateX(-4deg) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) rotateX(0deg) translateY(0);
+  }
+}

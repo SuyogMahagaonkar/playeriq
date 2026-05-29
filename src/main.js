@@ -23,6 +23,7 @@ import './styles/user-pages.css';
 import './styles/mobile-player.css';
 import './styles/connectivity.css';
 import './styles/downloads.css';
+import './styles/calendar.css';
 
 
 // Core
@@ -484,6 +485,12 @@ function initApp() {
     updateSidebarActive();
     const { renderDownloadsPage } = await import('./pages/DownloadsPage.js');
     return await renderDownloadsPage(ctx);
+  });
+
+  addRoute('/calendar', async (ctx) => {
+    updateSidebarActive();
+    const { renderCalendarPage } = await import('./pages/CalendarPage.js');
+    return await renderCalendarPage(ctx);
   });
 
   // Start routing

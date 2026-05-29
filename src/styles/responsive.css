@@ -105,7 +105,10 @@
    LARGE PHONE  (≤ 767px)
    ================================================ */
 @media (max-width: 767px) {
-
+  /* Hide Calendar link on mobile navigation drawer */
+  .sidebar-link[data-label="Calendar"] {
+    display: none !important;
+  }
 
   /* ---- Navbar ---- */
   .navbar        { padding: 0 var(--space-md); gap: var(--space-xs); }
