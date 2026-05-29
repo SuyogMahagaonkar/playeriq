@@ -782,3 +782,33 @@
     transform: perspective(1000px) rotateX(0deg) translateY(0);
   }
 }
+
+/* ========================================================
+   SPINNER AND LOADER STATES
+   ======================================================== */
+.calendar-loader-overlay {
+  display: flex !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.calendar-loader-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.calendar-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(168, 85, 247, 0.12);
+  border-top-color: var(--primary, #a855f7);
+  border-radius: 50%;
+  animation: calendarSpin 0.75s linear infinite;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+}
+
+@keyframes calendarSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

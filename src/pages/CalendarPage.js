@@ -6,6 +6,7 @@ import { createContentRow } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
+import { getWatchProviders, isSafeItem } from '../services/api.js';
 
 // High-fidelity release dataset (Hybrid TMDB IDs integrated)
 const RELEASES_DATA = [
@@ -256,6 +257,21 @@ const RELEASES_DATA = [
   }
 ];
 
+// Genre mapping list for TMDb numerical IDs
+const GENRE_MAP = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+  99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+  27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Sci-Fi",
+  10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+  10759: "Action & Adventure", 10762: "Kids", 10763: "News", 10764: "Reality",
+  10765: "Sci-Fi & Fantasy", 10766: "Soap", 10767: "Talk", 10768: "War & Politics"
+};
+
+const mapGenreIdsToLabels = (ids) => {
+  if (!ids || ids.length === 0) return ["General"];
+  return ids.slice(0, 3).map(id => GENRE_MAP[id] || "Other");
+};
+
 export async function renderCalendarPage({ container }) {
   // Enforce desktop check - redirect to home on small devices
   if (window.innerWidth <= 767) {
@@ -267,6 +283,10 @@ export async function renderCalendarPage({ container }) {
   let currentDate = new Date(2026, 4, 1); // May 2026 (0-indexed Month 4)
   let activePlatform = 'all';
   let selectedMovieId = null;
+  
+  // Dynamic monthly release cache and loader flags
+  let monthlyReleases = [];
+  let isLoading = false;
 
   // Initialize UI structure
   container.innerHTML = `
@@ -315,21 +335,29 @@ export async function renderCalendarPage({ container }) {
           </div>
 
           <!-- Dynamic Calendar Grid Panel -->
-          <div class="calendar-grid-card glass-panel" id="calendar-grid-card">
+          <div class="calendar-grid-card glass-panel" id="calendar-grid-card" style="position: relative;">
             <div class="calendar-days-header">
               <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
             </div>
             <div class="calendar-grid-body" id="calendar-grid-body">
               <!-- Grid Days loaded dynamically -->
             </div>
+            <!-- Glassmorphic Grid Spinner Loader -->
+            <div class="calendar-loader-overlay" id="calendar-grid-loader" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(16, 18, 30, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 12px; justify-content: center; align-items: center; z-index: 100;">
+              <div class="calendar-spinner"></div>
+            </div>
           </div>
         </div>
 
         <!-- Right Side: Release List Panel -->
-        <div class="calendar-right-pane glass-panel">
+        <div class="calendar-right-pane glass-panel" style="position: relative;">
           <h2 class="pane-side-title" id="side-list-title">Releases in May 2026</h2>
           <div class="side-releases-list" id="side-releases-list">
             <!-- Dynamic list -->
+          </div>
+          <!-- Glassmorphic List Spinner Loader -->
+          <div class="calendar-loader-overlay" id="calendar-list-loader" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(16, 18, 30, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 12px; justify-content: center; align-items: center; z-index: 100;">
+            <div class="calendar-spinner"></div>
           </div>
         </div>
 
@@ -364,27 +392,144 @@ export async function renderCalendarPage({ container }) {
   // Dynamic Lucide icons boot
   if (window.lucide) window.lucide.createIcons();
 
-  // Helper functions
+  // 1. Dynamic TMDb Discover API Fetcher
+  const fetchMonthlyReleases = async (year, month) => {
+    isLoading = true;
+    showLoaders();
+    
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
+
+    try {
+      // Parallel discover calls for Movies and TV shows
+      const [moviesRes, tvRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&primary_release_date.gte=${startDate}&primary_release_date.lte=${endDate}&sort_by=popularity.desc&include_adult=false&page=1`),
+        fetch(`https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&first_air_date.gte=${startDate}&first_air_date.lte=${endDate}&sort_by=popularity.desc&include_adult=false&page=1`)
+      ]);
+
+      if (!moviesRes.ok || !tvRes.ok) throw new Error("TMDB Discover failed");
+
+      const [moviesData, tvData] = await Promise.all([moviesRes.json(), tvRes.json()]);
+
+      const rawMovies = (moviesData.results || []).map(m => ({ ...m, media_type: 'movie' }));
+      const rawTvs = (tvData.results || []).map(t => ({ ...t, media_type: 'tv' }));
+      let combined = [...rawMovies, ...rawTvs];
+
+      // Safe Search recursively filters results
+      const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+      if (isSafe) {
+        combined = combined.filter(item => {
+          const checkItem = {
+            ...item,
+            genres: (item.genre_ids || []).map(id => GENRE_MAP[id] || "Other").join(' ')
+          };
+          return isSafeItem(checkItem);
+        });
+      }
+
+      // Map dynamic items into Release Calendar dataset schema
+      monthlyReleases = combined.map(item => {
+        // Platform classification heuristics
+        let platform = 'cinema';
+        let platformLabel = 'Cinema';
+        const genres = item.genre_ids || [];
+
+        if (item.media_type === 'tv') {
+          if (item.popularity % 4 === 0) {
+            platform = 'netflix';
+            platformLabel = 'Netflix';
+          } else if (item.popularity % 4 === 1) {
+            platform = 'prime';
+            platformLabel = 'Prime Video';
+          } else if (item.popularity % 4 === 2) {
+            platform = 'disney';
+            platformLabel = 'Disney+';
+          } else {
+            platform = 'hbo';
+            platformLabel = 'Max';
+          }
+        } else {
+          if (item.popularity > 80 && item.vote_count > 50) {
+            platform = 'cinema';
+            platformLabel = 'Cinema';
+          } else if (item.popularity % 4 === 0) {
+            platform = 'netflix';
+            platformLabel = 'Netflix';
+          } else if (item.popularity % 4 === 1) {
+            platform = 'prime';
+            platformLabel = 'Prime Video';
+          } else if (item.popularity % 4 === 2) {
+            platform = 'apple';
+            platformLabel = 'Apple TV+';
+          } else {
+            platform = 'disney';
+            platformLabel = 'Disney+';
+          }
+        }
+
+        return {
+          id: `${item.media_type || 'movie'}_${item.id}`,
+          tmdbId: item.id,
+          type: item.media_type || 'movie',
+          title: item.title || item.name,
+          date: item.release_date || item.first_air_date,
+          platform: platform,
+          platformLabel: platformLabel,
+          rating: item.vote_average ? item.vote_average.toFixed(1) : 'NR',
+          runtime: item.media_type === 'tv' ? 'TV Show' : 'Movie',
+          genres: mapGenreIdsToLabels(item.genre_ids),
+          poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=500&q=80',
+          backdrop: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1280&q=80',
+          tagline: item.tagline || 'Upcoming Release',
+          overview: item.overview || 'No storyline details available yet.',
+          trailerKey: ''
+        };
+      });
+
+    } catch (err) {
+      console.warn("TMDb Live Fetch failed, falling back to curated backup database:", err);
+      // Catch-all fallback filters our curated dataset for the active month
+      monthlyReleases = RELEASES_DATA.filter(movie => {
+        const movieDate = new Date(movie.date);
+        return movieDate.getFullYear() === year && movieDate.getMonth() === month;
+      });
+    } finally {
+      isLoading = false;
+      hideLoaders();
+    }
+  };
+
+  // Helper functions using active cache
   const getFilteredReleases = () => {
-    return RELEASES_DATA.filter(movie => {
-      const movieDate = new Date(movie.date);
-      const isSameMonth = movieDate.getFullYear() === currentDate.getFullYear() &&
-                          movieDate.getMonth() === currentDate.getMonth();
+    return monthlyReleases.filter(movie => {
       const isSamePlatform = activePlatform === 'all' || movie.platform === activePlatform;
-      return isSameMonth && isSamePlatform;
+      return isSamePlatform;
     });
   };
 
   const getMovieOnDay = (day) => {
-    return RELEASES_DATA.filter(movie => {
+    return monthlyReleases.filter(movie => {
+      if (!movie.date) return false;
       const movieDate = new Date(movie.date);
-      return movieDate.getFullYear() === currentDate.getFullYear() &&
-             movieDate.getMonth() === currentDate.getMonth() &&
-             movieDate.getDate() === day;
+      return movieDate.getDate() === day;
     });
   };
 
-  // Drawer slider action
+  const showLoaders = () => {
+    const gridLoader = document.getElementById('calendar-grid-loader');
+    const listLoader = document.getElementById('calendar-list-loader');
+    if (gridLoader) { gridLoader.style.display = 'flex'; gridLoader.classList.add('active'); }
+    if (listLoader) { listLoader.style.display = 'flex'; listLoader.classList.add('active'); }
+  };
+
+  const hideLoaders = () => {
+    const gridLoader = document.getElementById('calendar-grid-loader');
+    const listLoader = document.getElementById('calendar-list-loader');
+    if (gridLoader) { gridLoader.classList.remove('active'); setTimeout(() => gridLoader.style.display = 'none', 300); }
+    if (listLoader) { listLoader.classList.remove('active'); setTimeout(() => listLoader.style.display = 'none', 300); }
+  };
+
+  // Drawer slider action with dynamic real-time provider and trailer resolution
   const openDrawer = async (movie) => {
     const drawer = document.getElementById('calendar-drawer');
     const drawerBody = document.getElementById('drawer-body-content');
@@ -407,13 +552,14 @@ export async function renderCalendarPage({ container }) {
     const watchlistBtnIcon = isAdded ? 'check' : 'plus';
     const watchlistBtnClass = isAdded ? 'drawer-btn-secondary added' : 'drawer-btn-secondary';
 
+    // Instantly load layout card to keep transitions smooth
     drawerBody.innerHTML = `
       <div class="drawer-backdrop-hero" style="background-image: linear-gradient(to bottom, rgba(16,18,30,0) 20%, #10121e 100%), url('${movie.backdrop}');">
-        <span class="drawer-platform-tag ${movie.platform}">${movie.platformLabel}</span>
+        <span class="drawer-platform-tag ${movie.platform}" id="drawer-live-platform">${movie.platformLabel}</span>
       </div>
       <div class="drawer-info-content">
         <h3 class="drawer-movie-title">${movie.title}</h3>
-        <p class="drawer-tagline">"${movie.tagline}"</p>
+        <p class="drawer-tagline" id="drawer-live-tagline">"Loading details..."</p>
         
         <div class="drawer-metadata-row">
           <span class="drawer-meta-rating">
@@ -428,16 +574,20 @@ export async function renderCalendarPage({ container }) {
           ${movie.genres.map(g => `<span class="drawer-genre-tag">${g}</span>`).join('')}
         </div>
 
+        <!-- Live Watch Providers Section -->
+        <h4 class="drawer-storyline-title" style="margin-top: 14px;">Where to Watch</h4>
+        <div class="drawer-providers-row" id="drawer-providers-container" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="drawer-platform-tag ${movie.platform}">${movie.platformLabel}</span>
+        </div>
+
         <h4 class="drawer-storyline-title">Storyline</h4>
         <p class="drawer-overview">${movie.overview}</p>
 
         <div class="drawer-actions-stack">
-          ${movie.trailerKey ? `
-            <button class="drawer-btn-primary" id="drawer-play-trailer-btn">
-              <i data-lucide="play-circle"></i>
-              Watch Trailer
-            </button>
-          ` : ''}
+          <button class="drawer-btn-primary" id="drawer-play-trailer-btn" style="display: none;">
+            <i data-lucide="play-circle"></i>
+            Watch Trailer
+          </button>
           <button class="${watchlistBtnClass}" id="drawer-watchlist-toggle-btn">
             <i data-lucide="${watchlistBtnIcon}"></i>
             <span id="drawer-watchlist-text">${watchlistBtnText}</span>
@@ -450,22 +600,71 @@ export async function renderCalendarPage({ container }) {
       </div>
     `;
 
+    drawer.classList.add('open');
     if (window.lucide) window.lucide.createIcons();
 
-    // Attach drawer button click handlers
-    document.getElementById('drawer-play-trailer-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('calendar-trailer-modal');
-      const trailerContainer = document.getElementById('cal-trailer-container');
-      if (modal && trailerContainer) {
-        trailerContainer.innerHTML = `
-          <iframe src="https://www.youtube.com/embed/${movie.trailerKey}?autoplay=1&rel=0" 
-                  style="width:100%; height:100%; border:none;" 
-                  allow="autoplay; encrypted-media; fullscreen" 
-                  allowfullscreen></iframe>`;
-        modal.style.display = 'flex';
-      }
-    });
+    // Fetch live watch providers, tagline, and trailer keys dynamically in the background
+    let liveTrailerKey = null;
+    (async () => {
+      try {
+        const [providers, videoRes, detailsRes] = await Promise.all([
+          getWatchProviders(movie.tmdbId, movie.type),
+          fetch(`https://api.themoviedb.org/3/${movie.type}/${movie.tmdbId}/videos?api_key=8e4ad9e56e31ab079517b5be6965b477`),
+          fetch(`https://api.themoviedb.org/3/${movie.type}/${movie.tmdbId}?api_key=8e4ad9e56e31ab079517b5be6965b477`)
+        ]);
 
+        // Dynamic streaming service resolve
+        const providersContainer = document.getElementById('drawer-providers-container');
+        if (providersContainer && providers) {
+          const flatrate = providers.flatrate || providers.buy || [];
+          if (flatrate.length > 0) {
+            providersContainer.innerHTML = flatrate.slice(0, 3).map(p => `
+              <span class="drawer-platform-tag" style="background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); color: #fff;">
+                ${p.provider_name}
+              </span>
+            `).join('');
+          }
+        }
+
+        // Live Tagline resolve
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json();
+          const taglineEl = document.getElementById('drawer-live-tagline');
+          if (taglineEl) {
+            taglineEl.textContent = detailsData.tagline ? `"${detailsData.tagline}"` : `"${movie.title}"`;
+          }
+        }
+
+        // YouTube Trailer resolve
+        if (videoRes.ok) {
+          const videoData = await videoRes.json();
+          const trailer = videoData.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube') || videoData.results?.[0];
+          if (trailer) {
+            liveTrailerKey = trailer.key;
+            const playBtn = document.getElementById('drawer-play-trailer-btn');
+            if (playBtn) {
+              playBtn.style.display = 'flex';
+              playBtn.addEventListener('click', () => {
+                const modal = document.getElementById('calendar-trailer-modal');
+                const trailerContainer = document.getElementById('cal-trailer-container');
+                if (modal && trailerContainer) {
+                  trailerContainer.innerHTML = `
+                    <iframe src="https://www.youtube.com/embed/${liveTrailerKey}?autoplay=1&rel=0" 
+                            style="width:100%; height:100%; border:none;" 
+                            allow="autoplay; encrypted-media; fullscreen" 
+                            allowfullscreen></iframe>`;
+                  modal.style.display = 'flex';
+                }
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Background drawer API fetch failed:", err);
+      }
+    })();
+
+    // Watchlist trigger handlers
     document.getElementById('drawer-watchlist-toggle-btn')?.addEventListener('click', async () => {
       if (!user) {
         navigate('/settings');
@@ -502,8 +701,6 @@ export async function renderCalendarPage({ container }) {
       drawer.classList.remove('open');
       navigate(`/${movie.type}/${movie.tmdbId}`);
     });
-
-    drawer.classList.add('open');
   };
 
   const closeDrawer = () => {
@@ -580,7 +777,7 @@ export async function renderCalendarPage({ container }) {
     listContainer.querySelectorAll('.list-movie-card').forEach(card => {
       card.addEventListener('click', () => {
         const movieId = card.dataset.movieId;
-        const movie = RELEASES_DATA.find(m => m.id === movieId);
+        const movie = monthlyReleases.find(m => m.id === movieId);
         if (movie) {
           // Highlight
           listContainer.querySelectorAll('.list-movie-card').forEach(c => c.classList.remove('active'));
@@ -679,26 +876,32 @@ export async function renderCalendarPage({ container }) {
     });
   };
 
+  // Controller function that chains loading spinner state with dynamic TMDb discover calls
+  const loadAndRenderReleases = async () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    await fetchMonthlyReleases(year, month);
+    renderCalendarGrid();
+    renderReleasesList();
+  };
+
   // Wire controls and month selectors
   document.getElementById('prev-month-btn')?.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
     closeDrawer();
-    renderCalendarGrid();
-    renderReleasesList();
+    loadAndRenderReleases();
   });
 
   document.getElementById('next-month-btn')?.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     closeDrawer();
-    renderCalendarGrid();
-    renderReleasesList();
+    loadAndRenderReleases();
   });
 
   document.getElementById('today-btn')?.addEventListener('click', () => {
     currentDate = new Date(2026, 4, 1); // Jump back to May 2026 default
     closeDrawer();
-    renderCalendarGrid();
-    renderReleasesList();
+    loadAndRenderReleases();
   });
 
   // Platform source tabs filtering
@@ -715,9 +918,8 @@ export async function renderCalendarPage({ container }) {
     });
   });
 
-  // Initial render calls
-  renderCalendarGrid();
-  renderReleasesList();
+  // Initial dynamically populated render call
+  await loadAndRenderReleases();
 
   // Cleanup on route shift
   return () => {
