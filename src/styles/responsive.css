@@ -71,6 +71,7 @@
   .detail-main           { flex-direction: column; align-items: center; padding: 0 var(--space-lg); }
   .detail-poster-wrapper { width: 200px; }
   .detail-info           { padding-top: var(--space-md); text-align: center; }
+  .detail-logo-meta-group { align-items: center !important; }
   .detail-genres         { justify-content: center; }
   .detail-actions        { justify-content: center; }
   .detail-title          { font-size: var(--text-2xl); }
