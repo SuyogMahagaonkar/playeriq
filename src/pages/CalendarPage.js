@@ -9,7 +9,43 @@ import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/
 
 // High-fidelity release dataset (Hybrid TMDB IDs integrated)
 const RELEASES_DATA = [
+  // December 2025 Releases
+  {
+    id: "stranger_5",
+    tmdbId: 66732, // Stranger Things
+    type: "tv",
+    title: "Stranger Things 5 (Vol. 1)",
+    date: "2025-12-05", // Officially released in Dec 2025
+    platform: "netflix",
+    platformLabel: "Netflix",
+    rating: "9.2",
+    runtime: "55m/ep",
+    genres: ["Sci-Fi", "Drama", "Mystery"],
+    poster: "https://image.tmdb.org/t/p/w500/49W04aTFRIj6H6wzrj7A0ugIuIR.jpg",
+    backdrop: "https://image.tmdb.org/t/p/w1280/56v2Dnjsu505CgA3U17u1D35JWh.jpg",
+    tagline: "One last ride in the Upside Down.",
+    overview: "The final showdown in Hawkins begins as Eleven and her friends gather their strength to close the rift to the Upside Down once and for all and defeat Vecna in an epic closing season.",
+    trailerKey: "tos7MZ18118"
+  },
+
   // May 2026 Releases
+  {
+    id: "avengers_doomsday",
+    tmdbId: 1003596, // Avengers: Doomsday
+    type: "movie",
+    title: "Avengers: Doomsday",
+    date: "2026-05-01",
+    platform: "cinema",
+    platformLabel: "Cinema",
+    rating: "9.4",
+    runtime: "160m",
+    genres: ["Action", "Sci-Fi", "Adventure"],
+    poster: "https://image.tmdb.org/t/p/w500/8HkIe2i4ScpCkcX9SzZ9IPasqWV.jpg",
+    backdrop: "https://image.tmdb.org/t/p/w1280/3eOINbgRs8WiWfQfViXeuZ3enrs.jpg",
+    tagline: "The doom of the multiverse begins.",
+    overview: "Earth's mightiest heroes face an unprecedented threat from the multiverse as Doctor Doom rises to reshape reality itself in his own image.",
+    trailerKey: "tos7MZ18118"
+  },
   {
     id: "batman_2",
     tmdbId: 414906, // The Batman
@@ -28,20 +64,37 @@ const RELEASES_DATA = [
     trailerKey: "mqqft2x_Aa4"
   },
   {
-    id: "stranger_5",
-    tmdbId: 66732, // Stranger Things
+    id: "dune_prophecy",
+    tmdbId: 91363, // Dune: Prophecy / Foundation
     type: "tv",
-    title: "Stranger Things 5 (Vol. 1)",
-    date: "2026-05-20",
-    platform: "netflix",
-    platformLabel: "Netflix",
-    rating: "9.2",
-    runtime: "55m/ep",
-    genres: ["Sci-Fi", "Drama", "Mystery"],
-    poster: "https://image.tmdb.org/t/p/w500/49W04aTFRIj6H6wzrj7A0ugIuIR.jpg",
-    backdrop: "https://image.tmdb.org/t/p/w1280/56v2Dnjsu505CgA3U17u1D35JWh.jpg",
-    tagline: "One last ride in the Upside Down.",
-    overview: "The final showdown in Hawkins begins as Eleven and her friends gather their strength to close the rift to the Upside Down once and for all and defeat Vecna in an epic closing season.",
+    title: "Dune: Prophecy Season 2",
+    date: "2026-05-14",
+    platform: "hbo",
+    platformLabel: "Max",
+    rating: "8.5",
+    runtime: "60m/ep",
+    genres: ["Sci-Fi", "Drama"],
+    poster: "https://image.tmdb.org/t/p/w500/h6Y65HlE681h0xH6xZzXU64Tj1y.jpg",
+    backdrop: "https://image.tmdb.org/t/p/w1280/etj8VeTYcl8hUkeOF9v69gCBvLs.jpg",
+    tagline: "The origin of the Sisterhood.",
+    overview: "Set 10,000 years before the ascension of Paul Atreides, Season 2 continues the story of the Harkonnen sisters as they establish the fabled sect that will become known as the Bene Gesserit.",
+    trailerKey: "m20e5V1B0lM"
+  },
+  {
+    id: "mission_8",
+    tmdbId: 575264, // Mission: Impossible - Dead Reckoning (MI8 substitute)
+    type: "movie",
+    title: "Mission: Impossible - The Final Reckoning",
+    date: "2026-05-20", // Replaces Stranger Things 5 Vol 1 on May 20, 2026
+    platform: "cinema",
+    platformLabel: "Cinema",
+    rating: "8.9",
+    runtime: "163m",
+    genres: ["Action", "Adventure", "Thriller"],
+    poster: "https://image.tmdb.org/t/p/w500/NNxYkU70HPurnNCSiCjYAmacwm.jpg",
+    backdrop: "https://image.tmdb.org/t/p/w1280/628Dep6AxEtDxjZoGP78TsOxYbK.jpg",
+    tagline: "Our lives are the sum of our choices.",
+    overview: "Ethan Hunt and his IMF team embark on their most dangerous mission yet to track down a terrifying new weapon that threatens all of humanity before it falls into the wrong hands.",
     trailerKey: "tos7MZ18118"
   },
   {
@@ -60,23 +113,6 @@ const RELEASES_DATA = [
     tagline: "This is the way... to the big screen.",
     overview: "Din Djarin and his beloved foundling Grogu embark on a brand new cinematic adventure, navigating the dangerous outer rim in a story that expands the Mandalorian saga to epic scope.",
     trailerKey: "aOC8E8z_ifw"
-  },
-  {
-    id: "dune_prophecy",
-    tmdbId: 91363, // Dune: Prophecy / Foundation
-    type: "tv",
-    title: "Dune: Prophecy Season 2",
-    date: "2026-05-14",
-    platform: "hbo",
-    platformLabel: "Max",
-    rating: "8.5",
-    runtime: "60m/ep",
-    genres: ["Sci-Fi", "Drama"],
-    poster: "https://image.tmdb.org/t/p/w500/h6Y65HlE681h0xH6xZzXU64Tj1y.jpg",
-    backdrop: "https://image.tmdb.org/t/p/w1280/etj8VeTYcl8hUkeOF9v69gCBvLs.jpg",
-    tagline: "The origin of the Sisterhood.",
-    overview: "Set 10,000 years before the ascension of Paul Atreides, Season 2 continues the story of the Harkonnen sisters as they establish the fabled sect that will become known as the Bene Gesserit.",
-    trailerKey: "m20e5V1B0lM"
   },
 
   // June 2026 Releases
