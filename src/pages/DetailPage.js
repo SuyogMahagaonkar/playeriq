@@ -246,9 +246,9 @@ export async function renderDetailPage({ params, container }) {
 
     // Extract cast for mobile inline tab
     let castHTML = '';
+    const staffMap = new Map();
     if (data.raw_data && data.raw_data.staffList && data.raw_data.staffList.length > 0) {
       const staffList = data.raw_data.staffList;
-      const staffMap = new Map();
       staffList.forEach(staff => {
         if (!staff.name) return;
         const role = staff.character || (staff.staffType === 1 ? 'Actor' : 'Director');
@@ -261,16 +261,30 @@ export async function renderDetailPage({ params, container }) {
           staffMap.set(staff.name, { ...staff, character: role });
         }
       });
+    } else if (data.credits && data.credits.cast && data.credits.cast.length > 0) {
+      data.credits.cast.slice(0, 15).forEach(member => {
+        if (!member.name) return;
+        staffMap.set(member.name, {
+          name: member.name,
+          character: member.character,
+          avatarUrl: member.profile_path ? img.profile(member.profile_path) : null
+        });
+      });
+    }
 
-      const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-          <rect width="100" height="100" fill="var(--bg-tertiary, %230a0a0a)" />
-          <circle cx="50" cy="50" r="48" stroke="var(--accent, %23a855f7)" stroke-width="2" stroke-dasharray="4 2" fill="none" opacity="0.3" />
-          <circle cx="50" cy="38" r="16" fill="var(--accent, %23a855f7)" opacity="0.4" />
-          <path d="M22 82C22 65 34 56 50 56C66 56 78 65 78 82" fill="var(--accent, %23a855f7)" opacity="0.4" />
-        </svg>
-      `)}`;
+    const castCount = staffMap.size;
+    const castCountLabel = castCount > 0 ? `Cast (${castCount})` : 'Cast';
 
+    const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect width="100" height="100" fill="var(--bg-tertiary, %230a0a0a)" />
+        <circle cx="50" cy="50" r="48" stroke="var(--accent, %23a855f7)" stroke-width="2" stroke-dasharray="4 2" fill="none" opacity="0.3" />
+        <circle cx="50" cy="38" r="16" fill="var(--accent, %23a855f7)" opacity="0.4" />
+        <path d="M22 82C22 65 34 56 50 56C66 56 78 65 78 82" fill="var(--accent, %23a855f7)" opacity="0.4" />
+      </svg>
+    `)}`;
+
+    if (staffMap.size > 0) {
       castHTML = `
         <div class="mobile-bento-cast-grid">
           ${Array.from(staffMap.values()).slice(0, 9).map(staff => `
@@ -333,51 +347,7 @@ export async function renderDetailPage({ params, container }) {
           <div class="detail-info">
             ${logoHTML}
             ${data.tagline ? `<p class="detail-tagline">"${data.tagline}"</p>` : ''}
-            <div class="detail-bento-grid">
-              <!-- Bento Card 1: Rating -->
-              <div class="bento-card bento-card-rating">
-                <span class="bento-card-title">Rating</span>
-                <div class="bento-card-value rating-value">
-                  <svg class="bento-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  <span>${rating}</span>
-                </div>
-              </div>
-
-              <!-- Bento Card 2: Release & Duration -->
-              <div class="bento-card bento-card-meta">
-                <span class="bento-card-title">Info</span>
-                <div class="bento-card-value meta-value">
-                  <span class="meta-year">${year}</span>
-                  ${runtime ? `<span class="meta-divider">·</span><span class="meta-runtime">${runtime}</span>` : ''}
-                  ${isTV && data.number_of_seasons ? `<span class="meta-divider">·</span><span class="meta-seasons">${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}</span>` : ''}
-                </div>
-              </div>
-
-              <!-- Bento Card 3: Genres -->
-              <div class="bento-card bento-card-genres">
-                <span class="bento-card-title">Genres</span>
-                <div class="detail-genres">
-                  ${(data.genres || []).map(g => `<span class="detail-genre-tag">${g.name}</span>`).join('')}
-                </div>
-              </div>
-
-              <!-- Bento Card 4: Streaming Providers -->
-              <div class="bento-card bento-card-providers" id="watch-providers-container" style="display: none;">
-                <span class="bento-card-title">Streaming Source</span>
-                <div id="watch-providers-list" class="bento-providers-list"></div>
-              </div>
-
-              <!-- Bento Card 5: Storyline -->
-              <div class="bento-card bento-card-story">
-                <span class="bento-card-title">Storyline</span>
-                <div class="detail-overview-wrapper">
-                  <p class="detail-overview collapsed" id="detail-overview-text">${data.overview || 'No overview available.'}</p>
-                  ${(data.overview && data.overview.length > 180) ? `
-                    <button class="overview-toggle-btn" id="overview-toggle" aria-label="Toggle full description">More</button>
-                  ` : ''}
-                </div>
-              </div>
-            </div>
+            
             <div class="detail-actions">
               ${isMovieUnreleased ? `
                 <button class="detail-btn detail-btn-primary" id="watch-btn" disabled style="opacity: 0.65; cursor: not-allowed; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);">
@@ -423,10 +393,56 @@ export async function renderDetailPage({ params, container }) {
             
             <!-- Premium Mobile Tab Navigation -->
             <div class="detail-mobile-tabs">
-              <button class="mobile-tab-btn active" data-tab="story">Story</button>
+              <button class="mobile-tab-btn active" data-tab="story">Overview</button>
+              <button class="mobile-tab-btn" data-tab="cast">${castCountLabel}</button>
               ${isTV ? `<button class="mobile-tab-btn" data-tab="episodes">Episodes</button>` : ''}
-              <button class="mobile-tab-btn" data-tab="cast">Cast</button>
               <button class="mobile-tab-btn" data-tab="similar">More Like This</button>
+            </div>
+
+            <div class="detail-bento-grid">
+              <!-- Bento Card 1: Rating -->
+              <div class="bento-card bento-card-rating">
+                <span class="bento-card-title">Rating</span>
+                <div class="bento-card-value rating-value">
+                  <svg class="bento-star-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span>${rating}</span>
+                </div>
+              </div>
+
+              <!-- Bento Card 2: Release & Duration -->
+              <div class="bento-card bento-card-meta">
+                <span class="bento-card-title">Info</span>
+                <div class="bento-card-value meta-value">
+                  <span class="meta-year">${year}</span>
+                  ${runtime ? `<span class="meta-divider">·</span><span class="meta-runtime">${runtime}</span>` : ''}
+                  ${isTV && data.number_of_seasons ? `<span class="meta-divider">·</span><span class="meta-seasons">${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Bento Card 3: Genres -->
+              <div class="bento-card bento-card-genres">
+                <span class="bento-card-title">Genres</span>
+                <div class="detail-genres">
+                  ${(data.genres || []).map(g => `<span class="detail-genre-tag">${g.name}</span>`).join('')}
+                </div>
+              </div>
+
+              <!-- Bento Card 4: Streaming Providers -->
+              <div class="bento-card bento-card-providers" id="watch-providers-container" style="display: none;">
+                <span class="bento-card-title">Streaming Source</span>
+                <div id="watch-providers-list" class="bento-providers-list"></div>
+              </div>
+
+              <!-- Bento Card 5: Storyline -->
+              <div class="bento-card bento-card-story">
+                <span class="bento-card-title">Storyline</span>
+                <div class="detail-overview-wrapper">
+                  <p class="detail-overview collapsed" id="detail-overview-text">${data.overview || 'No overview available.'}</p>
+                  ${(data.overview && data.overview.length > 180) ? `
+                    <button class="overview-toggle-btn" id="overview-toggle" aria-label="Toggle full description">More</button>
+                  ` : ''}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -727,6 +743,29 @@ export async function renderDetailPage({ params, container }) {
           }
           if (data.overview) {
             html += `<p style="margin-top: 15px;"><strong>Overview:</strong><br/>${data.overview}</p>`;
+          }
+          if (data.credits && data.credits.cast && data.credits.cast.length > 0) {
+            const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <rect width="100" height="100" fill="var(--bg-tertiary, %230a0a0a)" />
+                <circle cx="50" cy="50" r="48" stroke="var(--accent, %23a855f7)" stroke-width="2" stroke-dasharray="4 2" fill="none" opacity="0.3" />
+                <circle cx="50" cy="38" r="16" fill="var(--accent, %23a855f7)" opacity="0.4" />
+                <path d="M22 82C22 65 34 56 50 56C66 56 78 65 78 82" fill="var(--accent, %23a855f7)" opacity="0.4" />
+              </svg>
+            `)}`;
+            html += `<h3 style="margin-top: 20px; margin-bottom: 16px; color: var(--text-main);">Cast & Crew</h3>`;
+            html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; margin-top: 12px;">`;
+            data.credits.cast.slice(0, 15).forEach(member => {
+              const avatar = member.profile_path ? img.profile(member.profile_path) : fallbackImg;
+              html += `
+                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%;">
+                  <img src="${avatar}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; border: 2px solid var(--accent, %23a855f7); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                  <div style="font-size: 13px; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin: 0 auto;" title="${member.name || ''}">${member.name || ''}</div>
+                  <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin: 2px auto 0 auto;" title="${member.character}">${member.character}</div>
+                </div>
+              `;
+            });
+            html += `</div>`;
           }
         }
         

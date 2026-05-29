@@ -181,6 +181,10 @@
     padding-bottom: 28px !important;
   }
 
+  #details-btn {
+    display: none !important;
+  }
+
   .detail-actions-row .detail-btn-secondary,
   .detail-actions-row .detail-btn-trailer {
     width: 44px !important;
