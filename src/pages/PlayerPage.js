@@ -226,7 +226,7 @@ let episodeDetails = new Map(); // key: `S${season}E${ep}` â€” episode meta
 let totalEpisodes = 0;
 let currentSeasonEpisodes = []; // Cached episodes list for in-player navigation
 let currentEpisodesPage = 1;
-const EPISODES_PER_PAGE = 10;
+const EPISODES_PER_PAGE = 6;
 
 async function cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes) {
   try {
