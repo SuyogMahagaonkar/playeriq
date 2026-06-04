@@ -1092,6 +1092,7 @@ export async function renderSettingsPage({ container }) {
     localStorage.setItem('piq_sub_size', newPrefs.subtitleSize);
     localStorage.setItem('piq_sub_color', newPrefs.subtitleColor);
     localStorage.setItem('piq_sub_bg_opacity', String(newPrefs.subtitleBgOpacity));
+    localStorage.setItem('piq_quality', newPrefs.quality);
 
     // Apply styles instantly!
     applyGlobalTheme();
@@ -1223,7 +1224,7 @@ export async function renderSettingsPage({ container }) {
   // Wire cache purger footprint action
   estimateCacheFootprint();
   container.querySelector('#btn-purge-cache')?.addEventListener('click', () => {
-    const itemsToKeep = ['piq_safesearch', 'piq_theme_color', 'piq_theme_dark', 'piq_seek_interval', 'piq_skip_recaps', 'piq_sub_size', 'piq_sub_color', 'piq_sub_bg_opacity'];
+    const itemsToKeep = ['piq_safesearch', 'piq_theme_color', 'piq_theme_dark', 'piq_seek_interval', 'piq_skip_recaps', 'piq_sub_size', 'piq_sub_color', 'piq_sub_bg_opacity', 'piq_quality'];
     const keys = Object.keys(localStorage);
     for (const key of keys) {
       if (!itemsToKeep.includes(key) && !key.startsWith('firebase:')) {

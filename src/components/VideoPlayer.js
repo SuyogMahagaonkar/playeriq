@@ -1109,42 +1109,164 @@ export function createVideoPlayer(container, streamData, {
       });
 
     } else if (streamData.type === 'hls' && Hls.isSupported()) {
+      // ── Netflix-style HLS config ──────────────────────────────────────────────
+      // Read saved quality preference (set in SettingsPage / SettingsDrawer)
+      const savedQualityPref = localStorage.getItem('piq_quality') || 'auto';
+
+      // Determine viewport-capped max resolution (no point fetching pixels the
+      // screen can't render — mirrors Netflix's viewport-resolution ceiling).
+      const viewportHeight = window.screen.height || window.innerHeight || 1080;
+
       hls = new Hls({
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        startLevel: 1, // Start on mobile-friendly 480p/720p resolution
+        // ── Startup & ABR ───────────────────────────────────────────────────────
+        startLevel:           -1,            // Let ABR pick the best start level
+        abrEwmaDefaultEstimate: 1_500_000,   // Assume 1.5 Mbps initially (faster first segment)
+        abrBandWidthFactor:      0.90,       // Use 90% of measured BW (leave headroom)
+        abrBandWidthUpFactor:    0.70,       // Conservative upswitch: require 70% overhead
+
+        // ── Buffer sizes (Netflix strategy) ─────────────────────────────────────
+        // Keep 30 s ahead; never let hls.js gorge on the whole file.
+        maxBufferLength:       30,           // Target forward buffer (seconds)
+        maxMaxBufferLength:    60,           // Absolute ceiling
+        maxBufferSize:       60 * 1024 * 1024,  // 60 MB max in-memory buffer
+        maxBufferHole:          0.5,         // Fill tiny gaps instead of rebuffering
+
+        // ── Back-buffer (memory) ────────────────────────────────────────────────
+        // hls.js ≥ 1.x supports backBufferLength; older builds silently ignore it.
+        backBufferLength:      30,           // Keep 30 s behind playhead for seek-back
+
+        // ── Latency & recovery ──────────────────────────────────────────────────
+        progressive:            true,        // Feed data to MSE as it arrives
+        lowLatencyMode:         false,       // We serve VOD, not live
+        manifestLoadingTimeOut: 10_000,
+        manifestLoadingMaxRetry: 4,
+        levelLoadingTimeOut:    10_000,
+        levelLoadingMaxRetry:    4,
+        fragLoadingTimeOut:     20_000,
+        fragLoadingMaxRetry:     6,
+        fragLoadingRetryDelay:   500,        // ms between retries (exponentially doubles)
       });
+
       hls.loadSource(streamData.url);
       hls.attachMedia(video);
-      video._hls = hls; // Store on video element for reuse!
+      video._hls = hls; // Store on video element for reuse
 
-      // Automatic quality downgrade logic removed to prevent forceful downgrades and stream reloading/restarting.
+      // ── Quality / ABR ceiling helper ─────────────────────────────────────────
+      // Converts the user's saved preference string into a pixel-height cap.
+      function getQualityHeightCap(prefStr) {
+        const map = { '360p': 360, '480p': 480, '720p': 720, '1080p': 1080, '1440p': 1440, '4k': 2160 };
+        if (!prefStr || prefStr === 'auto') return Infinity;
+        return map[prefStr] ?? Infinity;
+      }
+
+      // Apply ABR ceiling: find the highest level that fits both the user pref
+      // AND the viewport height. Falls back gracefully if no level matches.
+      function applyAbrCeiling(levels) {
+        const prefCap      = getQualityHeightCap(savedQualityPref);
+        const effectiveCap = Math.min(prefCap, viewportHeight);
+        if (!isFinite(effectiveCap)) {
+          hls.autoLevelCapping = -1; // uncapped
+          return;
+        }
+        // Find the highest-resolution level that is ≤ effectiveCap
+        let bestLevel = -1;
+        levels.forEach((lvl, idx) => {
+          if ((lvl.height || 0) <= effectiveCap) bestLevel = idx;
+        });
+        // If no level fits (e.g. source only has 1080p but cap is 720p),
+        // use the lowest available level rather than crashing.
+        if (bestLevel === -1 && levels.length > 0) bestLevel = 0;
+        hls.autoLevelCapping = bestLevel;
+        console.log(`[HLS] ABR ceiling → level ${bestLevel} (${levels[bestLevel]?.height}p) — pref: ${savedQualityPref}, viewportH: ${viewportHeight}px`);
+      }
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         // Populate quality selector
         qualitySelect.innerHTML = '<option value="-1">Auto</option>';
         data.levels.forEach((level, i) => {
-          const height = level.height || '?';
+          const height  = level.height || '?';
           const bitrate = Math.round(level.bitrate / 1000);
           qualitySelect.innerHTML += `<option value="${i}">${height}p (${bitrate}k)</option>`;
         });
-        loader.style.display = 'none';
-        if (startTime > 0) {
-          video.currentTime = startTime;
+
+        // Apply the saved quality ceiling immediately after levels are known
+        applyAbrCeiling(data.levels);
+
+        // If the user has a specific (non-auto) preference, jump directly to the
+        // best matching level so there's zero quality-ramp lag on start.
+        if (savedQualityPref && savedQualityPref !== 'auto') {
+          const prefHeight = getQualityHeightCap(savedQualityPref);
+          let bestIdx = -1;
+          data.levels.forEach((lvl, idx) => {
+            if ((lvl.height || 0) <= prefHeight) bestIdx = idx;
+          });
+          if (bestIdx === -1 && data.levels.length > 0) bestIdx = 0; // fallback to lowest
+          if (bestIdx !== -1) {
+            hls.startLevel    = bestIdx;
+            hls.currentLevel  = bestIdx;
+            // Sync the dropdown to the resolved level
+            qualitySelect.value = String(bestIdx);
+          }
         }
+
+        loader.style.display = 'none';
+        if (startTime > 0) video.currentTime = startTime;
         video.play().catch(err => console.log('[HLS Autoplay] Blocked or interrupted:', err));
       });
 
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          console.error('[HLS] Fatal error:', data.type, data.details);
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
+      // ── Back-buffer cleanup (sliding window) ──────────────────────────────────
+      // Remove segments more than 30 s behind the playhead to free memory,
+      // mimicking Netflix's sliding-window buffer strategy.
+      const backBufferCleanupInterval = setInterval(() => {
+        if (!hls || video.paused) return;
+        const currentTime = video.currentTime;
+        try {
+          // hls.js ≥ 1.5 exposes a dedicated flushBackBuffer; older versions
+          // don't have it, so we guard with an existence check.
+          if (typeof hls.flushBackBuffer === 'function') {
+            hls.flushBackBuffer();
           }
+        } catch (_) {}
+      }, 10_000); // run every 10 s
+
+      // ── Buffer-starvation quick-recovery ─────────────────────────────────────
+      // If the video stalls and the buffer is empty, nudge the loader immediately.
+      let stallTimer = null;
+      video.addEventListener('waiting', () => {
+        clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => {
+          // If still stalled after 3 s, attempt a startLoad() nudge
+          if (!video.paused && video.readyState < 3 && hls) {
+            console.warn('[HLS] Buffer starvation detected — nudging hls.startLoad()');
+            hls.startLoad(video.currentTime);
+          }
+        }, 3_000);
+      });
+      video.addEventListener('playing', () => clearTimeout(stallTimer));
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data.fatal) return; // non-fatal errors are handled by hls.js internally
+        console.error('[HLS] Fatal error:', data.type, data.details);
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Exponential back-off: wait 1 s before restarting the load
+          setTimeout(() => hls.startLoad(), 1_000);
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          hls.recoverMediaError();
+        } else {
+          // Unrecoverable — surface the fatal-error UI
+          clearInterval(backBufferCleanupInterval);
+          clearTimeout(watchdogTimeout);
+          if (onFatalError) onFatalError();
         }
       });
+
+      // Tear down the cleanup interval when the player is destroyed
+      const origDestroy = hls.destroy.bind(hls);
+      hls.destroy = () => {
+        clearInterval(backBufferCleanupInterval);
+        clearTimeout(stallTimer);
+        origDestroy();
+      };
     } else if (!isMP4 && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS (Safari)
       video.src = streamData.url;
@@ -1554,7 +1676,11 @@ export function createVideoPlayer(container, streamData, {
       window.pushTelemetry('quality_changed', { mediaId: streamData.id || '', quality: e.target.value });
     }
     if (hls) {
-      hls.currentLevel = parseInt(e.target.value);
+      const selectedLevel = parseInt(e.target.value);
+      hls.currentLevel = selectedLevel;
+      // When the user manually selects a level, update the ABR ceiling to match
+      // so hls.js doesn't silently switch back up after a bandwidth spike.
+      hls.autoLevelCapping = (selectedLevel === -1) ? -1 : selectedLevel;
     } else {
       const selectedOpt = e.target.options[e.target.selectedIndex];
       const newRawUrl = selectedOpt.dataset.url;

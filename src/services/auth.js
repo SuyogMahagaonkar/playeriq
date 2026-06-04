@@ -84,6 +84,7 @@ export function initAuth() {
       localStorage.setItem('piq_sub_size', prefs.subtitleSize || '100%');
       localStorage.setItem('piq_sub_color', prefs.subtitleColor || '#ffffff');
       localStorage.setItem('piq_sub_bg_opacity', String(prefs.subtitleBgOpacity ?? 0.5));
+      localStorage.setItem('piq_quality', prefs.quality || 'auto');
 
       // Apply the user's customized theme instantly
       applyGlobalTheme();
@@ -107,6 +108,7 @@ export function initAuth() {
       localStorage.removeItem('piq_sub_size');
       localStorage.removeItem('piq_sub_color');
       localStorage.removeItem('piq_sub_bg_opacity');
+      localStorage.removeItem('piq_quality');
 
       // Revert style to standard default theme
       applyGlobalTheme();
