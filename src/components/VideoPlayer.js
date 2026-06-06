@@ -183,6 +183,10 @@ export function createVideoPlayer(container, streamData, {
               </select>
             </div>
 
+            <button class="vp-btn" id="vp-sub-settings-btn" title="Subtitle Settings" aria-label="Subtitle Settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </button>
+
             <button class="vp-btn" id="vp-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
             </button>
@@ -305,6 +309,49 @@ export function createVideoPlayer(container, streamData, {
           </button>
         </div>
       </div>
+
+      <!-- Dynamic subtitle nudge layer — positioned via JS/CSS when controls show -->
+      <div id="vp-subtitle-nudge" class="vp-subtitle-nudge"></div>
+
+      <!-- Subtitle Style Settings Panel -->
+      <div id="vp-sub-settings-panel" class="vp-sub-settings-panel hidden">
+        <div class="vp-ssp-header">
+          <span class="vp-ssp-title">Subtitle Style</span>
+          <button class="vp-ssp-close" id="vp-ssp-close" aria-label="Close subtitle settings">&#x2715;</button>
+        </div>
+        <div class="vp-ssp-row">
+          <label class="vp-ssp-label">Font Size</label>
+          <div class="vp-ssp-slider-wrap">
+            <input type="range" class="vp-ssp-slider" id="vp-ssp-size" min="60" max="200" step="10" value="100" aria-label="Subtitle font size">
+            <span class="vp-ssp-val" id="vp-ssp-size-val">100%</span>
+          </div>
+        </div>
+        <div class="vp-ssp-row">
+          <label class="vp-ssp-label">Text Color</label>
+          <div class="vp-ssp-swatches" id="vp-ssp-swatches">
+            <button class="vp-ssp-swatch active" data-color="#ffffff" style="background:#ffffff" aria-label="White"></button>
+            <button class="vp-ssp-swatch" data-color="#ffff00" style="background:#ffff00" aria-label="Yellow"></button>
+            <button class="vp-ssp-swatch" data-color="#00ffff" style="background:#00ffff" aria-label="Cyan"></button>
+            <button class="vp-ssp-swatch" data-color="#00ff88" style="background:#00ff88" aria-label="Green"></button>
+            <button class="vp-ssp-swatch" data-color="#ff8c00" style="background:#ff8c00" aria-label="Orange"></button>
+          </div>
+        </div>
+        <div class="vp-ssp-row">
+          <label class="vp-ssp-label">Background Opacity</label>
+          <div class="vp-ssp-slider-wrap">
+            <input type="range" class="vp-ssp-slider" id="vp-ssp-bg" min="0" max="100" step="5" value="50" aria-label="Subtitle background opacity">
+            <span class="vp-ssp-val" id="vp-ssp-bg-val">50%</span>
+          </div>
+        </div>
+        <div class="vp-ssp-row">
+          <label class="vp-ssp-label">Position</label>
+          <div class="vp-ssp-toggle-group">
+            <button class="vp-ssp-toggle active" data-pos="normal">Default</button>
+            <button class="vp-ssp-toggle" data-pos="raised">Raised</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -353,21 +400,13 @@ export function createVideoPlayer(container, streamData, {
   });
 
   const controls = document.getElementById('vp-controls');
-  if (controls && !document.getElementById('vp-top-bar')) {
-    // 1. Top Bar
-    const topBar = document.createElement('div');
-    topBar.className = 'vp-top-bar';
-    topBar.id = 'vp-top-bar';
-    topBar.innerHTML = `
-      <button class="vp-btn" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
-      </button>
-      <div class="vp-top-title" id="vp-top-title">Now Playing</div>
-      <button class="vp-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-      </button>
-    `;
-    controls.insertBefore(topBar, controls.firstChild);
+  if (controls && !document.getElementById('vp-top-title')) {
+    // Floating title overlay — no strip bar, just text floating at top with gradient
+    const titleOverlay = document.createElement('div');
+    titleOverlay.className = 'vp-top-title-overlay';
+    titleOverlay.id = 'vp-top-title';
+    titleOverlay.textContent = 'Now Playing';
+    player.appendChild(titleOverlay);
 
     // 2. Brightness Slider Group
     const brightSlider = document.createElement('div');
@@ -446,8 +485,7 @@ export function createVideoPlayer(container, streamData, {
     // Wire up listeners
     const bSlider = document.getElementById('vp-brightness-slider');
     const bSliderFill = document.getElementById('vp-brightness-slider-fill');
-    const topCastBtn = document.getElementById('vp-top-cast-btn');
-    const topFsBtn = document.getElementById('vp-top-fs-btn');
+
     const optSpeed = document.getElementById('vp-opt-speed');
     const optSpeedLabel = document.getElementById('vp-opt-speed-label');
     const optLock = document.getElementById('vp-opt-lock');
@@ -473,21 +511,6 @@ export function createVideoPlayer(container, streamData, {
       });
     }
 
-    if (topCastBtn) {
-      topCastBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const mainCastBtn = document.getElementById('vp-cast-btn');
-        if (mainCastBtn) mainCastBtn.click();
-      });
-    }
-
-    if (topFsBtn) {
-      topFsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const mainFsBtn = document.getElementById('vp-fs-btn');
-        if (mainFsBtn) mainFsBtn.click();
-      });
-    }
 
     // Lock option: forwards tap to real lock button
     if (optLock) {
@@ -628,29 +651,56 @@ export function createVideoPlayer(container, streamData, {
      // Subtitles option logic (Desktop Dropdown & Mobile Picker)
      const realSubtitles = document.getElementById('vp-subtitles');
      if (realSubtitles) {
+       // Active cue listener refs — cleaned up on each track switch
+       let _cueTrack = null;
+       let _cueHandler = null;
+
        function toggleSubtitleTrack(trackIndex) {
          const tracks = video.textTracks;
          if (!tracks) return;
-         
-         Array.from(tracks).forEach((track, i) => {
-           if (i === trackIndex) {
-             track.mode = 'showing';
-           } else {
-             track.mode = 'disabled';
-           }
-         });
-         
+         const nudge = document.getElementById('vp-subtitle-nudge');
+
+         // Remove previous cue listener + disable all tracks
+         if (_cueTrack && _cueHandler) {
+           _cueTrack.removeEventListener('cuechange', _cueHandler);
+           _cueTrack = null; _cueHandler = null;
+         }
+         Array.from(tracks).forEach(t => { t.mode = 'disabled'; });
+         if (nudge) nudge.innerHTML = '';
+
          localStorage.setItem('piq_sub_preference', trackIndex === -1 ? 'off' : String(trackIndex));
 
          // Update mobile opt label text dynamically
          if (optSubtitlesLabel) {
-           if (trackIndex === -1) {
-             optSubtitlesLabel.textContent = 'Subtitles (Off)';
-           } else {
-             const subLabel = streamData.subtitles?.[trackIndex]?.label || `Subtitle ${trackIndex + 1}`;
-             optSubtitlesLabel.textContent = subLabel;
-           }
+           optSubtitlesLabel.textContent = trackIndex === -1
+             ? 'Subtitles (Off)'
+             : (streamData.subtitles?.[trackIndex]?.label || `Subtitle ${trackIndex + 1}`);
          }
+
+         if (trackIndex === -1) return; // Off — nothing more to do
+
+         const targetTrack = Array.from(tracks)[trackIndex];
+         if (!targetTrack) return;
+
+         // 'hidden' = browser loads/parses cues but does NOT render them natively.
+         // We render into #vp-subtitle-nudge so we can fully control position.
+         targetTrack.mode = 'hidden';
+         _cueTrack = targetTrack;
+
+         _cueHandler = () => {
+           if (!nudge) return;
+           const activeCues = targetTrack.activeCues;
+           if (!activeCues || activeCues.length === 0) { nudge.innerHTML = ''; return; }
+           const texts = Array.from(activeCues).map(c =>
+             (c.text || '').replace(/<[^>]+>/g, '') // strip any embedded HTML tags
+           );
+           const sz  = localStorage.getItem('piq_sub_size') || '100%';
+           const col = localStorage.getItem('piq_sub_color') || '#ffffff';
+           const bg  = localStorage.getItem('piq_sub_bg_opacity') || '0.5';
+           nudge.innerHTML = `<span class="vp-cue-text" style="font-size:${sz};color:${col};background-color:rgba(0,0,0,${bg})">${texts.join('<br>')}</span>`;
+         };
+
+         targetTrack.addEventListener('cuechange', _cueHandler);
        }
 
        // Populates subtitles dynamically in the select element
@@ -710,9 +760,144 @@ export function createVideoPlayer(container, streamData, {
        video.textTracks.addEventListener('addtrack', () => {
          const savedSubPref = localStorage.getItem('piq_sub_preference');
          const activeIdx = (savedSubPref === 'off' || savedSubPref === null) ? -1 : parseInt(savedSubPref);
-         toggleSubtitleTrack(activeIdx === -1 ? (streamData.subtitles?.length ? 0 : -1) : activeIdx);
-       });
-     }
+          toggleSubtitleTrack(activeIdx === -1 ? (streamData.subtitles?.length ? 0 : -1) : activeIdx);
+        });
+      }
+
+
+    // ── Subtitle Style Settings Panel ─────────────────────────────────────
+    const subSettingsBtn   = document.getElementById('vp-sub-settings-btn');
+    const subSettingsPanel = document.getElementById('vp-sub-settings-panel');
+
+    if (subSettingsBtn && subSettingsPanel) {
+      const sspClose   = document.getElementById('vp-ssp-close');
+      const sspSize    = document.getElementById('vp-ssp-size');
+      const sspSizeVal = document.getElementById('vp-ssp-size-val');
+      const sspBg      = document.getElementById('vp-ssp-bg');
+      const sspBgVal   = document.getElementById('vp-ssp-bg-val');
+      const sspSwatches = subSettingsPanel.querySelectorAll('.vp-ssp-swatch');
+      const sspPosBtns  = subSettingsPanel.querySelectorAll('.vp-ssp-toggle');
+
+      // Init current values from localStorage
+      let curSize    = parseInt(localStorage.getItem('piq_sub_size') || '100') || 100;
+      let curColor   = localStorage.getItem('piq_sub_color') || '#ffffff';
+      let curBgOpPct = Math.round(parseFloat(localStorage.getItem('piq_sub_bg_opacity') || '0.5') * 100);
+      let curPos     = localStorage.getItem('piq_sub_position') || 'normal';
+
+      if (sspSize)    { sspSize.value = curSize; }
+      if (sspSizeVal) { sspSizeVal.textContent = curSize + '%'; }
+      if (sspBg)      { sspBg.value = curBgOpPct; }
+      if (sspBgVal)   { sspBgVal.textContent = curBgOpPct + '%'; }
+
+      // Highlight matching color swatch
+      sspSwatches.forEach(s => {
+        s.classList.toggle('active', s.dataset.color.toLowerCase() === curColor.toLowerCase());
+      });
+      // Highlight matching position toggle
+      sspPosBtns.forEach(b => b.classList.toggle('active', b.dataset.pos === curPos));
+      // Apply saved position class to nudge
+      const nudgeEl = document.getElementById('vp-subtitle-nudge');
+      if (nudgeEl && curPos === 'raised') nudgeEl.classList.add('position-raised');
+
+      // ── Live-update helper ──────────────────────────────────────────────
+      function applySubStylesLive(size, color, bgOpPct) {
+        // Update ::cue style tag (for any browser-native fallback)
+        const styleEl = document.getElementById('piq-subtitles-custom-style');
+        if (styleEl) {
+          styleEl.innerHTML = `#vp-video::cue{font-size:${size}% !important;color:${color} !important;background-color:rgba(0,0,0,${bgOpPct/100}) !important;}`;
+        }
+        // Also update the already-rendered cue span instantly
+        const el = document.querySelector('#vp-subtitle-nudge .vp-cue-text');
+        if (el) {
+          el.style.fontSize   = size + '%';
+          el.style.color      = color;
+          el.style.backgroundColor = `rgba(0,0,0,${bgOpPct/100})`;
+        }
+        // Persist
+        localStorage.setItem('piq_sub_size',       size + '%');
+        localStorage.setItem('piq_sub_color',      color);
+        localStorage.setItem('piq_sub_bg_opacity', String(bgOpPct / 100));
+      }
+
+      // ── Open / Close ────────────────────────────────────────────────────
+      let _panelOpen = false;
+      function openSubPanel() {
+        subSettingsPanel.classList.remove('hidden');
+        requestAnimationFrame(() => subSettingsPanel.classList.add('open'));
+        subSettingsBtn.classList.add('active');
+        _panelOpen = true;
+        clearTimeout(controlsTimeout); // keep controls alive while panel is open
+      }
+      function closeSubPanel() {
+        subSettingsPanel.classList.remove('open');
+        setTimeout(() => subSettingsPanel.classList.add('hidden'), 300);
+        subSettingsBtn.classList.remove('active');
+        _panelOpen = false;
+      }
+
+      subSettingsBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        _panelOpen ? closeSubPanel() : openSubPanel();
+      });
+      if (sspClose) {
+        sspClose.addEventListener('click', e => { e.stopPropagation(); closeSubPanel(); });
+      }
+
+      // ── Size slider ─────────────────────────────────────────────────────
+      if (sspSize) {
+        sspSize.addEventListener('input', e => {
+          curSize = parseInt(e.target.value);
+          if (sspSizeVal) sspSizeVal.textContent = curSize + '%';
+          applySubStylesLive(curSize, curColor, curBgOpPct);
+        });
+      }
+
+      // ── Color swatches ──────────────────────────────────────────────────
+      sspSwatches.forEach(swatch => {
+        swatch.addEventListener('click', e => {
+          e.stopPropagation();
+          curColor = swatch.dataset.color;
+          sspSwatches.forEach(s => s.classList.remove('active'));
+          swatch.classList.add('active');
+          applySubStylesLive(curSize, curColor, curBgOpPct);
+        });
+      });
+
+      // ── Background opacity ──────────────────────────────────────────────
+      if (sspBg) {
+        sspBg.addEventListener('input', e => {
+          curBgOpPct = parseInt(e.target.value);
+          if (sspBgVal) sspBgVal.textContent = curBgOpPct + '%';
+          applySubStylesLive(curSize, curColor, curBgOpPct);
+        });
+      }
+
+      // ── Position toggle ─────────────────────────────────────────────────
+      sspPosBtns.forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          curPos = btn.dataset.pos;
+          sspPosBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          localStorage.setItem('piq_sub_position', curPos);
+          const nudge2 = document.getElementById('vp-subtitle-nudge');
+          if (nudge2) nudge2.classList.toggle('position-raised', curPos === 'raised');
+        });
+      });
+
+      // Close panel on outside-click
+      player.addEventListener('click', e => {
+        if (_panelOpen && !subSettingsPanel.contains(e.target) && e.target !== subSettingsBtn) {
+          closeSubPanel();
+        }
+      });
+
+      // Mirror hide — if no subtitles, hide settings button too
+      const desktopWrapper = document.getElementById('vp-subtitles-desktop-wrapper');
+      if (desktopWrapper && desktopWrapper.style.display === 'none') {
+        subSettingsBtn.style.display = 'none';
+      }
+    }
 
 
     function renderEpisodeCards() {
@@ -1496,9 +1681,14 @@ export function createVideoPlayer(container, streamData, {
   function showControls() {
     controls.classList.add('vp-visible');
     player.style.cursor = '';
-    // Also show the floating buttons that live outside the controls bar
-    const lockBtn  = document.getElementById('vp-lock-btn');
-    const diagBtn  = document.getElementById('vp-diag-btn');
+    // Floating title overlay + subtitle nudge
+    const titleEl = document.getElementById('vp-top-title');
+    const nudge   = document.getElementById('vp-subtitle-nudge');
+    if (titleEl) titleEl.classList.add('visible');
+    if (nudge)   nudge.classList.add('controls-up');
+    // Floating buttons outside the controls bar
+    const lockBtn = document.getElementById('vp-lock-btn');
+    const diagBtn = document.getElementById('vp-diag-btn');
     if (lockBtn) lockBtn.style.opacity = '1';
     if (diagBtn) diagBtn.style.opacity = '1';
     clearTimeout(controlsTimeout);
@@ -1511,7 +1701,12 @@ export function createVideoPlayer(container, streamData, {
     if (video.paused || isEpisodesVisible) return;
     controls.classList.remove('vp-visible');
     player.style.cursor = 'none';
-    // Also fade the floating buttons — but keep lock btn visible (dimly) when locked
+    // Fade title overlay + return subtitles to default position
+    const titleEl = document.getElementById('vp-top-title');
+    const nudge   = document.getElementById('vp-subtitle-nudge');
+    if (titleEl) titleEl.classList.remove('visible');
+    if (nudge)   nudge.classList.remove('controls-up');
+    // Also fade the floating buttons
     const lockBtn  = document.getElementById('vp-lock-btn');
     const diagBtn  = document.getElementById('vp-diag-btn');
     const isLocked = player.classList.contains('vp-locked');

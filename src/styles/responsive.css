@@ -4275,50 +4275,23 @@
     visibility: visible !important;
   }
 
-  /* 3. Top bar adjustments (Netflix cast/title/close row) */
-  .mobile-player-container .vp-top-bar {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    width: 100% !important;
-    height: 48px !important;
-    pointer-events: auto !important;
-    margin-top: 16px !important; /* Moved downward */
-    margin-bottom: 0 !important;
+  /* 3. Floating title overlay — no strip bar; same gradient approach as desktop */
+  .mobile-player-container .vp-top-title-overlay {
+    font-size: 13px !important;
+    padding: 16px 60px 28px !important;
   }
 
-  .mobile-player-container .vp-top-title {
-    color: #ffffff !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.5px !important;
-    text-align: center !important;
-    flex: 1 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    padding: 0 16px !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8) !important;
+  /* Subtitle nudge — mobile offsets (higher than desktop to clear options row) */
+  .mobile-player-container .vp-subtitle-nudge.controls-up {
+    bottom: 175px !important; /* clears progress bar + options row on mobile */
+  }
+  .mobile-player-container .vp-subtitle-nudge.position-raised.controls-up {
+    bottom: 200px !important;
   }
 
-  .mobile-player-container .vp-top-bar .vp-btn {
-    background: transparent !important;
-    border: none !important;
-    color: #ffffff !important;
-    width: 44px !important;
-    height: 44px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
-  }
-
-  .mobile-player-container .vp-top-bar .vp-btn svg {
-    width: 22px !important;
-    height: 22px !important;
-    stroke-width: 2.2 !important;
+  /* Subtitle settings button — hidden on mobile (use mobile subtitles picker instead) */
+  .mobile-player-container #vp-sub-settings-btn {
+    display: none !important;
   }
 
   /* 4. Left-aligned Vertical Brightness Slider — hidden by default, visible on left swipe */

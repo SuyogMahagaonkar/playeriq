@@ -565,3 +565,252 @@
 }
 
 
+/* ========================================
+   🎬 FLOATING TITLE OVERLAY (replaces top strip)
+   ======================================== */
+.vp-top-title-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 20px 80px 36px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+  color: rgba(255,255,255,0.93);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vp-top-title-overlay.visible {
+  opacity: 1;
+}
+
+/* ========================================
+   🔵 DYNAMIC SUBTITLE NUDGE LAYER
+   ======================================== */
+.vp-subtitle-nudge {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 25;
+  /* Smooth slide when controls appear/disappear */
+  transition: bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 40px;
+}
+
+/* Desktop: rise above the ~90px controls bar */
+.vp-subtitle-nudge.controls-up {
+  bottom: 110px;
+}
+
+/* User-preference: always keep raised */
+.vp-subtitle-nudge.position-raised {
+  bottom: 70px !important;
+}
+.vp-subtitle-nudge.position-raised.controls-up {
+  bottom: 140px !important;
+}
+
+.vp-cue-text {
+  display: inline-block;
+  max-width: 85%;
+  padding: 4px 12px;
+  border-radius: 4px;
+  line-height: 1.65;
+  font-family: var(--font-body, sans-serif);
+  font-weight: 500;
+  font-size: 1em; /* overridden per-render by inline style */
+  white-space: pre-wrap;
+  transition: font-size 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+/* ========================================
+   🟡 SUBTITLE SETTINGS PANEL
+   ======================================== */
+#vp-sub-settings-btn {
+  /* inherits .vp-btn base */
+}
+#vp-sub-settings-btn.active {
+  color: var(--accent, #a855f7) !important;
+}
+#vp-sub-settings-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.vp-sub-settings-panel {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  width: 268px;
+  background: rgba(10, 10, 16, 0.94);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 16px 18px 18px;
+  z-index: 300;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.05) inset;
+  /* Slide-up animation */
+  transform: translateY(14px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.22s ease;
+}
+.vp-sub-settings-panel.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.vp-sub-settings-panel.hidden {
+  display: none;
+}
+
+.vp-ssp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.vp-ssp-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+.vp-ssp-close {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.vp-ssp-close:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.vp-ssp-row {
+  margin-bottom: 14px;
+}
+.vp-ssp-row:last-child { margin-bottom: 0; }
+
+.vp-ssp-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  margin-bottom: 8px;
+}
+
+/* Sliders */
+.vp-ssp-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vp-ssp-slider {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  accent-color: var(--accent, #a855f7);
+  cursor: pointer;
+  background: rgba(255,255,255,0.15);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.vp-ssp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent, #a855f7);
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.2);
+  transition: box-shadow 0.2s;
+}
+.vp-ssp-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px rgba(168,85,247,0.3);
+}
+.vp-ssp-val {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  min-width: 38px;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Color swatches */
+.vp-ssp-swatches {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vp-ssp-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+  background: none; /* color set inline */
+}
+.vp-ssp-swatch:hover { transform: scale(1.18); border-color: rgba(255,255,255,0.45); }
+.vp-ssp-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.35);
+  transform: scale(1.1);
+}
+
+/* Position toggles */
+.vp-ssp-toggle-group {
+  display: flex;
+  gap: 6px;
+}
+.vp-ssp-toggle {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+.vp-ssp-toggle:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
+.vp-ssp-toggle.active {
+  background: var(--accent, #a855f7);
+  border-color: var(--accent, #a855f7);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(168,85,247,0.4);
+}
