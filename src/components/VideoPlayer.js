@@ -1575,6 +1575,7 @@ export function createVideoPlayer(container, streamData, {
     // NATIVE CAPACITOR APP (APK)
     if (Capacitor && Capacitor.isNativePlatform()) {
       try {
+        StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
         StatusBar.hide().catch(() => {});
         NavigationBar.hide().catch(() => {});
       } catch(e) {}
@@ -2785,6 +2786,7 @@ export function createVideoPlayer(container, streamData, {
       }
       if (Capacitor && Capacitor.isNativePlatform()) {
         try { 
+          StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
           StatusBar.show().catch(() => {}); 
           NavigationBar.show().catch(() => {});
           ScreenOrientation.lock({ type: 'portrait' }).catch(() => {});
