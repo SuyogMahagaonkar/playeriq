@@ -573,24 +573,56 @@
   top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  padding: 20px 80px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 36px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
-  color: rgba(255,255,255,0.93);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.4px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-  pointer-events: none;
+  pointer-events: none;   /* overlay transparent to taps except child buttons */
   z-index: 30;
   opacity: 0;
   transition: opacity 0.3s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .vp-top-title-overlay.visible {
   opacity: 1;
+}
+
+/* Buttons inside the overlay get their click events back */
+.vp-overlay-btn {
+  pointer-events: auto !important;
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.9) !important;
+  background: transparent !important;
+  border: none !important;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+.vp-overlay-btn:hover {
+  background: rgba(255,255,255,0.12) !important;
+}
+.vp-overlay-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.vp-title-text {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.93);
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+  line-height: 40px;
 }
 
 /* ========================================

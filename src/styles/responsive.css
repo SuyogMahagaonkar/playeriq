@@ -4275,10 +4275,21 @@
     visibility: visible !important;
   }
 
-  /* 3. Floating title overlay — no strip bar; same gradient approach as desktop */
+  /* 3. Floating title overlay — make overlay taller on mobile for touch targets */
   .mobile-player-container .vp-top-title-overlay {
+    padding: 10px 8px 32px !important;
+  }
+  .mobile-player-container .vp-overlay-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mobile-player-container .vp-overlay-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .mobile-player-container .vp-title-text {
     font-size: 13px !important;
-    padding: 16px 60px 28px !important;
+    line-height: 44px !important;
   }
 
   /* Subtitle nudge — mobile offsets (higher than desktop to clear options row) */
@@ -4289,9 +4300,9 @@
     bottom: 200px !important;
   }
 
-  /* Subtitle settings button — hidden on mobile (use mobile subtitles picker instead) */
+  /* Subtitle settings button — show on mobile inside the overlay (desktop bottom bar button is hidden) */
   .mobile-player-container #vp-sub-settings-btn {
-    display: none !important;
+    display: none !important;  /* still hidden from bottom bar on mobile — accessed via desktop */
   }
 
   /* 4. Left-aligned Vertical Brightness Slider — hidden by default, visible on left swipe */

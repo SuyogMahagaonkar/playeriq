@@ -401,12 +401,37 @@ export function createVideoPlayer(container, streamData, {
 
   const controls = document.getElementById('vp-controls');
   if (controls && !document.getElementById('vp-top-title')) {
-    // Floating title overlay — no strip bar, just text floating at top with gradient
+    // Floating title overlay — flex row: [Cast] [Title] [Fullscreen]
+    // No strip background, just text+buttons floating over a top gradient
     const titleOverlay = document.createElement('div');
     titleOverlay.className = 'vp-top-title-overlay';
     titleOverlay.id = 'vp-top-title';
-    titleOverlay.textContent = 'Now Playing';
+    titleOverlay.innerHTML = `
+      <button class="vp-btn vp-overlay-btn" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+      </button>
+      <span class="vp-title-text" id="vp-title-text">Now Playing</span>
+      <button class="vp-btn vp-overlay-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+      </button>
+    `;
     player.appendChild(titleOverlay);
+
+    // Wire overlay cast → real cast button
+    const _topCast = document.getElementById('vp-top-cast-btn');
+    const _topFs   = document.getElementById('vp-top-fs-btn');
+    if (_topCast) {
+      _topCast.addEventListener('click', e => {
+        e.stopPropagation();
+        document.getElementById('vp-cast-btn')?.click();
+      });
+    }
+    if (_topFs) {
+      _topFs.addEventListener('click', e => {
+        e.stopPropagation();
+        document.getElementById('vp-fs-btn')?.click();
+      });
+    }
 
     // 2. Brightness Slider Group
     const brightSlider = document.createElement('div');
@@ -1963,7 +1988,7 @@ export function createVideoPlayer(container, streamData, {
 
   // ---- MediaSession API (lock screen + notification controls) ----
   function initMediaSession(title, artist, posterUrl, onPrev, onNext) {
-    const topTitle = document.getElementById('vp-top-title');
+    const topTitle = document.getElementById('vp-title-text') || document.getElementById('vp-top-title');
     if (topTitle) {
       topTitle.textContent = artist ? `${title} · ${artist}` : title;
     }
