@@ -858,3 +858,53 @@
 .vp-sub-backdrop {
   display: none;
 }
+
+/* ── Next Episode Floating Button ── */
+.vp-next-overlay-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(10, 10, 15, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-family: inherit;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  letter-spacing: 0.5px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 12px rgba(168, 85, 247, 0.3) !important; /* purple glow */
+  transition: bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease, opacity 0.3s ease !important;
+  animation: vpNextBtnFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.vp-next-overlay-btn:hover {
+  background: rgba(168, 85, 247, 0.25) !important;
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  transform: scale(1.04) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 16px rgba(168, 85, 247, 0.5) !important;
+}
+
+/* Slide above progress bar when controls are visible */
+.vp-controls.vp-visible ~ .vp-next-overlay-btn {
+  bottom: 110px; /* clears desktop controls bar */
+}
+
+@keyframes vpNextBtnFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

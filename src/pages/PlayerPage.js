@@ -412,63 +412,42 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
     btn = document.createElement('button');
     btn.className = 'vp-next-overlay-btn';
-    btn.style.cssText = `
-      position: absolute;
-      bottom: 100px;
-      right: 40px;
-      background: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      color: #000000;
-      padding: 14px 32px;
-      border-radius: 2px;
-      font-family: inherit;
-      font-weight: 800;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      z-index: 100;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      transition: all 0.25s ease;
-      opacity: 0;
-      transform: translateY(15px);
-    `;
 
-    btn.innerHTML = `
-      <span>Next Episode</span>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><rect x="17" y="4" width="2" height="16"></rect></svg>
-    `;
+    const videoEl = document.getElementById('vp-video');
+    let remaining = 15;
+    if (videoEl && videoEl.duration && videoEl.currentTime) {
+      remaining = Math.max(5, Math.min(15, Math.ceil(videoEl.duration - videoEl.currentTime)));
+    }
 
+    const updateButtonText = (seconds) => {
+      btn.innerHTML = `
+        <span>Play Next Episode (${seconds}s)</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><rect x="17" y="4" width="2" height="16"></rect></svg>
+      `;
+    };
+
+    updateButtonText(remaining);
     wrapper.appendChild(btn);
 
-    // Trigger visual entry transition
-    requestAnimationFrame(() => {
-      btn.style.opacity = '1';
-      btn.style.transform = 'none';
-    });
+    let countdownVal = remaining;
+    const intervalId = setInterval(() => {
+      countdownVal--;
+      if (countdownVal <= 0) {
+        clearInterval(intervalId);
+        btn.remove();
+        if (onNextEpisodeClick) {
+          onNextEpisodeClick();
+        } else if (onEnded) {
+          onEnded();
+        }
+      } else {
+        updateButtonText(countdownVal);
+      }
+    }, 1000);
 
-    // Hover effects
-    btn.addEventListener('mouseenter', () => {
-      btn.style.background = '#000000';
-      btn.style.color = '#ffffff';
-      btn.style.borderColor = 'rgba(255,255,255,0.8)';
-      btn.style.transform = 'scale(1.05)';
-      btn.style.boxShadow = '0 12px 40px rgba(0,0,0,0.7)';
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.background = '#ffffff';
-      btn.style.color = '#000000';
-      btn.style.borderColor = 'rgba(0, 0, 0, 0.15)';
-      btn.style.transform = 'scale(1)';
-      btn.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
-    });
-
-    // Click trigger
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      clearInterval(intervalId);
       btn.remove();
       if (onNextEpisodeClick) {
         onNextEpisodeClick();
@@ -476,13 +455,18 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
         onEnded();
       }
     });
+
+    btn._countdownInterval = intervalId;
   }
 
   function hideNextEpisodeFloatingButton() {
     const btn = wrapper.querySelector('.vp-next-overlay-btn');
     if (btn) {
+      if (btn._countdownInterval) {
+        clearInterval(btn._countdownInterval);
+      }
       btn.style.opacity = '0';
-      btn.style.transform = 'translateX(20px)';
+      btn.style.transform = 'translateY(15px)';
       setTimeout(() => btn.remove(), 300);
     }
   }
@@ -576,10 +560,10 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
               episode_overview: epOverview
             });
 
-            // Floating Next Episode button in last 60 seconds
+            // Floating Next Episode button in last 15 seconds
             const remaining = duration - currentTime;
             const nextEpNum = episode + 1;
-            if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+            if (isTV && nextEpNum <= totalEpisodes && remaining <= 15 && remaining > 0) {
               showNextEpisodeFloatingButton(nextEpNum);
             } else {
               hideNextEpisodeFloatingButton();
@@ -840,10 +824,10 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
                 episode_overview: epOverview
               });
 
-              // Floating Next Episode button in last 60 seconds
+              // Floating Next Episode button in last 15 seconds
               const remaining = duration - currentTime;
               const nextEpNum = episode + 1;
-              if (isTV && nextEpNum <= totalEpisodes && remaining <= 60 && remaining > 0) {
+              if (isTV && nextEpNum <= totalEpisodes && remaining <= 15 && remaining > 0) {
                 showNextEpisodeFloatingButton(nextEpNum);
               } else {
                 hideNextEpisodeFloatingButton();

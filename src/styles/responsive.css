@@ -4305,6 +4305,18 @@
     display: none !important;  /* still hidden from bottom bar on mobile — accessed via desktop */
   }
 
+  /* Next Episode button mobile placement & sliding offsets */
+  .mobile-player-container .vp-next-overlay-btn {
+    bottom: 80px !important; /* default above mobile progress bar when controls hidden */
+    right: 16px !important;
+    padding: 10px 20px !important;
+    font-size: 12px !important;
+  }
+
+  .mobile-player-container .vp-controls.vp-visible ~ .vp-next-overlay-btn {
+    bottom: 175px !important; /* clears mobile options row + progress bar when controls visible */
+  }
+
   /* 4. Left-aligned Vertical Brightness Slider — hidden by default, visible on left swipe */
   .mobile-player-container .vp-brightness-slider-group {
     position: absolute !important;
