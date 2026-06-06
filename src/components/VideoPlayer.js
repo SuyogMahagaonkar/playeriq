@@ -2121,10 +2121,17 @@ export function createVideoPlayer(container, streamData, {
     let swipeSide = null; // 'left' | 'right'
     let longPressTimer = null;
     let lastTapTime = { left: 0, right: 0 };
+    let lastTouchTime = 0;
 
     let isMouseDown = false;
 
     function handleGestureStart(side, e) {
+      if (e.type.startsWith('touch')) {
+        lastTouchTime = Date.now();
+      } else if (e.type.startsWith('mouse')) {
+        if (Date.now() - lastTouchTime < 1000) return;
+      }
+
       const t = e.changedTouches ? e.changedTouches[0] : e;
       touchStartX = t.clientX;
       touchStartY = t.clientY;
@@ -2212,6 +2219,12 @@ export function createVideoPlayer(container, streamData, {
     }
 
     function handleGestureEnd(side, e) {
+      if (e.type.startsWith('touch')) {
+        lastTouchTime = Date.now();
+      } else if (e.type.startsWith('mouse')) {
+        if (Date.now() - lastTouchTime < 1000) return;
+      }
+
       clearTimeout(longPressTimer);
 
       // Restore speed if long-press was active
