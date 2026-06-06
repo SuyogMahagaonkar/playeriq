@@ -1193,6 +1193,8 @@ export async function renderPlayerPage({ params, container }) {
 
   activeTmdbId = id; // Sync original numerical TMDB ID for background validator
 
+  document.body.classList.add('piq-player-active');
+
   enableRedirectGuard();
 
   // Clean up any global cast session bar / remote overlay when entering watch page
@@ -2577,6 +2579,7 @@ export async function renderPlayerPage({ params, container }) {
     // Cleanup function
     return () => {
       try {
+        document.body.classList.remove('piq-player-active');
         disableRedirectGuard();
         clearIframeTracker();
         if (_keyHandler) {
@@ -2593,6 +2596,7 @@ export async function renderPlayerPage({ params, container }) {
     };
 
   } catch (err) {
+    document.body.classList.remove('piq-player-active');
     console.error('Player page error:', err);
     if (err.message === 'OFFLINE_AND_NOT_DOWNLOADED' || !navigator.onLine || isOfflinePlayback) {
       container.innerHTML = `
@@ -4594,6 +4598,7 @@ async function renderMobileLayout({
   pushTelemetry('player_open', { id, type, season: currentSeason, episode: currentEpisode, source: 'mobile' });
 
   return () => {
+    document.body.classList.remove('piq-player-active');
     disableRedirectGuard();
     clearIframeTracker();
     cleanupOrientation();

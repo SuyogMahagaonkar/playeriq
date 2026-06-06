@@ -587,6 +587,13 @@
   opacity: 1;
 }
 
+.vp-top-left-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 /* Buttons inside the overlay get their click events back */
 .vp-overlay-btn {
   pointer-events: auto !important;

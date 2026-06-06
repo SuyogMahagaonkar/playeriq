@@ -908,7 +908,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
     // Pagination calculations
     const allEpisodes = season.episodes || [];
     const totalEpisodes = allEpisodes.length;
-    const episodesPerPage = 10;
+    const episodesPerPage = 6;
     const totalPages = Math.ceil(totalEpisodes / episodesPerPage);
     const currentPage = Math.max(1, Math.min(pageNumber, totalPages));
     const startIndex = (currentPage - 1) * episodesPerPage;

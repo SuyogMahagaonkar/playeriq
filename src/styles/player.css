@@ -1523,3 +1523,17 @@
     gap: 5px !important;
   }
 }
+
+/* --- Player Active Global Adjustments --- */
+body.piq-player-active .navbar,
+body.piq-player-active .sidebar,
+body.piq-player-active .mobile-bottom-nav {
+  display: none !important;
+}
+body.piq-player-active .main-content {
+  margin-left: 0 !important;
+  padding-top: 0 !important;
+}
+body.piq-player-active .page-content {
+  padding-top: 0 !important;
+}
