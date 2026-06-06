@@ -4277,7 +4277,7 @@
 
   /* 3. Floating title overlay — make overlay taller on mobile for touch targets */
   .mobile-player-container .vp-top-title-overlay {
-    padding: 10px 8px 32px !important;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 32px !important;
   }
   .mobile-player-container .vp-overlay-btn {
     width: 44px !important;
@@ -4721,6 +4721,52 @@
     opacity: 1 !important;
     pointer-events: auto !important;
     display: flex !important;
+  }
+
+  /* Subtitle Settings Backdrop & Panel Centering Overrides */
+  .mobile-player-container .vp-sub-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    z-index: 11000 !important;
+    opacity: 0 !important;
+    transition: opacity 0.25s ease !important;
+    pointer-events: none !important;
+  }
+  .mobile-player-container .vp-sub-backdrop.open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    display: block !important;
+  }
+  .mobile-player-container .vp-sub-backdrop.hidden {
+    display: none !important;
+  }
+
+  .mobile-player-container .vp-sub-settings-panel {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    bottom: auto !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) scale(0.95) !important;
+    background: #181818 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    width: 90% !important;
+    max-width: 290px !important;
+    padding: 24px 20px 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
+    z-index: 12000 !important;
+    box-sizing: border-box !important;
+    opacity: 0 !important;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+  }
+  .mobile-player-container .vp-sub-settings-panel.open {
+    transform: translate(-50%, -50%) scale(1) !important;
+    opacity: 1 !important;
+    display: block !important;
   }
 
   /* Backdrop: translucent dark frosted-glass overlay */

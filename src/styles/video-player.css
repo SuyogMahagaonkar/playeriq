@@ -576,7 +576,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 12px 36px;
+  padding: 24px 24px 36px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
   pointer-events: none;   /* overlay transparent to taps except child buttons */
   z-index: 30;
@@ -852,4 +852,9 @@
   border-color: var(--accent, #a855f7);
   color: #fff;
   box-shadow: 0 2px 8px rgba(168,85,247,0.4);
+}
+
+/* Default backdrop style (hidden on desktop) */
+.vp-sub-backdrop {
+  display: none;
 }

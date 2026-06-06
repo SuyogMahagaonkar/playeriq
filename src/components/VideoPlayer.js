@@ -313,6 +313,9 @@ export function createVideoPlayer(container, streamData, {
       <!-- Dynamic subtitle nudge layer — positioned via JS/CSS when controls show -->
       <div id="vp-subtitle-nudge" class="vp-subtitle-nudge"></div>
 
+      <!-- Subtitle Settings Backdrop (Mobile Centered Dialog) -->
+      <div id="vp-sub-backdrop" class="vp-sub-backdrop hidden"></div>
+
       <!-- Subtitle Style Settings Panel -->
       <div id="vp-sub-settings-panel" class="vp-sub-settings-panel hidden">
         <div class="vp-ssp-header">
@@ -816,6 +819,7 @@ export function createVideoPlayer(container, streamData, {
     // ── Subtitle Style Settings Panel ─────────────────────────────────────
     const subSettingsBtn   = document.getElementById('vp-sub-settings-btn');
     const subSettingsPanel = document.getElementById('vp-sub-settings-panel');
+    const subBackdrop      = document.getElementById('vp-sub-backdrop');
 
     if (subSettingsBtn && subSettingsPanel) {
       const sspClose   = document.getElementById('vp-ssp-close');
@@ -872,6 +876,10 @@ export function createVideoPlayer(container, streamData, {
       function openSubPanel() {
         subSettingsPanel.classList.remove('hidden');
         requestAnimationFrame(() => subSettingsPanel.classList.add('open'));
+        if (subBackdrop) {
+          subBackdrop.classList.remove('hidden');
+          requestAnimationFrame(() => subBackdrop.classList.add('open'));
+        }
         subSettingsBtn.classList.add('active');
         _panelOpen = true;
         clearTimeout(controlsTimeout); // keep controls alive while panel is open
@@ -879,6 +887,10 @@ export function createVideoPlayer(container, streamData, {
       function closeSubPanel() {
         subSettingsPanel.classList.remove('open');
         setTimeout(() => subSettingsPanel.classList.add('hidden'), 300);
+        if (subBackdrop) {
+          subBackdrop.classList.remove('open');
+          setTimeout(() => subBackdrop.classList.add('hidden'), 300);
+        }
         subSettingsBtn.classList.remove('active');
         _panelOpen = false;
       }
@@ -889,6 +901,12 @@ export function createVideoPlayer(container, streamData, {
       });
       if (sspClose) {
         sspClose.addEventListener('click', e => { e.stopPropagation(); closeSubPanel(); });
+      }
+      if (subBackdrop) {
+        subBackdrop.addEventListener('click', e => {
+          e.stopPropagation();
+          closeSubPanel();
+        });
       }
 
       // ── Size slider ─────────────────────────────────────────────────────
