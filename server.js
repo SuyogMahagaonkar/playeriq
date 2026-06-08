@@ -470,26 +470,32 @@ app.get('/api/tmdb/episodes', async (req, res) => {
     const seasonRes = await axios.get(seasonUrl, { timeout: 10000 });
     const tmdbEpisodes = seasonRes.data.episodes || [];
 
+    // Get the maximum released episodes from MovieBox for this season if it's a MovieBox ID
+    let movieBoxMaxEp = null;
+    if (tvId && String(tvId).startsWith('mb_')) {
+      const subjectId = String(tvId).replace('mb_', '');
+      try {
+        const port = process.env.PORT || PORT || 3000;
+        const mbSeasonsRes = await axios.get(`http://localhost:${port}/api/moviebox/seasons/${subjectId}`, { timeout: 5000 });
+        const mbSeasons = mbSeasonsRes.data.seasons || [];
+        const currentMbSeason = mbSeasons.find(s => s.se === parseInt(season));
+        if (currentMbSeason) {
+          movieBoxMaxEp = currentMbSeason.maxEp || 0;
+        }
+      } catch (e) {
+        console.warn(`[TMDB Episodes] Failed to fetch MovieBox seasons for ${subjectId}:`, e.message);
+      }
+    }
+
     if (isAbsoluteMapping) {
       // Map MovieBox episode numbers to absolute episode numbers from TMDB Season 1
-      let maxEp = 52; // default
-      if (tvId) {
-        const subjectId = String(tvId).replace('mb_', '');
-        try {
-          const port = process.env.PORT || 3000;
-          const mbSeasonsRes = await axios.get(`http://localhost:${port}/api/moviebox/seasons/${subjectId}`, { timeout: 5000 });
-          const mbSeasons = mbSeasonsRes.data.seasons || [];
-          const currentMbSeason = mbSeasons.find(s => s.se === parseInt(season));
-          if (currentMbSeason) {
-            maxEp = currentMbSeason.maxEp || 52;
-          }
-        } catch (e) {}
-      }
-
+      let maxEp = movieBoxMaxEp || 52; // prioritize MovieBox maxEp if resolved
+      
       episodes = [];
       for (let i = 1; i <= maxEp; i++) {
         const absEpNum = offset + i;
         const matchingEp = tmdbEpisodes.find(ep => ep.episode_number === absEpNum);
+        const isReleased = movieBoxMaxEp !== null && i <= movieBoxMaxEp;
         if (matchingEp) {
           episodes.push({
             episode_number: i, // keep MovieBox episode number so UI maps correctly
@@ -497,7 +503,7 @@ app.get('/api/tmdb/episodes', async (req, res) => {
             runtime: matchingEp.runtime,
             overview: matchingEp.overview || '',
             still_path: matchingEp.still_path || null,
-            air_date: matchingEp.air_date
+            air_date: isReleased ? '1970-01-01' : matchingEp.air_date
           });
         } else {
           episodes.push({
@@ -506,19 +512,22 @@ app.get('/api/tmdb/episodes', async (req, res) => {
             runtime: null,
             overview: '',
             still_path: null,
-            air_date: null
+            air_date: isReleased ? '1970-01-01' : null
           });
         }
       }
     } else {
-      episodes = tmdbEpisodes.map(ep => ({
-        episode_number: ep.episode_number,
-        name: ep.name,
-        runtime: ep.runtime,
-        overview: ep.overview,
-        still_path: ep.still_path,
-        air_date: ep.air_date
-      }));
+      episodes = tmdbEpisodes.map(ep => {
+        const isReleased = movieBoxMaxEp !== null && ep.episode_number <= movieBoxMaxEp;
+        return {
+          episode_number: ep.episode_number,
+          name: ep.name,
+          runtime: ep.runtime,
+          overview: ep.overview,
+          still_path: ep.still_path,
+          air_date: isReleased ? '1970-01-01' : ep.air_date
+        };
+      });
     }
     
     const result = { episodes };

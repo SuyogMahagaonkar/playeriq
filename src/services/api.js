@@ -299,7 +299,8 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
           episode_number: i, 
           name: `Episode ${i}`, 
           runtime: null,
-          overview: '' 
+          overview: '',
+          air_date: '1970-01-01'
         });
       }
       return { episodes };
@@ -315,7 +316,8 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
       episode_number: i,
       name: `Episode ${i}`,
       runtime: 45,
-      overview: 'Episode details are currently offline.'
+      overview: 'Episode details are currently offline.',
+      air_date: '1970-01-01'
     });
   }
   return { episodes };
