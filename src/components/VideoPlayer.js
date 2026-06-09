@@ -2449,19 +2449,40 @@ export function createVideoPlayer(container, streamData, {
 
   // Fullscreen
   function toggleFs() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
+    const isFs = document.fullscreenElement || 
+                 document.webkitFullscreenElement || 
+                 document.mozFullScreenElement || 
+                 document.msFullscreenElement;
+    if (isFs) {
+      const exitFs = document.exitFullscreen || 
+                     document.webkitExitFullscreen || 
+                     document.mozCancelFullScreen || 
+                     document.msExitFullscreen;
+      exitFs.call(document);
     } else {
       const wrapper = document.getElementById('video-wrapper') || player;
-      wrapper.requestFullscreen?.().catch(() => {});
+      const reqFs = wrapper.requestFullscreen || 
+                    wrapper.webkitRequestFullscreen || 
+                    wrapper.mozRequestFullScreen || 
+                    wrapper.msRequestFullscreen;
+      reqFs?.call(wrapper);
     }
   }
   fsBtn.addEventListener('click', toggleFs);
 
-  document.addEventListener('fullscreenchange', () => {
-    const isFs = !!document.fullscreenElement;
-    fsBtn.querySelector('.vp-icon-expand').style.display = isFs ? 'none' : '';
-    fsBtn.querySelector('.vp-icon-shrink').style.display = isFs ? '' : 'none';
+  function updateFsIcon() {
+    const isFs = !!(document.fullscreenElement || 
+                    document.webkitFullscreenElement || 
+                    document.mozFullScreenElement || 
+                    document.msFullscreenElement);
+    const expand = fsBtn.querySelector('.vp-icon-expand');
+    const shrink = fsBtn.querySelector('.vp-icon-shrink');
+    if (expand) expand.style.display = isFs ? 'none' : '';
+    if (shrink) shrink.style.display = isFs ? '' : 'none';
+  }
+
+  ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+    document.addEventListener(evt, updateFsIcon);
   });
 
   // Auto-hide controls

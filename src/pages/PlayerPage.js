@@ -284,10 +284,22 @@ function _onBeforeUnload(e) {
 function toggleFullscreen() {
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
+  const isFs = document.fullscreenElement || 
+               document.webkitFullscreenElement || 
+               document.mozFullScreenElement || 
+               document.msFullscreenElement;
+  if (isFs) {
+    const exitFs = document.exitFullscreen || 
+                   document.webkitExitFullscreen || 
+                   document.mozCancelFullScreen || 
+                   document.msExitFullscreen;
+    exitFs.call(document);
   } else {
-    wrapper.requestFullscreen?.();
+    const reqFs = wrapper.requestFullscreen || 
+                  wrapper.webkitRequestFullscreen || 
+                  wrapper.mozRequestFullScreen || 
+                  wrapper.msRequestFullscreen;
+    reqFs?.call(wrapper);
   }
 }
 
@@ -296,7 +308,11 @@ function _onFullscreenChange() {
   const expandIcon = document.querySelector('.player-fs-btn .fs-expand');
   const shrinkIcon = document.querySelector('.player-fs-btn .fs-shrink');
   if (!expandIcon || !shrinkIcon) return;
-  if (document.fullscreenElement) {
+  const isFs = document.fullscreenElement || 
+               document.webkitFullscreenElement || 
+               document.mozFullScreenElement || 
+               document.msFullscreenElement;
+  if (isFs) {
     expandIcon.style.display = 'none';
     shrinkIcon.style.display = 'block';
   } else {
@@ -304,7 +320,9 @@ function _onFullscreenChange() {
     shrinkIcon.style.display = 'none';
   }
 }
-document.addEventListener('fullscreenchange', _onFullscreenChange);
+['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+  document.addEventListener(evt, _onFullscreenChange);
+});
 
 // ---- Fetch Saved Watch Progress ----
 async function getSavedPlaybackTime(id, isTV, season, episode) {
