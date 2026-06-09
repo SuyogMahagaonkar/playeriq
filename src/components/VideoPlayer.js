@@ -34,6 +34,9 @@ export function createVideoPlayer(container, streamData, {
   let isDragging = false;
   let playInterval = null;
   let isEpisodesVisible = false; // Tracks if Episodes Overlay is open
+  let cinematicOn = localStorage.getItem('piq_cinematic') === '1';
+  let updateCinematicUI = () => {};
+
 
   const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
   const isSkipRecapsEnabled = localStorage.getItem('piq_skip_recaps') === 'true';
@@ -193,6 +196,13 @@ export function createVideoPlayer(container, streamData, {
 
             <button class="vp-btn" id="vp-cast-btn" title="Cast Video" aria-label="Cast Video" style="display:none;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+            </button>
+
+            <button class="vp-btn vp-cinematic-btn" id="vp-cinematic-btn" title="Cinematic Mode" aria-label="Toggle Cinematic Mode">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                <rect x="7" y="7" width="10" height="10" rx="1" />
+              </svg>
             </button>
 
             <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
@@ -422,6 +432,12 @@ export function createVideoPlayer(container, streamData, {
         </button>
       </div>
       <span class="vp-title-text" id="vp-title-text">Now Playing</span>
+      <button class="vp-btn vp-overlay-btn vp-cinematic-btn" id="vp-top-cinematic-btn" title="Cinematic Mode" aria-label="Toggle Cinematic Mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+          <rect x="7" y="7" width="10" height="10" rx="1" />
+        </svg>
+      </button>
       <button class="vp-btn vp-overlay-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
@@ -2000,24 +2016,30 @@ export function createVideoPlayer(container, streamData, {
   function isMobile() { return true; }
 
   // ---- Cinematic Mode Toggle (cover ↔ contain) ----
-  const cinematicBtn = document.getElementById('vp-cinematic-btn');
-  if (cinematicBtn) {
-    let cinematicOn = false;
-    cinematicBtn.addEventListener('click', (e) => {
+  const cinematicBtns = [
+    document.getElementById('vp-cinematic-btn'),
+    document.getElementById('vp-top-cinematic-btn')
+  ].filter(Boolean);
+
+  updateCinematicUI = () => {
+    player.classList.toggle('cinematic-mode', cinematicOn);
+    cinematicBtns.forEach(btn => {
+      btn.classList.toggle('active', cinematicOn);
+      btn.setAttribute('title', cinematicOn ? 'Letterbox Mode' : 'Cinematic Mode');
+    });
+  };
+
+  // Initial sync
+  updateCinematicUI();
+
+  cinematicBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       cinematicOn = !cinematicOn;
-      player.classList.toggle('cinematic-mode', cinematicOn);
-      cinematicBtn.classList.toggle('active', cinematicOn);
-      cinematicBtn.setAttribute('title', cinematicOn ? 'Letterbox Mode' : 'Cinematic Mode');
       localStorage.setItem('piq_cinematic', cinematicOn ? '1' : '0');
+      updateCinematicUI();
     });
-    // Restore preference
-    if (localStorage.getItem('piq_cinematic') === '1') {
-      cinematicOn = true;
-      player.classList.add('cinematic-mode');
-      cinematicBtn.classList.add('active');
-    }
-  }
+  });
 
   // ---- Offline Banner ----
   if (streamData.isOffline) {
@@ -2506,28 +2528,26 @@ export function createVideoPlayer(container, streamData, {
       );
       
       const pinchThreshold = 50; // pixels of distance change to trigger zoom
-      const cinematicBtn = document.getElementById('vp-cinematic-btn');
-      
       if (currentDistance > initialPinchDistance + pinchThreshold) {
         // Zooming OUT (fingers apart) -> Fill screen
-        if (!player.classList.contains('cinematic-mode')) {
+        if (!cinematicOn) {
           if (Capacitor && Capacitor.isNativePlatform()) {
             try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
           }
-          player.classList.add('cinematic-mode');
-          if (cinematicBtn) cinematicBtn.classList.add('active');
+          cinematicOn = true;
           localStorage.setItem('piq_cinematic', '1');
+          updateCinematicUI();
         }
         initialPinchDistance = null; // stop further triggering
       } else if (currentDistance < initialPinchDistance - pinchThreshold) {
         // Zooming IN (fingers together) -> Fit screen
-        if (player.classList.contains('cinematic-mode')) {
+        if (cinematicOn) {
           if (Capacitor && Capacitor.isNativePlatform()) {
             try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
           }
-          player.classList.remove('cinematic-mode');
-          if (cinematicBtn) cinematicBtn.classList.remove('active');
+          cinematicOn = false;
           localStorage.setItem('piq_cinematic', '0');
+          updateCinematicUI();
         }
         initialPinchDistance = null;
       }
@@ -2625,6 +2645,14 @@ export function createVideoPlayer(container, streamData, {
           showControls();
           e.preventDefault();
         }
+        break;
+      case 'z':
+      case 'c':
+        cinematicOn = !cinematicOn;
+        localStorage.setItem('piq_cinematic', cinematicOn ? '1' : '0');
+        updateCinematicUI();
+        showControls();
+        e.preventDefault();
         break;
       case 'f':
         toggleFs();

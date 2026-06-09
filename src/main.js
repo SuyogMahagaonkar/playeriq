@@ -71,8 +71,7 @@ if (Capacitor && Capacitor.isNativePlatform()) {
     const player = document.getElementById('vp-player');
     if (player && player.classList.contains('cinematic-mode')) {
       player.classList.remove('cinematic-mode');
-      const btn = document.getElementById('vp-cinematic-btn');
-      if (btn) btn.classList.remove('active');
+      document.querySelectorAll('.vp-cinematic-btn').forEach(btn => btn.classList.remove('active'));
       localStorage.setItem('piq_cinematic', '0');
       return;
     }
