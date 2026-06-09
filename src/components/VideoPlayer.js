@@ -89,7 +89,7 @@ export function createVideoPlayer(container, streamData, {
 
   container.innerHTML = `
     <div class="vp-player" id="vp-player">
-      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous"></video>
+      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous" disableRemotePlayback></video>
 
       <!-- Loading spinner -->
       <div class="vp-loader" id="vp-loader">

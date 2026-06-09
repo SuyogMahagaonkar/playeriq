@@ -909,3 +909,9 @@
     transform: translateY(0);
   }
 }
+
+/* Prevent Chromium from overlaying the native Cast button inside the video frame */
+video::-internal-media-controls-overlay-cast-button,
+video::-webkit-media-controls-overlay-cast-button {
+  display: none !important;
+}
