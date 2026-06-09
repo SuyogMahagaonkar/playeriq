@@ -278,6 +278,16 @@
   height: 100vh;
 }
 
+/* Force video to fill/cover the whole screen in fullscreen mode */
+.vp-player:fullscreen .vp-video,
+.vp-player:-webkit-full-screen .vp-video,
+.player-video-wrapper:fullscreen .vp-video,
+.player-video-wrapper:-webkit-full-screen .vp-video,
+.player-video-wrapper:fullscreen #vp-video,
+.player-video-wrapper:-webkit-full-screen #vp-video {
+  object-fit: cover !important;
+}
+
 /* ========================================
    🎬 PREMIUM IN-PLAYER EPISODES LIST OVERLAY
    ======================================== */

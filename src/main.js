@@ -68,13 +68,7 @@ if (Capacitor && Capacitor.isNativePlatform()) {
       return;
     }
 
-    const player = document.getElementById('vp-player');
-    if (player && player.classList.contains('cinematic-mode')) {
-      player.classList.remove('cinematic-mode');
-      document.querySelectorAll('.vp-cinematic-btn').forEach(btn => btn.classList.remove('active'));
-      localStorage.setItem('piq_cinematic', '0');
-      return;
-    }
+
 
     if (canGoBack) {
       window.history.back();

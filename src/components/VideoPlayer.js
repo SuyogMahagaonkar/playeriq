@@ -34,8 +34,6 @@ export function createVideoPlayer(container, streamData, {
   let isDragging = false;
   let playInterval = null;
   let isEpisodesVisible = false; // Tracks if Episodes Overlay is open
-  let cinematicOn = localStorage.getItem('piq_cinematic') === '1';
-  let updateCinematicUI = () => {};
 
 
   const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
@@ -196,13 +194,6 @@ export function createVideoPlayer(container, streamData, {
 
             <button class="vp-btn" id="vp-cast-btn" title="Cast Video" aria-label="Cast Video" style="display:none;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
-            </button>
-
-            <button class="vp-btn vp-cinematic-btn" id="vp-cinematic-btn" title="Cinematic Mode" aria-label="Toggle Cinematic Mode">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-                <rect x="7" y="7" width="10" height="10" rx="1" />
-              </svg>
             </button>
 
             <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
@@ -432,12 +423,6 @@ export function createVideoPlayer(container, streamData, {
         </button>
       </div>
       <span class="vp-title-text" id="vp-title-text">Now Playing</span>
-      <button class="vp-btn vp-overlay-btn vp-cinematic-btn" id="vp-top-cinematic-btn" title="Cinematic Mode" aria-label="Toggle Cinematic Mode">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-          <rect x="7" y="7" width="10" height="10" rx="1" />
-        </svg>
-      </button>
       <button class="vp-btn vp-overlay-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
@@ -1597,7 +1582,7 @@ export function createVideoPlayer(container, streamData, {
       } catch(e) {}
     }
 
-    const fsTarget = player; // fullscreen the vp-player element
+    const fsTarget = document.getElementById('video-wrapper') || player; // fullscreen the wrapper element
     if (!document.fullscreenElement) {
       const p = fsTarget.requestFullscreen?.() || 
                 fsTarget.webkitRequestFullscreen?.() || 
@@ -2013,33 +1998,11 @@ export function createVideoPlayer(container, streamData, {
   // ========================================================
   // MOBILE-ONLY ENHANCEMENTS
   // ========================================================
-  function isMobile() { return true; }
+  function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  }
 
-  // ---- Cinematic Mode Toggle (cover ↔ contain) ----
-  const cinematicBtns = [
-    document.getElementById('vp-cinematic-btn'),
-    document.getElementById('vp-top-cinematic-btn')
-  ].filter(Boolean);
 
-  updateCinematicUI = () => {
-    player.classList.toggle('cinematic-mode', cinematicOn);
-    cinematicBtns.forEach(btn => {
-      btn.classList.toggle('active', cinematicOn);
-      btn.setAttribute('title', cinematicOn ? 'Letterbox Mode' : 'Cinematic Mode');
-    });
-  };
-
-  // Initial sync
-  updateCinematicUI();
-
-  cinematicBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      cinematicOn = !cinematicOn;
-      localStorage.setItem('piq_cinematic', cinematicOn ? '1' : '0');
-      updateCinematicUI();
-    });
-  });
 
   // ---- Offline Banner ----
   if (streamData.isOffline) {
@@ -2507,52 +2470,7 @@ export function createVideoPlayer(container, streamData, {
   // Mobile: reset the 5s timer on any touch anywhere in the player
   player.addEventListener('touchstart',  showControls, { passive: true });
   
-  // Mobile: Pinch-to-zoom (Cinematic Toggle like YouTube)
-  let initialPinchDistance = null;
-  player.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
-      initialPinchDistance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-    } else {
-      initialPinchDistance = null;
-    }
-  }, { passive: true });
 
-  player.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2 && initialPinchDistance !== null) {
-      const currentDistance = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      
-      const pinchThreshold = 50; // pixels of distance change to trigger zoom
-      if (currentDistance > initialPinchDistance + pinchThreshold) {
-        // Zooming OUT (fingers apart) -> Fill screen
-        if (!cinematicOn) {
-          if (Capacitor && Capacitor.isNativePlatform()) {
-            try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
-          }
-          cinematicOn = true;
-          localStorage.setItem('piq_cinematic', '1');
-          updateCinematicUI();
-        }
-        initialPinchDistance = null; // stop further triggering
-      } else if (currentDistance < initialPinchDistance - pinchThreshold) {
-        // Zooming IN (fingers together) -> Fit screen
-        if (cinematicOn) {
-          if (Capacitor && Capacitor.isNativePlatform()) {
-            try { Haptics.impact({ style: ImpactStyle.Medium }); } catch(e) {}
-          }
-          cinematicOn = false;
-          localStorage.setItem('piq_cinematic', '0');
-          updateCinematicUI();
-        }
-        initialPinchDistance = null;
-      }
-    }
-  }, { passive: true });
 
   // Also start the timer as soon as playback begins
   video.addEventListener('play', () => {
@@ -2645,14 +2563,6 @@ export function createVideoPlayer(container, streamData, {
           showControls();
           e.preventDefault();
         }
-        break;
-      case 'z':
-      case 'c':
-        cinematicOn = !cinematicOn;
-        localStorage.setItem('piq_cinematic', cinematicOn ? '1' : '0');
-        updateCinematicUI();
-        showControls();
-        e.preventDefault();
         break;
       case 'f':
         toggleFs();
