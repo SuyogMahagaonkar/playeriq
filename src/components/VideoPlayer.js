@@ -1605,7 +1605,8 @@ export function createVideoPlayer(container, streamData, {
 
   // Browsers block fullscreen if the video started via async autoplay.
   // We bind it to the very first touch/click on the player to guarantee it fires inside a user gesture.
-  if (isMobile()) {
+  const isActualMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  if (isActualMobile) {
     player.addEventListener('touchstart', requestMobileFullscreen);
     player.addEventListener('click', requestMobileFullscreen);
   }
@@ -1999,7 +2000,7 @@ export function createVideoPlayer(container, streamData, {
   // MOBILE-ONLY ENHANCEMENTS
   // ========================================================
   function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    return true;
   }
 
 
