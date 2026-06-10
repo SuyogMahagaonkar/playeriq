@@ -4,6 +4,7 @@
 
 import { login, loginEmail, signUpEmail, onUserChange } from '../services/auth.js';
 import { navigate } from '../services/router.js';
+import '../styles/login.css';
 
 // Popular movie posters for the card fan decoration
 const POSTER_URLS = [

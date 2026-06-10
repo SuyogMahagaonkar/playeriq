@@ -11,6 +11,9 @@ import { saveProgress, getWatchHistory, getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
 import { validateSources, onValidationUpdate, getCachedResults, getFallbackSources, BADGE_CONFIG, SOURCE_ID_TO_INDEX, streamValidateSources } from '../services/SourceValidator.js';
+import '../styles/player.css';
+import '../styles/video-player.css';
+import '../styles/mobile-player.css';
 
 // Embed sources â€” using TMDB ID
 // Nontongo is the primary working source (user-verified)

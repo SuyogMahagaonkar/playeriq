@@ -5,6 +5,8 @@
 import { img, NODE_PROXY } from '../services/api.js';
 import { getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
+import '../styles/movie-card.css';
+import '../styles/movie-grid.css';
 
 export function createMovieCard(item, type = 'movie', customRoute = null, customSubtitle = null, progressData = null, showDeleteBtn = false, cardLayout = 'portrait') {
   const title = item.title || item.name || 'Unknown';

@@ -46,7 +46,64 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Bypass caching entirely for dynamic API nodes, TMDB queries, or Firebase
+  // 1. Cache-First for TMDB images (immutable poster/backdrop paths)
+  if (url.hostname.includes('image.tmdb.org')) {
+    event.respondWith(
+      caches.open('playeriq-images').then((cache) => {
+        return cache.match(req).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          return fetch(req).then((networkResponse) => {
+            if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
+              cache.put(req, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => null);
+        });
+      })
+    );
+    return;
+  }
+
+  // 2. Stale-While-Revalidate for TMDB metadata API calls
+  if (url.hostname.includes('api.themoviedb.org')) {
+    event.respondWith(
+      caches.open('playeriq-tmdb-metadata').then((cache) => {
+        return cache.match(req).then((cachedResponse) => {
+          const fetchPromise = fetch(req).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(req, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => null);
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // 3. Stale-While-Revalidate for MovieBox metadata (info & seasons)
+  if (
+    url.pathname.startsWith('/api/moviebox/info/') || 
+    url.pathname.startsWith('/api/moviebox/seasons/')
+  ) {
+    event.respondWith(
+      caches.open('playeriq-moviebox-metadata').then((cache) => {
+        return cache.match(req).then((cachedResponse) => {
+          const fetchPromise = fetch(req).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(req, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => null);
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // Bypass caching entirely for other dynamic API nodes, TMDB queries, or Firebase
   if (
     url.pathname.startsWith('/api/') || 
     url.hostname.includes('themoviedb.org') || 

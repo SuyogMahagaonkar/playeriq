@@ -326,6 +326,85 @@ app.get('/api/moviebox/search', async (req, res) => {
   }
 });
 
+// ---- MovieBox Batch Match Endpoint (3G Optimization) ----
+
+function cleanTitleForMatch(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/\[.*?\]/g, '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+async function findMovieBoxMatch(title, year, type) {
+  const cleanTitle = (title || '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+  const mbType = type === 'tv' ? 'tv' : 'movie';
+  
+  // Check memory cache first to avoid duplicate loopback bridge queries
+  const cacheKey = `mb-match-${type}-${cleanTitleForMatch(cleanTitle)}-${year || ''}`;
+  const cached = getCached(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
+  let searchQueries = [cleanTitle];
+  if (year) {
+    searchQueries.unshift(`${cleanTitle} ${year}`);
+  }
+  
+  for (const q of searchQueries) {
+    try {
+      const bridgeUrl = `${PYTHON_BRIDGE_URL}/api/moviebox/search?q=${encodeURIComponent(q)}&type=${mbType}`;
+      const { data } = await axios.get(bridgeUrl, { timeout: 10000 });
+      const results = data.results || [];
+      const cleanedTarget = cleanTitleForMatch(cleanTitle);
+      
+      for (const item of results) {
+        const cleanedItem = cleanTitleForMatch(item.title);
+        const itemYear = (item.release_date || item.year || '').slice(0, 4);
+        const yearMatches = !year || !itemYear || year === itemYear;
+        
+        if (yearMatches && (cleanedTarget === cleanedItem || cleanedTarget.includes(cleanedItem) || cleanedItem.includes(cleanedTarget))) {
+          setCache(cacheKey, item);
+          return item;
+        }
+      }
+    } catch (err) {
+      console.warn(`[findMovieBoxMatch server] Failed for query "${q}":`, err.message);
+    }
+  }
+  
+  setCache(cacheKey, null);
+  return null;
+}
+
+app.post('/api/moviebox/match-batch', async (req, res) => {
+  const { items } = req.body; // array of { id, title, year, type }
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Missing or invalid items array' });
+  }
+
+  try {
+    const matches = await Promise.all(items.map(async (item) => {
+      const match = await findMovieBoxMatch(item.title, item.year, item.type);
+      if (match) {
+        return {
+          id: item.id,
+          subject_id: match.subject_id || match.id || match.subjectId,
+          is_hindi: match.title?.toLowerCase().includes('hindi') || match.title?.toLowerCase().includes('हिंदी') || false,
+          source: 'moviebox'
+        };
+      }
+      return null;
+    }));
+    res.json({ matches: matches.filter(Boolean) });
+  } catch (err) {
+    console.error('[MovieBox Batch Match]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---- MovieBox Native APIs ----
 app.get('/api/moviebox/info/:subjectId', async (req, res) => {
   try {

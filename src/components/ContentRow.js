@@ -3,6 +3,7 @@
 // ========================================
 
 import { createMovieCard, createSkeletonCard, attachCardClicks } from './MovieCard.js';
+import '../styles/content-row.css';
 
 export function createContentRow(title, items, type = 'movie', moreRoute = null, cardLayout = 'portrait', showViewMore = false) {
   let cards = '';

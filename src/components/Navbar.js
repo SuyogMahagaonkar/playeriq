@@ -758,12 +758,8 @@ export async function clearAllNotifications() {
   const user = getUser();
   if (user) {
     try {
-      const { collection, getDocs, deleteDoc, db } = await import('../services/firebase.js');
-      const colRef = collection(db, 'users', user.uid, 'notifications');
-      const snapshot = await getDocs(colRef);
-      const deletions = [];
-      snapshot.forEach(docSnap => deletions.push(deleteDoc(docSnap.ref)));
-      await Promise.all(deletions);
+      const { clearAllNotifications: clearAllNotificationsInCloud } = await import('../services/firebase.js');
+      await clearAllNotificationsInCloud(user.uid);
     } catch (e) {
       console.warn('Failed to clear notifications in cloud:', e);
     }

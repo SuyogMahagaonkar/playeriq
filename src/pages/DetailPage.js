@@ -8,6 +8,7 @@ import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
+import '../styles/detail.css';
 
 function trackTelemetryEvent(eventName, eventData = {}) {
   console.log(`[Telemetry] Event: ${eventName}`, eventData);

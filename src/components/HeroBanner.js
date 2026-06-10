@@ -4,6 +4,7 @@
 
 import { img } from '../services/api.js';
 import { navigate } from '../services/router.js';
+import '../styles/hero.css';
 
 export function createHeroBanner(items) {
   const filtered = items.filter(m => m.backdrop_path).slice(0, 10);

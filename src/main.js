@@ -8,22 +8,10 @@ import './styles/base.css';
 import './styles/animations.css';
 import './styles/sidebar.css';
 import './styles/navbar.css';
-import './styles/hero.css';
-import './styles/movie-card.css';
-import './styles/content-row.css';
-import './styles/movie-grid.css';
-import './styles/detail.css';
-import './styles/player.css';
-import './styles/video-player.css';
 import './styles/responsive.css';
-import './styles/ranking.css';
-import './styles/login.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
-import './styles/mobile-player.css';
 import './styles/connectivity.css';
-import './styles/downloads.css';
-import './styles/calendar.css';
 
 
 // Core

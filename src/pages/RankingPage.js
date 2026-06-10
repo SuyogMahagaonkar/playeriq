@@ -5,6 +5,7 @@
 import { getTrendingMovies, getTrendingTV, getMediaImages, img } from '../services/api.js';
 import { navigate } from '../services/router.js';
 import { createFooter } from '../components/Footer.js';
+import '../styles/ranking.css';
 
 export async function renderRankingPage({ container }) {
   container.innerHTML = `

@@ -3,6 +3,7 @@
 // ========================================
 
 import { createContentRow } from '../components/ContentRow.js';
+import '../styles/calendar.css';
 import { navigate } from '../services/router.js';
 import { getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';

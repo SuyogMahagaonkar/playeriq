@@ -6,6 +6,7 @@ import { DownloadManager } from '../services/download.js';
 import { isOnline } from '../services/connectivity.js';
 import { Capacitor } from '@capacitor/core';
 import { updateSidebarActive } from '../components/Sidebar.js';
+import '../styles/downloads.css';
 
 // ---- Circumference for a 23px-radius progress ring ----
 const RING_R      = 22;

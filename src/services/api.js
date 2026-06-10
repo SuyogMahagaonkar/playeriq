@@ -772,22 +772,63 @@ export async function findMovieBoxMatch(title, year, type) {
 
 export async function filterAvailableItems(items, type) {
   if (!items || !items.length) return [];
-  const matches = await Promise.all(items.map(async (item) => {
-    const title = item.title || item.name;
-    const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+
+  const payloadItems = items.map(item => {
     const itemType = type === 'mixed' ? (item.media_type || (item.first_air_date ? 'tv' : 'movie')) : type;
-    const match = await findMovieBoxMatch(title, year, itemType);
-    if (match) {
-      return {
-        ...item,
-        subject_id: match.subject_id || match.id || match.subjectId,
-        is_hindi: match.title?.toLowerCase().includes('hindi') || false,
-        media_type: itemType
-      };
-    }
-    return null;
-  }));
-  return matches.filter(Boolean);
+    return {
+      id: item.id,
+      title: item.title || item.name,
+      year: (item.release_date || item.first_air_date || '').slice(0, 4),
+      type: itemType
+    };
+  });
+
+  try {
+    const res = await fetch(`${NODE_PROXY}/api/moviebox/match-batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ items: payloadItems })
+    });
+    if (!res.ok) throw new Error(`Batch match failed: ${res.status}`);
+    const { matches } = await res.json();
+    
+    const matchedItems = items.map(item => {
+      const match = matches.find(m => m.id === item.id);
+      if (match) {
+        return {
+          ...item,
+          subject_id: match.subject_id,
+          is_hindi: match.is_hindi,
+          source: match.source,
+          media_type: payloadItems.find(p => p.id === item.id)?.type || type
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    return matchedItems;
+  } catch (err) {
+    console.warn('[filterAvailableItems] dynamic match-batch request failed, falling back to local loops:', err);
+    // Keep local loop fallback so the app continues to operate normally in case of temporary API anomalies
+    const matches = await Promise.all(items.map(async (item) => {
+      const title = item.title || item.name;
+      const year = (item.release_date || item.first_air_date || '').slice(0, 4);
+      const itemType = type === 'mixed' ? (item.media_type || (item.first_air_date ? 'tv' : 'movie')) : type;
+      const match = await findMovieBoxMatch(title, year, itemType);
+      if (match) {
+        return {
+          ...item,
+          subject_id: match.subject_id || match.id || match.subjectId,
+          is_hindi: match.title?.toLowerCase().includes('hindi') || false,
+          media_type: itemType
+        };
+      }
+      return null;
+    }));
+    return matches.filter(Boolean);
+  }
 }
 
 export async function discoverTmdbContent(mediaType, { genre, language, page = 1 }) {

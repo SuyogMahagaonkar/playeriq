@@ -1,30 +1,6 @@
 // ========================================
-// PlayerIQ — Firebase Service
+// PlayerIQ — Firebase Service (Dynamic Loading)
 // ========================================
-
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile
-} from 'firebase/auth';
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  getDocs,
-  serverTimestamp
-} from 'firebase/firestore';
 
 // ---- Config ----
 const firebaseConfig = {
@@ -36,16 +12,41 @@ const firebaseConfig = {
   appId: "1:527529297313:web:b8b01da095a9017b38b7e0"
 };
 
-// ---- Init ----
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// ---- Dynamic State & Live Bindings ----
+let app = null;
+export let auth = null;
+export let db = null;
 
-// ---- Auth ----
-const provider = new GoogleAuthProvider();
+let authExports = {};
+let firestoreExports = {};
+let initPromise = null;
+
+export async function ensureFirebaseInitialized() {
+  if (initPromise) return initPromise;
+  
+  initPromise = (async () => {
+    const firebaseApp = await import('firebase/app');
+    const firebaseAuth = await import('firebase/auth');
+    const firebaseFirestore = await import('firebase/firestore');
+    
+    app = firebaseApp.initializeApp(firebaseConfig);
+    auth = firebaseAuth.getAuth(app);
+    db = firebaseFirestore.getFirestore(app);
+    
+    authExports = firebaseAuth;
+    firestoreExports = firebaseFirestore;
+  })();
+  
+  return initPromise;
+}
+
+// ---- Auth Actions ----
 
 export async function signInWithGoogle() {
+  await ensureFirebaseInitialized();
+  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = authExports;
   try {
+    const provider = new GoogleAuthProvider();
     // Detect mobile WebViews or mobile devices where popups are blocked or extremely slow
     const isMobileOrWebView = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                               (window.Capacitor && window.Capacitor.isNative) ||
@@ -68,6 +69,8 @@ export async function signInWithGoogle() {
 }
 
 export async function loginWithEmail(email, password) {
+  await ensureFirebaseInitialized();
+  const { signInWithEmailAndPassword } = authExports;
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
@@ -78,12 +81,13 @@ export async function loginWithEmail(email, password) {
 }
 
 export async function signUpWithEmail(email, password, displayName) {
+  await ensureFirebaseInitialized();
+  const { createUserWithEmailAndPassword, updateProfile } = authExports;
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) {
       await updateProfile(result.user, { displayName });
     }
-    // Return updated user
     return result.user;
   } catch (err) {
     console.error('[Firebase] Email sign-up error:', err);
@@ -92,6 +96,8 @@ export async function signUpWithEmail(email, password, displayName) {
 }
 
 export async function signOutUser() {
+  await ensureFirebaseInitialized();
+  const { signOut } = authExports;
   try {
     await signOut(auth);
   } catch (err) {
@@ -104,11 +110,14 @@ export async function signOutUser() {
  * @param {(user: import('firebase/auth').User|null) => void} callback
  */
 export function onAuthChange(callback) {
-  return onAuthStateChanged(auth, callback);
+  ensureFirebaseInitialized().then(() => {
+    const { onAuthStateChanged } = authExports;
+    onAuthStateChanged(auth, callback);
+  });
 }
 
 export function getCurrentUser() {
-  return auth.currentUser;
+  return auth ? auth.currentUser : null;
 }
 
 // ---- Firestore: Watch History ----
@@ -116,16 +125,18 @@ export function getCurrentUser() {
 /**
  * Save a watch progress entry to Firestore.
  * @param {string} userId
- * @param {Object} media - { id, title, type, poster_path, backdrop_path, season, episode, currentTime, duration }
+ * @param {Object} media
  */
 export async function saveProgressToCloud(userId, media) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
   try {
     if (media.type === 'tv') {
       const showId = String(media.id);
       const seasonNum = String(media.season);
       const episodeNum = String(media.episode);
 
-      // 1. Set main TV Show document
+      // 1. Set TV Show doc
       const showRef = doc(db, 'users', userId, 'watch_history', showId);
       await setDoc(showRef, {
         id: media.id,
@@ -136,14 +147,14 @@ export async function saveProgressToCloud(userId, media) {
         timestamp: serverTimestamp()
       }, { merge: true });
 
-      // 2. Set Season document
+      // 2. Set Season doc
       const seasonRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`);
       await setDoc(seasonRef, {
         season: Number(seasonNum),
         timestamp: serverTimestamp()
       }, { merge: true });
 
-      // 3. Set Episode document
+      // 3. Set Episode doc
       const epRef = doc(db, 'users', userId, 'watch_history', showId, 'seasons', `season_${seasonNum}`, 'episodes', `episode_${episodeNum}`);
       await setDoc(epRef, {
         ...media,
@@ -169,6 +180,8 @@ export async function saveProgressToCloud(userId, media) {
  * @param {string|number} mediaId
  */
 export async function removeProgressFromCloud(userId, mediaId) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc, collection, getDocs } = firestoreExports;
   try {
     if (typeof mediaId === 'string' && mediaId.includes('_s') && mediaId.includes('_e')) {
       const parts = mediaId.split('_s');
@@ -210,6 +223,8 @@ export async function removeProgressFromCloud(userId, mediaId) {
  * @returns {Promise<Array>}
  */
 export async function fetchWatchHistory(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs } = firestoreExports;
   try {
     const colRef = collection(db, 'users', userId, 'watch_history');
     const snapshot = await getDocs(colRef);
@@ -254,7 +269,7 @@ export async function fetchWatchHistory(userId) {
       }));
     }
 
-    // Sort by timestamp descending (most recent first)
+    // Sort by timestamp descending
     items.sort((a, b) => {
       const ta = a.timestamp?.toMillis?.() ?? 0;
       const tb = b.timestamp?.toMillis?.() ?? 0;
@@ -273,6 +288,8 @@ export async function fetchWatchHistory(userId) {
  * @param {Object} data
  */
 export async function saveUserProfile(userId, data) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId);
     await setDoc(ref, data, { merge: true });
@@ -287,6 +304,8 @@ export async function saveUserProfile(userId, data) {
  * @returns {Promise<Object|null>}
  */
 export async function getUserProfile(userId) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId);
     const snap = await getDoc(ref);
@@ -302,9 +321,11 @@ export async function getUserProfile(userId) {
 /**
  * Add a media item to the user's watchlist.
  * @param {string} userId
- * @param {Object} media - { id, title, type, poster_path, backdrop_path }
+ * @param {Object} media
  */
 export async function addToWatchlist(userId, media) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'watchlist', String(media.id));
     await setDoc(ref, {
@@ -328,6 +349,8 @@ export async function addToWatchlist(userId, media) {
  * @param {string|number} mediaId
  */
 export async function removeFromWatchlist(userId, mediaId) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'watchlist', String(mediaId));
     await deleteDoc(ref);
@@ -344,6 +367,8 @@ export async function removeFromWatchlist(userId, mediaId) {
  * @returns {Promise<boolean>}
  */
 export async function isInWatchlist(userId, mediaId) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'watchlist', String(mediaId));
     const snap = await getDoc(ref);
@@ -360,6 +385,8 @@ export async function isInWatchlist(userId, mediaId) {
  * @returns {Promise<Array>}
  */
 export async function fetchWatchlist(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs } = firestoreExports;
   try {
     const colRef = collection(db, 'users', userId, 'watchlist');
     const snapshot = await getDocs(colRef);
@@ -399,6 +426,8 @@ const DEFAULT_SETTINGS = {
  * @param {Object} settings
  */
 export async function saveSettings(userId, settings) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId);
     await setDoc(ref, { settings: { ...settings } }, { merge: true });
@@ -414,6 +443,8 @@ export async function saveSettings(userId, settings) {
  * @returns {Promise<Object>}
  */
 export async function getSettings(userId) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId);
     const snap = await getDoc(ref);
@@ -432,6 +463,8 @@ export async function getSettings(userId) {
  * @param {string} userId
  */
 export async function clearAllWatchHistory(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs, deleteDoc } = firestoreExports;
   try {
     const colRef = collection(db, 'users', userId, 'watch_history');
     const snapshot = await getDocs(colRef);
@@ -468,9 +501,11 @@ export async function clearAllWatchHistory(userId) {
 /**
  * Add an unaired episode notification alert.
  * @param {string} userId
- * @param {Object} notif - { epKey, tvId, seasonNumber, episodeNumber, title, airDate }
+ * @param {Object} notif
  */
 export async function addNotificationToCloud(userId, notif) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'notifications', notif.epKey);
     await setDoc(ref, {
@@ -488,6 +523,8 @@ export async function addNotificationToCloud(userId, notif) {
  * @param {string} epKey
  */
 export async function removeNotificationFromCloud(userId, epKey) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'notifications', epKey);
     await deleteDoc(ref);
@@ -503,6 +540,8 @@ export async function removeNotificationFromCloud(userId, epKey) {
  * @returns {Promise<boolean>}
  */
 export async function isNotificationInCloud(userId, epKey) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId, 'notifications', epKey);
     const snap = await getDoc(ref);
@@ -514,10 +553,31 @@ export async function isNotificationInCloud(userId, epKey) {
 }
 
 /**
+ * Clear all notifications for a user in Firestore.
+ * @param {string} userId
+ */
+export async function clearAllNotifications(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs, deleteDoc } = firestoreExports;
+  try {
+    const colRef = collection(db, 'users', userId, 'notifications');
+    const snapshot = await getDocs(colRef);
+    const deletions = [];
+    snapshot.forEach(docSnap => deletions.push(deleteDoc(docSnap.ref)));
+    await Promise.all(deletions);
+  } catch (err) {
+    console.error('[Firebase] Failed to clear notifications:', err);
+    throw err;
+  }
+}
+
+/**
  * Get system-wide global configuration.
  * @returns {Promise<Object>}
  */
 export async function getGlobalConfig() {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
   try {
     const ref = doc(db, 'system', 'config');
     const snap = await getDoc(ref);
@@ -536,6 +596,8 @@ export async function getGlobalConfig() {
  * @param {Object} config
  */
 export async function saveGlobalConfig(config) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc } = firestoreExports;
   try {
     const ref = doc(db, 'system', 'config');
     await setDoc(ref, config, { merge: true });
@@ -551,6 +613,8 @@ export async function saveGlobalConfig(config) {
  * @returns {Promise<Object>}
  */
 export async function exportUserLibrary(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs } = firestoreExports;
   try {
     const history = await fetchWatchHistory(userId);
     const watchlistRef = collection(db, 'users', userId, 'watchlist');
@@ -578,6 +642,8 @@ export async function exportUserLibrary(userId) {
  * @param {Object} data
  */
 export async function importUserLibrary(userId, data) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc } = firestoreExports;
   try {
     if (!data || typeof data !== 'object') throw new Error('Invalid backup data format');
     
@@ -598,4 +664,3 @@ export async function importUserLibrary(userId, data) {
     throw err;
   }
 }
-
