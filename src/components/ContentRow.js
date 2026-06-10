@@ -179,7 +179,6 @@ export function initContentRows(container) {
     }
 
     scroll.addEventListener('scroll', updateArrows, { passive: true });
-    window.addEventListener('resize', updateArrows, { passive: true });
 
     // Evaluate immediately on initial paint
     updateArrows();
@@ -191,6 +190,22 @@ export function initContentRows(container) {
     let isDragging   = false;
     let dragMoved    = false;
 
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.pageX - dragStartX;
+      if (Math.abs(dx) > 4) dragMoved = true; // threshold to consider it a drag
+      scroll.scrollLeft = dragScrollL - dx;
+    };
+
+    const onMouseUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      scroll.style.cursor = '';
+      scroll.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
     scroll.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return; // only left click
       isDragging  = true;
@@ -199,20 +214,9 @@ export function initContentRows(container) {
       dragScrollL = scroll.scrollLeft;
       scroll.style.cursor = 'grabbing';
       scroll.style.userSelect = 'none';
-    });
 
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const dx = e.pageX - dragStartX;
-      if (Math.abs(dx) > 4) dragMoved = true; // threshold to consider it a drag
-      scroll.scrollLeft = dragScrollL - dx;
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      scroll.style.cursor = '';
-      scroll.style.userSelect = '';
+      window.addEventListener('mousemove', onMouseMove, { passive: true });
+      window.addEventListener('mouseup', onMouseUp);
     });
 
     // Prevent card navigation click after a drag
@@ -228,3 +232,22 @@ export function initContentRows(container) {
   // Attach card click handlers
   attachCardClicks(container);
 }
+
+// Global debounced resize listener for all active carousels to avoid performance bottlenecks
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    document.querySelectorAll('.content-row-container').forEach(row => {
+      const scroll = row.querySelector('.content-row-scroll');
+      const leftArrow = row.querySelector('.content-row-arrow-left');
+      const rightArrow = row.querySelector('.content-row-arrow-right');
+      if (scroll) {
+        const atStart = scroll.scrollLeft <= 5;
+        const atEnd = scroll.scrollLeft >= (scroll.scrollWidth - scroll.clientWidth - 5);
+        if (leftArrow) leftArrow.classList.toggle('hidden', atStart);
+        if (rightArrow) rightArrow.classList.toggle('hidden', atEnd);
+      }
+    });
+  }, 150);
+}, { passive: true });

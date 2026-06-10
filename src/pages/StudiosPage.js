@@ -8,12 +8,12 @@ import { createFooter } from '../components/Footer.js';
 export async function renderStudiosPage({ container }) {
   // 12 Registered Brand Studios List
   const studiosList = [
-    { name: 'Disney+', route: '/category?title=Disney%2B', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg' },
-    { name: 'Netflix', route: '/category?title=Netflix', logo: 'https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg' },
-    { name: 'Prime Video', route: '/category?title=Amazon%20Prime%20Video', logo: 'https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png' },
+    { name: 'Disney+', route: '/category?title=Disney%2B', logo: '/disney-logo.svg' },
+    { name: 'Netflix', route: '/category?title=Netflix', logo: '/netflix-logo.svg' },
+    { name: 'Prime Video', route: '/category?title=Amazon%20Prime%20Video', logo: '/prime-logo.png' },
     { name: 'Marvel', route: '/category?title=Marvel', logo: '/marvel-logo-white.svg' },
-    { name: 'HBO Max', route: '/category?title=HBO%20Max', logo: 'https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png' },
-    { name: 'Paramount+', route: '/category?title=Paramount%2B', logo: 'https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png' },
+    { name: 'HBO Max', route: '/category?title=HBO%20Max', logo: '/hbo-logo.png' },
+    { name: 'Paramount+', route: '/category?title=Paramount%2B', logo: '/paramount-logo.png' },
     { name: 'DC Studios', route: '/category?title=DC%20Studios', logo: '/dc-studios-tmdb.png' },
     { name: 'Warner Bros', route: '/category?title=Warner%20Bros', logo: '/wb-official.svg' },
     { name: 'Universal', route: '/category?title=Universal%20Pictures', logo: '/universal-tmdb.png' },

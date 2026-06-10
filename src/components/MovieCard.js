@@ -8,6 +8,8 @@ import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/
 import '../styles/movie-card.css';
 import '../styles/movie-grid.css';
 
+const previewCache = new Map();
+
 export function createMovieCard(item, type = 'movie', customRoute = null, customSubtitle = null, progressData = null, showDeleteBtn = false, cardLayout = 'portrait') {
   const title = item.title || item.name || 'Unknown';
   const year = (item.release_date || item.first_air_date || item.year || '').slice(0, 4);
@@ -236,64 +238,71 @@ export function attachCardClicks(container) {
         const cardReleaseDate = card.dataset.releaseDate || '';
         const cardOverview = decodeURIComponent(card.dataset.overview || '');
 
-        let tmdbData = null;
+        const cacheKey = `${type}_${id}`;
+        let tmdbData = previewCache.get(cacheKey) || null;
 
-        if (isMovieBox) {
-          try {
-            // First search TMDB by clean title in the background to get TMDB details
-            const cleanTitle = cardTitle.replace(/\[.*?\]/g, '').trim();
-            const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
-            if (searchRes.ok) {
-              const searchData = await searchRes.json();
-              if (searchData.results && searchData.results.length > 0) {
-                let matchedResult = searchData.results[0];
-                const cardYear = cardReleaseDate.slice(0, 4);
-                if (cardYear) {
-                  const matchByYear = searchData.results.find(r => {
-                    const rYear = (r.release_date || r.first_air_date || '').slice(0, 4);
-                    return rYear === cardYear;
-                  });
-                  if (matchByYear) matchedResult = matchByYear;
-                }
-                
-                // Fetch full details with images, videos using matched TMDB ID
-                const tmdbId = matchedResult.id;
-                const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
-                if (detailsRes.ok) {
-                  tmdbData = await detailsRes.json();
-                }
-              }
-            }
-          } catch (e) {
-            console.warn('Failed to resolve TMDB details via search for MovieBox item', e);
-          }
-
-          // Fallback to MovieBox native details API if TMDB search failed
-          if (!tmdbData) {
+        if (!tmdbData) {
+          if (isMovieBox) {
             try {
-              const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${id}`);
-              if (res.ok) {
-                const data = await res.json();
-                tmdbData = {
-                  title: data.title,
-                  overview: data.description || '',
-                  release_date: data.releaseDate || '',
-                  vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : 0,
-                  backdrop_path: data.cover?.url || data.coverUrl || '',
-                  poster_path: data.cover?.url || data.coverUrl || '',
-                };
+              // First search TMDB by clean title in the background to get TMDB details
+              const cleanTitle = cardTitle.replace(/\[.*?\]/g, '').trim();
+              const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
+              if (searchRes.ok) {
+                const searchData = await searchRes.json();
+                if (searchData.results && searchData.results.length > 0) {
+                  let matchedResult = searchData.results[0];
+                  const cardYear = cardReleaseDate.slice(0, 4);
+                  if (cardYear) {
+                    const matchByYear = searchData.results.find(r => {
+                      const rYear = (r.release_date || r.first_air_date || '').slice(0, 4);
+                      return rYear === cardYear;
+                    });
+                    if (matchByYear) matchedResult = matchByYear;
+                  }
+                  
+                  // Fetch full details with images, videos using matched TMDB ID
+                  const tmdbId = matchedResult.id;
+                  const detailsRes = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
+                  if (detailsRes.ok) {
+                    tmdbData = await detailsRes.json();
+                  }
+                }
               }
             } catch (e) {
-              console.warn('Failed to fetch MovieBox native info for preview', e);
+              console.warn('Failed to resolve TMDB details via search for MovieBox item', e);
+            }
+
+            // Fallback to MovieBox native details API if TMDB search failed
+            if (!tmdbData) {
+              try {
+                const res = await fetch(`${NODE_PROXY}/api/moviebox/info/${id}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  tmdbData = {
+                    title: data.title,
+                    overview: data.description || '',
+                    release_date: data.releaseDate || '',
+                    vote_average: data.imdbRatingValue ? parseFloat(data.imdbRatingValue) : 0,
+                    backdrop_path: data.cover?.url || data.coverUrl || '',
+                    poster_path: data.cover?.url || data.coverUrl || '',
+                  };
+                }
+              } catch (e) {
+                console.warn('Failed to fetch MovieBox native info for preview', e);
+              }
+            }
+          } else {
+            // Standard TMDB card, fetch details directly
+            try {
+              const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
+              if (res.ok) tmdbData = await res.json();
+            } catch (e) {
+              console.warn('Failed to fetch TMDB details directly', e);
             }
           }
-        } else {
-          // Standard TMDB card, fetch details directly
-          try {
-            const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=videos,release_dates,content_ratings,images&include_image_language=en,hi,null`);
-            if (res.ok) tmdbData = await res.json();
-          } catch (e) {
-            console.warn('Failed to fetch TMDB details directly', e);
+
+          if (tmdbData) {
+            previewCache.set(cacheKey, tmdbData);
           }
         }
 

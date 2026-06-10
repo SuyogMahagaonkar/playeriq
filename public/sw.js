@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Stale-While-Revalidate for TMDB metadata API calls
+  // 2. Stale-While-Revalidate with 24-hour expiration for TMDB metadata API calls
   if (url.hostname.includes('api.themoviedb.org')) {
     event.respondWith(
       caches.open('playeriq-tmdb-metadata').then((cache) => {
@@ -75,14 +75,31 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           }).catch(() => null);
-          return cachedResponse || fetchPromise;
+
+          if (cachedResponse) {
+            const dateHeader = cachedResponse.headers.get('date');
+            let isExpired = false;
+            if (dateHeader) {
+              const cachedTime = new Date(dateHeader).getTime();
+              if (!isNaN(cachedTime)) {
+                isExpired = (Date.now() - cachedTime) > 24 * 60 * 60 * 1000;
+              }
+            }
+            if (!isExpired) {
+              return cachedResponse;
+            }
+            // If expired, wait for network, fallback to cache if offline
+            return fetchPromise.then(res => res || cachedResponse);
+          }
+
+          return fetchPromise;
         });
       })
     );
     return;
   }
 
-  // 3. Stale-While-Revalidate for MovieBox metadata (info & seasons)
+  // 3. Stale-While-Revalidate with 24-hour expiration for MovieBox metadata (info & seasons)
   if (
     url.pathname.startsWith('/api/moviebox/info/') || 
     url.pathname.startsWith('/api/moviebox/seasons/')
@@ -96,7 +113,24 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           }).catch(() => null);
-          return cachedResponse || fetchPromise;
+
+          if (cachedResponse) {
+            const dateHeader = cachedResponse.headers.get('date');
+            let isExpired = false;
+            if (dateHeader) {
+              const cachedTime = new Date(dateHeader).getTime();
+              if (!isNaN(cachedTime)) {
+                isExpired = (Date.now() - cachedTime) > 24 * 60 * 60 * 1000;
+              }
+            }
+            if (!isExpired) {
+              return cachedResponse;
+            }
+            // If expired, wait for network, fallback to cache if offline
+            return fetchPromise.then(res => res || cachedResponse);
+          }
+
+          return fetchPromise;
         });
       })
     );

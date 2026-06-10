@@ -47,7 +47,7 @@ export function createHeroBanner(items) {
 
     return `
       <div class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}" data-detail-route="/${type}/${m.id}">
-        <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'original')}" ${bannerSrcset} ${bannerSizes} alt="${title}" loading="eager" />
+        <img class="hero-backdrop" src="${img.backdrop(m.backdrop_path, 'w780')}" ${bannerSrcset} ${bannerSizes} alt="${title}" loading="${i === 0 ? 'eager' : 'lazy'}" />
         <div class="hero-gradient-left"></div>
         <div class="hero-gradient-bottom"></div>
         

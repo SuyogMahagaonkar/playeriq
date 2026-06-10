@@ -36,17 +36,17 @@ export async function renderHomePage({ container }) {
       <div id="home-category-grid-container" class="home-category-grid">
         <div class="category-grid-item" data-route="/category?title=Disney%2B">
           <div class="category-grid-icon">
-            <img class="studio-logo studio-logo-white" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="/disney-logo.svg" alt="Disney+" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Netflix">
           <div class="category-grid-icon">
-            <img class="studio-logo studio-logo-white" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="/netflix-logo.svg" alt="Netflix" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Amazon%20Prime%20Video">
           <div class="category-grid-icon">
-            <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="/prime-logo.png" alt="Prime Video" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
         </div>
         <div class="category-grid-item" data-route="/category?title=Marvel">
@@ -56,7 +56,7 @@ export async function renderHomePage({ container }) {
         </div>
         <div class="category-grid-item" data-route="/category?title=HBO%20Max">
           <div class="category-grid-icon">
-            <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" style="max-width:85%; max-height:80%; object-fit:contain;" />
+            <img class="studio-logo studio-logo-white" src="/hbo-logo.png" alt="HBO Max" style="max-width:85%; max-height:80%; object-fit:contain;" />
           </div>
         </div>
         <div class="category-grid-item category-grid-item-viewall" data-route="/studios">
@@ -80,19 +80,19 @@ export async function renderHomePage({ container }) {
             </button>
             <div class="studio-row-scroll content-row-scroll">
               <div class="studio-card studio-disney" data-route="/category?title=Disney%2B">
-                <img class="studio-logo studio-logo-white" src="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg" alt="Disney+" />
+                <img class="studio-logo studio-logo-white" src="/disney-logo.svg" alt="Disney+" />
               </div>
               <div class="studio-card studio-hbo" data-route="/category?title=HBO%20Max">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/tuomPhY2UtuPTqqFnKMVHvSb724.png" alt="HBO Max" />
+                <img class="studio-logo studio-logo-white" src="/hbo-logo.png" alt="HBO Max" />
               </div>
               <div class="studio-card studio-netflix" data-route="/category?title=Netflix">
-                <img class="studio-logo studio-logo-white" src="https://www.vectorlogo.zone/logos/netflix/netflix-ar21.svg" alt="Netflix" />
+                <img class="studio-logo studio-logo-white" src="/netflix-logo.svg" alt="Netflix" />
               </div>
               <div class="studio-card studio-prime" data-route="/category?title=Amazon%20Prime%20Video">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/f311cuuS7HK38HYgcYl0rXQrKvv.png" alt="Prime Video" />
+                <img class="studio-logo studio-logo-white" src="/prime-logo.png" alt="Prime Video" />
               </div>
               <div class="studio-card studio-paramount" data-route="/category?title=Paramount%2B">
-                <img class="studio-logo studio-logo-white" src="https://image.tmdb.org/t/p/original/jay6WcMgagAklUt7i9Euwj1pzTF.png" alt="Paramount+" />
+                <img class="studio-logo studio-logo-white" src="/paramount-logo.png" alt="Paramount+" />
               </div>
               <div class="studio-card studio-marvel" data-route="/category?title=Marvel">
                 <img class="studio-logo" src="/marvel-logo-white.svg" alt="Marvel" />
@@ -201,11 +201,10 @@ export async function renderHomePage({ container }) {
     // ========================================
     
     // 1. Fetch & Hydrate Above-The-Fold viewports
-    const [trendingAllData, top10MoviesData, top10SeriesData, watchHistoryData] = await Promise.all([
+    const [trendingAllData, top10MoviesData, top10SeriesData] = await Promise.all([
       getTrendingAll().catch(() => ({ results: [] })),
       getTop10Movies().catch(() => ({ results: [] })),
-      getTop10Series().catch(() => ({ results: [] })),
-      getWatchHistory().catch(() => [])
+      getTop10Series().catch(() => ({ results: [] }))
     ]);
 
     // 2. Hydrate Hero Spotlight Banner
@@ -244,25 +243,19 @@ export async function renderHomePage({ container }) {
 
     const heroItems = await Promise.all(finalHeroItemsBase.map(async (item) => {
       try {
-        const cleanTitle = item.title.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
-        const searchRes = await fetch(`https://api.themoviedb.org/3/search/${item.media_type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          const tmdbMatch = searchData.results?.[0];
-          if (tmdbMatch) {
-            const imagesRes = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${tmdbMatch.id}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,hi,null`);
-            const imagesData = imagesRes.ok ? await imagesRes.json() : null;
-            return {
-              ...item,
-              vote_average: tmdbMatch.vote_average || item.vote_average,
-              release_date: tmdbMatch.release_date || tmdbMatch.first_air_date || item.release_date,
-              first_air_date: tmdbMatch.first_air_date || tmdbMatch.release_date || item.first_air_date,
-              overview: tmdbMatch.overview || item.overview,
-              backdrop_path: tmdbMatch.backdrop_path || item.backdrop_path,
-              poster_path: tmdbMatch.poster_path || item.poster_path,
-              images: imagesData
-            };
-          }
+        const res = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${item.id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=images&include_image_language=en,hi,null`);
+        if (res.ok) {
+          const tmdbData = await res.json();
+          return {
+            ...item,
+            vote_average: tmdbData.vote_average || item.vote_average,
+            release_date: tmdbData.release_date || tmdbData.first_air_date || item.release_date,
+            first_air_date: tmdbData.first_air_date || tmdbData.release_date || item.first_air_date,
+            overview: tmdbData.overview || item.overview,
+            backdrop_path: tmdbData.backdrop_path || item.backdrop_path,
+            poster_path: tmdbData.poster_path || item.poster_path,
+            images: tmdbData.images
+          };
         }
       } catch (e) {
         console.warn('Hero banner details fetch failed', e);
@@ -276,66 +269,74 @@ export async function renderHomePage({ container }) {
       cleanupHero = initHeroBanner();
     }
 
-    // 3. Hydrate Continue Watching
-    const getMillis = (timestamp) => {
-      if (!timestamp) return 0;
-      if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
-      if (typeof timestamp === 'number') return timestamp;
-      if (timestamp instanceof Date) return timestamp.getTime();
-      const parsed = Date.parse(timestamp);
-      return isNaN(parsed) ? 0 : parsed;
-    };
+    // 3. Hydrate Continue Watching in the background (non-blocking)
+    getWatchHistory().then(watchHistoryData => {
+      if (!watchHistoryData || watchHistoryData.length === 0) return;
 
-    let continueWatchingItems = watchHistoryData.filter(item => {
-      if (item.watched) return false;
-      const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
-      if (item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300))) return false;
-      return true;
-    });
+      const getMillis = (timestamp) => {
+        if (!timestamp) return 0;
+        if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
+        if (typeof timestamp === 'number') return timestamp;
+        if (timestamp instanceof Date) return timestamp.getTime();
+        const parsed = Date.parse(timestamp);
+        return isNaN(parsed) ? 0 : parsed;
+      };
 
-    const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
-    if (isSafe) {
-      continueWatchingItems = continueWatchingItems.filter(isSafeItem);
-    }
+      let continueWatchingItems = watchHistoryData.filter(item => {
+        if (item.watched) return false;
+        const pct = item.duration > 0 ? (item.currentTime / item.duration) : 0;
+        if (item.duration > 0 && (pct >= 0.90 || (item.duration - item.currentTime <= 300))) return false;
+        return true;
+      });
 
-    const tvLatestEpisodes = {};
-    const finalContinueWatching = [];
-
-    continueWatchingItems.forEach(item => {
-      if (item.type === 'tv') {
-        const existing = tvLatestEpisodes[item.id];
-        const itemTime = getMillis(item.timestamp);
-        if (!existing || itemTime > getMillis(existing.timestamp)) {
-          tvLatestEpisodes[item.id] = item;
-        }
-      } else {
-        finalContinueWatching.push(item);
+      const isSafe = localStorage.getItem('piq_safesearch') !== 'false';
+      if (isSafe) {
+        continueWatchingItems = continueWatchingItems.filter(isSafeItem);
       }
+
+      const tvLatestEpisodes = {};
+      const finalContinueWatching = [];
+
+      continueWatchingItems.forEach(item => {
+        if (item.type === 'tv') {
+          const existing = tvLatestEpisodes[item.id];
+          const itemTime = getMillis(item.timestamp);
+          if (!existing || itemTime > getMillis(existing.timestamp)) {
+            tvLatestEpisodes[item.id] = item;
+          }
+        } else {
+          finalContinueWatching.push(item);
+        }
+      });
+
+      Object.keys(tvLatestEpisodes).forEach(showId => {
+        finalContinueWatching.push(tvLatestEpisodes[showId]);
+      });
+
+      finalContinueWatching.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
+      continueWatchingItems = finalContinueWatching;
+
+      const continueWatchingMount = container.querySelector('#continue-watching-row-container');
+      if (continueWatchingMount && continueWatchingItems.length > 0) {
+        const historyCards = continueWatchingItems.map(item => {
+          const route = item.type === 'tv' 
+            ? `/watch/tv/${item.id}?s=${item.season}&e=${item.episode}` 
+            : `/watch/movie/${item.id}`;
+          const subtitle = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
+          return createMovieCard(item, item.type, route, subtitle, item, true, 'landscape');
+        }).join('');
+
+        continueWatchingMount.innerHTML = createContentRow(
+          '<i data-lucide="play-circle"></i> Continue Watching', 
+          historyCards, 
+          'custom'
+        );
+        initContentRows(continueWatchingMount);
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }).catch(err => {
+      console.warn('Failed to hydrate watch history:', err);
     });
-
-    Object.keys(tvLatestEpisodes).forEach(showId => {
-      finalContinueWatching.push(tvLatestEpisodes[showId]);
-    });
-
-    finalContinueWatching.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
-    continueWatchingItems = finalContinueWatching;
-
-    const continueWatchingMount = container.querySelector('#continue-watching-row-container');
-    if (continueWatchingMount && continueWatchingItems.length > 0) {
-      const historyCards = continueWatchingItems.map(item => {
-        const route = item.type === 'tv' 
-          ? `/watch/tv/${item.id}?s=${item.season}&e=${item.episode}` 
-          : `/watch/movie/${item.id}`;
-        const subtitle = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
-        return createMovieCard(item, item.type, route, subtitle, item, true, 'landscape');
-      }).join('');
-
-      continueWatchingMount.innerHTML = createContentRow(
-        '<i data-lucide="play-circle"></i> Continue Watching', 
-        historyCards, 
-        'custom'
-      );
-    }
 
     // 4. Hydrate Top 10 Movies Row
     const topMovies = top10MoviesData.results || [];

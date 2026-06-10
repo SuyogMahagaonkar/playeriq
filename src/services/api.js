@@ -6,12 +6,14 @@ export const NODE_PROXY = (window.location.hostname === 'localhost' || window.lo
   ? 'http://localhost:3000'
   : 'https://playerapi.suyogmahagaonkar.me';
 
+const TMDB_KEY = '8e4ad9e56e31ab079517b5be6965b477';
+
 // Image size helpers
 export const img = {
-  poster: (path) => path?.startsWith('/') ? `https://image.tmdb.org/t/p/w500${path}` : path,
-  backdrop: (path) => path?.startsWith('/') ? `https://image.tmdb.org/t/p/original${path}` : path,
-  profile: (path) => path?.startsWith('/') ? `https://image.tmdb.org/t/p/w185${path}` : path,
-  still: (path) => path?.startsWith('/') ? `https://image.tmdb.org/t/p/w500${path}` : path,
+  poster: (path, size = 'w342') => path?.startsWith('/') ? `https://image.tmdb.org/t/p/${size}${path}` : path,
+  backdrop: (path, size = 'w780') => path?.startsWith('/') ? `https://image.tmdb.org/t/p/${size}${path}` : path,
+  profile: (path, size = 'w185') => path?.startsWith('/') ? `https://image.tmdb.org/t/p/${size}${path}` : path,
+  still: (path, size = 'w300') => path?.startsWith('/') ? `https://image.tmdb.org/t/p/${size}${path}` : path,
 };
 
 function isSafeSearchOn() {
@@ -140,7 +142,7 @@ export async function getMovieBoxHome(forceRefresh = false) {
 export const getMovieDetails = async (id) => {
   let details = null;
   if (!String(id).startsWith('mb_')) {
-    const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations,videos,credits`);
+    const res = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_KEY}&append_to_response=similar,recommendations,videos,credits`);
     if (!res.ok) throw new Error('TMDB details failed');
     details = await res.json();
   } else {
@@ -175,7 +177,7 @@ export const getMovieDetails = async (id) => {
 export const getTVDetails = async (id) => {
   let details = null;
   if (!String(id).startsWith('mb_')) {
-    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=8e4ad9e56e31ab079517b5be6965b477&append_to_response=similar,recommendations,videos,credits`);
+    const res = await fetch(`https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_KEY}&append_to_response=similar,recommendations,videos,credits`);
     if (!res.ok) throw new Error('TMDB tv details failed');
     const data = await res.json();
     details = {
@@ -235,7 +237,7 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
   // 1. If it is a TMDB ID, try official TMDB Season endpoint first (most reliable)
   if (!String(tvId).startsWith('mb_')) {
     try {
-      const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+      const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_KEY}`);
       if (res.ok) {
         const data = await res.json();
         if (data.episodes && data.episodes.length > 0) {
@@ -266,12 +268,12 @@ export const getSeasonDetails = async (tvId, seasonNumber, title = null, year = 
   // 3. Search TMDB directly by title as a last-resort TMDB fallback if tvId starts with mb_
   if (title) {
     try {
-      const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(title)}${year ? `&first_air_date_year=${year}` : ''}`);
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}${year ? `&first_air_date_year=${year}` : ''}`);
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         const tmdbTv = searchData.results?.[0];
         if (tmdbTv) {
-          const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbTv.id}/season/${seasonNumber}?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+          const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbTv.id}/season/${seasonNumber}?api_key=${TMDB_KEY}`);
           if (res.ok) {
             const data = await res.json();
             if (data.episodes && data.episodes.length > 0) {
@@ -347,8 +349,8 @@ export async function searchMovieBox(query, type = 'all') {
 export async function getLatestNetflix(page = 1) {
   const isSafe = isSafeSearchOn();
   const [moviesRes, tvRes] = await Promise.all([
-    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`),
-    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`)
+    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`),
+    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`)
   ]);
   const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
   
@@ -373,8 +375,8 @@ export async function getLatestNetflix(page = 1) {
 export async function getLatestPrime(page = 1) {
   const isSafe = isSafeSearchOn();
   const [moviesRes, tvRes] = await Promise.all([
-    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`),
-    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`)
+    fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`),
+    fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`)
   ]);
   const [movies, tvs] = await Promise.all([moviesRes.json(), tvRes.json()]);
   
@@ -401,7 +403,7 @@ export async function getWatchProviders(id, type, title = null) {
   if (String(id).startsWith('mb_')) {
     if (!title) return null;
     try {
-      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(title)}`);
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_KEY}&query=${encodeURIComponent(title)}`);
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         if (searchData.results?.[0]) {
@@ -416,7 +418,7 @@ export async function getWatchProviders(id, type, title = null) {
   }
   
   try {
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/watch/providers?api_key=8e4ad9e56e31ab079517b5be6965b477`);
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/watch/providers?api_key=${TMDB_KEY}`);
     if (res.ok) {
       const data = await res.json();
       const providers = data.results?.IN || data.results?.US || Object.values(data.results || {})[0];
@@ -429,7 +431,7 @@ export async function getWatchProviders(id, type, title = null) {
 }
 
 export async function getTop10Movies() {
-  const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
+  const res = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_KEY}&page=1`);
   if (!res.ok) throw new Error('Failed to fetch top 10 movies');
   const data = await res.json();
   let results = data.results || [];
@@ -440,7 +442,7 @@ export async function getTop10Movies() {
 }
 
 export async function getTop10Series() {
-  const res = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=8e4ad9e56e31ab079517b5be6965b477&page=1`);
+  const res = await fetch(`https://api.themoviedb.org/3/tv/popular?api_key=${TMDB_KEY}&page=1`);
   if (!res.ok) throw new Error('Failed to fetch top 10 series');
   const data = await res.json();
   let results = data.results || [];
@@ -451,7 +453,7 @@ export async function getTop10Series() {
 }
 
 export async function getTrendingMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/trending/movie/week?api_key=${TMDB_KEY}&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch trending movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -461,7 +463,7 @@ export async function getTrendingMovies(page = 1) {
 }
 
 export async function getTrendingTV(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/trending/tv/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/trending/tv/week?api_key=${TMDB_KEY}&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch trending series');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -476,7 +478,7 @@ export async function getMediaImages(id, type, title = null) {
     if (!title) return null;
     const cleanTitle = title.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
     try {
-      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=8e4ad9e56e31ab079517b5be6965b477&query=${encodeURIComponent(cleanTitle)}`);
+      const searchRes = await fetch(`https://api.themoviedb.org/3/search/${type}?api_key=${TMDB_KEY}&query=${encodeURIComponent(cleanTitle)}`);
       if (searchRes.ok) {
         const searchData = await searchRes.json();
         if (searchData.results?.[0]) {
@@ -491,7 +493,7 @@ export async function getMediaImages(id, type, title = null) {
   }
   
   try {
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/images?api_key=8e4ad9e56e31ab079517b5be6965b477&include_image_language=en,hi,null`);
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/images?api_key=${TMDB_KEY}&include_image_language=en,hi,null`);
     if (res.ok) {
       return res.json();
     }
@@ -502,7 +504,7 @@ export async function getMediaImages(id, type, title = null) {
 }
 
 export async function getTrendingAll(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=8e4ad9e56e31ab079517b5be6965b477&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_KEY}&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch trending all');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -512,7 +514,7 @@ export async function getTrendingAll(page = 1) {
 }
 
 export async function getBollywoodMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=hi&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_original_language=hi&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Bollywood movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -522,7 +524,7 @@ export async function getBollywoodMovies(page = 1) {
 }
 
 export async function getSouthIndianMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=te|ta|kn|ml&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_original_language=te|ta|kn|ml&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch South Indian movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -532,7 +534,7 @@ export async function getSouthIndianMovies(page = 1) {
 }
 
 export async function getCinemaMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_original_language=en&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_original_language=en&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Cinema movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -546,7 +548,7 @@ export async function getCinemaMovies(page = 1) {
 // ========================================
 
 export async function getHorrorMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=27&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=27&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Horror movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -556,7 +558,7 @@ export async function getHorrorMovies(page = 1) {
 }
 
 export async function getRomanceMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=10749&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=10749&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Romance movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -566,7 +568,7 @@ export async function getRomanceMovies(page = 1) {
 }
 
 export async function getSciFiMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=878&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=878&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Sci-Fi movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -576,7 +578,7 @@ export async function getSciFiMovies(page = 1) {
 }
 
 export async function getKidsMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=10751&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=10751&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Family/Kids movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -586,7 +588,7 @@ export async function getKidsMovies(page = 1) {
 }
 
 export async function getComedyMovies(page = 1) {
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=35&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=35&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Comedy movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -597,7 +599,7 @@ export async function getComedyMovies(page = 1) {
 
 export async function getAnimeMovies(page = 1) {
   // TMDB Genre 16 is Animation, Japanese original language is specific to Japanese Anime!
-  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=${page}`);
+  const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_genres=16&with_original_language=ja&sort_by=popularity.desc&page=${page}`);
   if (!res.ok) throw new Error('Failed to fetch Anime movies');
   let data = await res.json();
   if (isSafeSearchOn() && data.results) {
@@ -619,55 +621,55 @@ export async function getStudioContent(studioName, page = 1) {
   
   if (cleanName.includes('disney')) {
     // Walt Disney Pictures (2), Walt Disney Animation Studios (6125), Pixar (3), Walt Disney Studios (33)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&vote_count.gte=100&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=2|3|33|6125&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=2|3|33|6125&sort_by=popularity.desc&vote_count.gte=100&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=2|3|33|6125&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('hbo')) {
     // TV network 49 (HBO), Production company 3268 (HBO Films)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=3268|9993&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_networks=49&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=3268|9993&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_networks=49&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('netflix')) {
     // Watch provider 8 (Netflix IN)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_watch_providers=8&watch_region=IN&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('prime')) {
     // Watch provider 119 (Amazon Prime IN)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_watch_providers=119&watch_region=IN&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('paramount')) {
     // Paramount Pictures company ID: 4|34
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=4|34&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_networks=1025&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=4|34&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_networks=1025&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('marvel')) {
     // Marvel Studios production company ID: 420
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=420&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=420&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=420&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('dc') || cleanName.includes('dcstudios') || cleanName.includes('dccomics')) {
     // DC Entertainment (9993), DC Studios (128064)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=9993|128064&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('warner') || cleanName.includes('wb')) {
     // Warner Bros. Pictures (174)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=174&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=174&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=174&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=174&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('universal')) {
     // Universal Pictures (33)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=33&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=33&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=33&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=33&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('sony')) {
     // Sony Pictures Entertainment (5), Columbia Pictures (13)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=5|13&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('apple')) {
     // Apple TV+ watch provider 350
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_watch_providers=350&watch_region=US&sort_by=popularity.desc&page=${page}`;
   } else if (cleanName.includes('dreamworks')) {
     // DreamWorks Animation (521), DreamWorks Pictures (27734)
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&with_companies=521|27734&sort_by=popularity.desc&page=${page}`;
   } else {
-    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
-    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=8e4ad9e56e31ab079517b5be6965b477&sort_by=popularity.desc&page=${page}`;
+    urlMovies = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&sort_by=popularity.desc&page=${page}`;
+    urlTv = `https://api.themoviedb.org/3/discover/tv?api_key=${TMDB_KEY}&sort_by=popularity.desc&page=${page}`;
   }
 
   const [moviesRes, tvRes] = await Promise.all([
@@ -850,4 +852,5 @@ export async function discoverTmdbContent(mediaType, { genre, language, page = 1
   }
   return data;
 }
+
 
