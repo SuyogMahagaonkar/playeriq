@@ -925,3 +925,75 @@ video::-internal-media-controls-overlay-cast-button,
 video::-webkit-media-controls-overlay-cast-button {
   display: none !important;
 }
+
+/* ========================================
+   VERTICAL BRIGHTNESS SLIDER (DESKTOP)
+   ======================================== */
+.vp-brightness-slider-group {
+  position: absolute !important;
+  left: 28px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+  z-index: 105 !important;
+  width: 36px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease !important;
+}
+
+/* Show when controls are visible */
+.vp-controls.vp-visible .vp-brightness-slider-group {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Maintain visibility when actively adjusted or hovered */
+.vp-brightness-slider-group.vp-brightness-active,
+.vp-brightness-slider-group:hover {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.vp-brightness-icon {
+  width: 22px !important;
+  height: 22px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important;
+}
+
+.vp-brightness-slider-track {
+  position: relative !important;
+  width: 6px !important;
+  height: 130px !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-radius: 3px !important;
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  overflow: visible !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+}
+
+.vp-brightness-slider-fill {
+  width: 100% !important;
+  background: #ffffff !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8) !important;
+}
+
+.vp-brightness-slider-input {
+  position: absolute !important;
+  top: 0 !important;
+  left: -10px !important;
+  width: 26px !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  -webkit-appearance: slider-vertical !important;
+}

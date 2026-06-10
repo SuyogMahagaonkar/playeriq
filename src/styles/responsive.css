@@ -7528,5 +7528,21 @@
     color: #FFFFFF !important;
     opacity: 1 !important;
   }
+
+  /* Show bottom nav on mobile player page */
+  body.piq-player-active .mobile-bottom-nav {
+    display: flex !important;
+  }
+
+  /* Hide bottom nav in landscape mode on mobile player page */
+  body.piq-player-active:has(.landscape-mode) .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  @media (orientation: landscape) {
+    body.piq-player-active .mobile-bottom-nav {
+      display: none !important;
+    }
+  }
 }
 

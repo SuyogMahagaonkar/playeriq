@@ -2872,10 +2872,19 @@ function setupOrientationMonitor() {
     const isMobile = window.innerWidth <= 767;
     if (!isMobile) {
       removeToast();
+      const playerPageEl = document.querySelector('.mobile-player-page');
+      if (playerPageEl) {
+        playerPageEl.classList.remove('landscape-mode');
+      }
       return;
     }
 
     const isLandscape = window.innerWidth > window.innerHeight;
+    const playerPageEl = document.querySelector('.mobile-player-page');
+    if (playerPageEl) {
+      playerPageEl.classList.toggle('landscape-mode', isLandscape);
+    }
+
     if (isLandscape) {
       if (!toastEl) {
         toastEl = document.createElement('div');
