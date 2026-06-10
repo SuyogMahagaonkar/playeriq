@@ -12,6 +12,7 @@ let isLoading = false;
 
 const TABS = [
   { id: 'all',        name: '🔥 All Adult Content' },
+  { id: 'ullu',       name: '🔞 ULLU Originals' },
   { id: 'vivamax',    name: '🇵🇭 Vivamax Hits' },
   { id: 'indian',     name: '🇮🇳 Indian Softcore' },
   { id: 'japanese',   name: '🇯🇵 JAV & Hentai' },
@@ -90,6 +91,8 @@ async function loadAdultContent() {
     let searchQueries = [];
     if (currentTab === 'all') {
       searchQueries = ['vivamax', 'ullu', 'kooku', 'primeplay', 'jav', 'hentai', 'sexa'];
+    } else if (currentTab === 'ullu') {
+      searchQueries = ['ullu'];
     } else if (currentTab === 'vivamax') {
       searchQueries = ['vivamax', 'sulutan', 'bula', 'higop'];
     } else if (currentTab === 'indian') {
