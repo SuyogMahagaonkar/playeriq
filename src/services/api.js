@@ -42,6 +42,24 @@ export function isSafeItem(item) {
   }
   genresStr = genresStr.toLowerCase();
 
+  // Extract networks and production companies from TMDB structure if present
+  const tmdbNetworks = Array.isArray(item.networks)
+    ? item.networks.map(n => n.name || n)
+    : [];
+  const tmdbProdCos = Array.isArray(item.production_companies)
+    ? item.production_companies.map(c => c.name || c)
+    : [];
+  const homepage = item.homepage || '';
+
+  const explicitStudios = ['ullu', 'kooku', 'primeplay', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti', 'chikooflix', 'gupchup', 'altbalaji', 'vivamax'];
+  for (const studio of explicitStudios) {
+    if (homepage.toLowerCase().includes(studio) ||
+        tmdbNetworks.some(n => String(n).toLowerCase().includes(studio)) ||
+        tmdbProdCos.some(c => String(c).toLowerCase().includes(studio))) {
+      return false;
+    }
+  }
+
   // Extract additional metadata fields to filter recursively
   const extraFields = [
     item.studio || '',
@@ -81,7 +99,8 @@ export function isSafeItem(item) {
     'sex movie', 'sex scene', 'sex video', 'sex show', 'sex tape',
     'hardcore sex', 'lesbian sex', 'gay sex', 'desi hot', 'desi sexy',
     'desi bhabhi', 'hot web series', '18+ web series', 'adult web series',
-    'uncut web series', 'unrated web series', 'teens love'
+    'uncut web series', 'unrated web series', 'teens love',
+    'chachi no.1', 'chachi no 1', 'chachi no. 1', 'chachi no'
   ];
   for (const sub of badSubstrings) {
     if (title.includes(sub) || overview.includes(sub) || genresStr.includes(sub) || extraFields.some(ef => ef.includes(sub))) {
@@ -791,7 +810,10 @@ export async function filterAvailableItems(items, type) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ items: payloadItems })
+      body: JSON.stringify({ 
+        items: payloadItems,
+        safe: isSafeSearchOn()
+      })
     });
     if (!res.ok) throw new Error(`Batch match failed: ${res.status}`);
     const { matches } = await res.json();

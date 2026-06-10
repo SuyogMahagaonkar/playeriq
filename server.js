@@ -167,9 +167,111 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
   }
 }
 
+// ---- TMDB safety caches and helper functions ----
+const TMDB_KEY = '8e4ad9e56e31ab079517b5be6965b477';
+const tmdbSafetyCache = new Map(); // TMDB ID -> boolean (isSafe)
+const tmdbSearchCache = new Map(); // "type_title_year" -> TMDB ID
+
+async function getTmdbIdForMovieBoxItem(title, year, type) {
+  const cleanTitle = (title || '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+  const searchType = type === 'tv' ? 'tv' : 'movie';
+  const cleanTitleKey = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cacheKey = `${searchType}_${cleanTitleKey}_${year || ''}`;
+  
+  if (tmdbSearchCache.has(cacheKey)) {
+    return tmdbSearchCache.get(cacheKey);
+  }
+  
+  try {
+    const yearParam = year ? `&${searchType === 'tv' ? 'first_air_date_year' : 'year'}=${year}` : '';
+    const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${TMDB_KEY}&query=${encodeURIComponent(cleanTitle)}${yearParam}`;
+    const res = await axios.get(url, { timeout: 3000 });
+    const results = res.data.results || [];
+    if (results.length > 0) {
+      const tmdbId = results[0].id;
+      tmdbSearchCache.set(cacheKey, tmdbId);
+      return tmdbId;
+    }
+  } catch (err) {
+    console.warn(`[TMDB Search ID] Failed for ${title}:`, err.message);
+  }
+  tmdbSearchCache.set(cacheKey, null);
+  return null;
+}
+
+async function checkTmdbSafety(tmdbId, type) {
+  if (!tmdbId) return true;
+  const searchType = type === 'tv' ? 'tv' : 'movie';
+  const cacheKey = `${searchType}_${tmdbId}`;
+  
+  if (tmdbSafetyCache.has(cacheKey)) {
+    return tmdbSafetyCache.get(cacheKey);
+  }
+  
+  try {
+    const url = `https://api.themoviedb.org/3/${searchType}/${tmdbId}?api_key=${TMDB_KEY}`;
+    const res = await axios.get(url, { timeout: 3000 });
+    const data = res.data;
+    
+    const homepage = (data.homepage || '').toLowerCase();
+    const networks = (data.networks || []).map(n => (n.name || '').toLowerCase());
+    const prodCos = (data.production_companies || []).map(c => (c.name || '').toLowerCase());
+    const overview = (data.overview || '').toLowerCase();
+    const name = (data.name || data.title || '').toLowerCase();
+    
+    // Explicit lists
+    const explicitStudios = ['ullu', 'kooku', 'primeplay', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti', 'chikooflix', 'gupchup', 'altbalaji', 'vivamax'];
+    
+    let isSafe = true;
+    for (const studio of explicitStudios) {
+      if (homepage.includes(studio) || 
+          networks.some(n => n.includes(studio)) || 
+          prodCos.some(c => c.includes(studio))) {
+        isSafe = false;
+        break;
+      }
+    }
+    
+    if (data.adult === true) {
+      isSafe = false;
+    }
+    
+    const explicitTerms = ['ullu', 'kooku', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies', 'primeplay', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti', 'chikooflix', 'gupchup', 'altbalaji', 'vivamax', 'xxx', 'hentai', 'porn', 'adult', 'erotic', 'erotica', 'softcore', 'sensual', '18+'];
+    if (isSafe) {
+      if (explicitTerms.some(term => name.includes(term) || overview.includes(term))) {
+        isSafe = false;
+      }
+    }
+    
+    tmdbSafetyCache.set(cacheKey, isSafe);
+    return isSafe;
+  } catch (err) {
+    console.warn(`[Safety Check] Failed to fetch TMDB details for ${type} ${tmdbId}:`, err.message);
+    return true; // default to safe on request failure
+  }
+}
+
 // ---- Content Filtering ----
 function isSafeContent(item) {
   if (!item) return false;
+  
+  // Extract networks and production companies from TMDB structure if present
+  const tmdbNetworks = Array.isArray(item.networks)
+    ? item.networks.map(n => n.name || n)
+    : [];
+  const tmdbProdCos = Array.isArray(item.production_companies)
+    ? item.production_companies.map(c => c.name || c)
+    : [];
+  const homepage = item.homepage || '';
+
+  const explicitStudios = ['ullu', 'kooku', 'primeplay', 'nuefliks', 'hotshots', 'fliz', 'rabbit movies', 'neonx', 'hotmasti', 'fappot', 'glowmax', 'cinemadosti', 'chikooflix', 'gupchup', 'altbalaji', 'vivamax'];
+  for (const studio of explicitStudios) {
+    if (homepage.toLowerCase().includes(studio) ||
+        tmdbNetworks.some(n => String(n).toLowerCase().includes(studio)) ||
+        tmdbProdCos.some(c => String(c).toLowerCase().includes(studio))) {
+      return false;
+    }
+  }
   
   // Extract additional metadata fields to filter recursively
   const extraFields = [
@@ -215,7 +317,8 @@ function isSafeContent(item) {
     'sex movie', 'sex scene', 'sex video', 'sex show', 'sex tape',
     'hardcore sex', 'lesbian sex', 'gay sex', 'desi hot', 'desi sexy',
     'desi bhabhi', 'hot web series', '18+ web series', 'adult web series',
-    'uncut web series', 'unrated web series', 'teens love'
+    'uncut web series', 'unrated web series', 'teens love',
+    'chachi no.1', 'chachi no 1', 'chachi no. 1', 'chachi no'
   ];
 
   for (const sub of badSubstrings) {
@@ -265,6 +368,15 @@ app.get('/api/moviebox/search', async (req, res) => {
     // Apply SafeSearch if enabled
     if (isSafe) {
       mbResults = mbResults.filter(isSafeContent);
+      const safetyChecks = await Promise.all(mbResults.map(async (item) => {
+        const itemType = item.type === 'tv' ? 'tv' : 'movie';
+        const tmdbId = await getTmdbIdForMovieBoxItem(item.title, item.year || item.release_date, itemType);
+        if (tmdbId) {
+          return await checkTmdbSafety(tmdbId, itemType);
+        }
+        return true;
+      }));
+      mbResults = mbResults.filter((_, idx) => safetyChecks[idx]);
     }
     
     const enriched = mbResults.map(item => {
@@ -380,13 +492,17 @@ async function findMovieBoxMatch(title, year, type) {
 }
 
 app.post('/api/moviebox/match-batch', async (req, res) => {
-  const { items } = req.body; // array of { id, title, year, type }
+  const { items, safe } = req.body; // array of { id, title, year, type }
   if (!items || !Array.isArray(items)) {
     return res.status(400).json({ error: 'Missing or invalid items array' });
   }
 
   try {
     const matches = await Promise.all(items.map(async (item) => {
+      if (safe) {
+        const isSafe = await checkTmdbSafety(item.id, item.type);
+        if (!isSafe) return null;
+      }
       const match = await findMovieBoxMatch(item.title, item.year, item.type);
       if (match) {
         return {
@@ -446,18 +562,47 @@ app.get('/api/moviebox/home', async (req, res) => {
 
       // 2. Apply SafeSearch filter recursively to remaining home data
       if (isSafe) {
-        data.items = data.items.map(row => {
+        data.items = await Promise.all(data.items.map(async (row) => {
           if (row.subjects) {
-            row.subjects = row.subjects.filter(s => isSafeContent(s));
+            const safety = await Promise.all(row.subjects.map(async (s) => {
+              if (!isSafeContent(s)) return false;
+              const type = s.type === 'tv' ? 'tv' : 'movie';
+              const tmdbId = await getTmdbIdForMovieBoxItem(s.title, s.year || s.release_date, type);
+              if (tmdbId) {
+                return await checkTmdbSafety(tmdbId, type);
+              }
+              return true;
+            }));
+            row.subjects = row.subjects.filter((_, idx) => safety[idx]);
           }
           if (row.customData?.items) {
-            row.customData.items = row.customData.items.filter(ci => isSafeContent(ci.subject));
+            const safety = await Promise.all(row.customData.items.map(async (ci) => {
+              const s = ci.subject;
+              if (!s || !isSafeContent(s)) return false;
+              const type = s.type === 'tv' ? 'tv' : 'movie';
+              const tmdbId = await getTmdbIdForMovieBoxItem(s.title, s.year || s.release_date, type);
+              if (tmdbId) {
+                return await checkTmdbSafety(tmdbId, type);
+              }
+              return true;
+            }));
+            row.customData.items = row.customData.items.filter((_, idx) => safety[idx]);
           }
           if (row.banner?.banners) {
-            row.banner.banners = row.banner.banners.filter(b => isSafeContent(b.subject));
+            const safety = await Promise.all(row.banner.banners.map(async (b) => {
+              const s = b.subject;
+              if (!s || !isSafeContent(s)) return false;
+              const type = s.type === 'tv' ? 'tv' : 'movie';
+              const tmdbId = await getTmdbIdForMovieBoxItem(s.title, s.year || s.release_date, type);
+              if (tmdbId) {
+                return await checkTmdbSafety(tmdbId, type);
+              }
+              return true;
+            }));
+            row.banner.banners = row.banner.banners.filter((_, idx) => safety[idx]);
           }
           return row;
-        });
+        }));
       }
     }
 
