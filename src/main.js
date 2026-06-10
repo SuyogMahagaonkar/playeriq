@@ -12,6 +12,12 @@ import './styles/responsive.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
 import './styles/connectivity.css';
+// Core component styles — imported here so they are always in the initial bundle
+// regardless of which route the user lands on first (fixes hero CSS not loading until /ranking visited)
+import './styles/hero.css';
+import './styles/content-row.css';
+import './styles/movie-card.css';
+import './styles/movie-grid.css';
 
 
 // Core
