@@ -6,6 +6,8 @@ import { discoverTmdbContent, filterAvailableItems, getMediaImages, img } from '
 import { createMovieCard, attachCardClicks } from '../components/MovieCard.js';
 import { createFooter } from '../components/Footer.js';
 import { navigate } from '../services/router.js';
+import '../styles/ranking.css';
+
 
 let currentQuery = '';
 let isLoading = false;
