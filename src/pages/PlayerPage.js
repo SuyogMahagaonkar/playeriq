@@ -2114,11 +2114,9 @@ export async function renderPlayerPage({ params, container }) {
 
     // ---- Episode panel collapse toggle ----
     const panelToggleBtn = container.querySelector('#player-panel-toggle');
-    if (panelToggleBtn) {
+    const panel = container.querySelector('#episodes-panel');
+    if (panelToggleBtn && panel) {
       panelToggleBtn.addEventListener('click', () => {
-        const panel = container.querySelector('#episodes-panel');
-        if (!panel) return;
-
         // Add animation class ONLY during the toggle — prevents layout transitions
         // from firing on window resize or CSS breakpoint changes
         const animClass = panel.classList.contains('collapsed') ? 'is-expanding' : 'is-collapsing';
@@ -2135,6 +2133,14 @@ export async function renderPlayerPage({ params, container }) {
         if (icon) icon.setAttribute('points', isCollapsed ? '15 18 9 12 15 6' : '9 18 15 12 9 6');
         panelToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand episode list' : 'Collapse episode list');
         panelToggleBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+      });
+
+      // When collapsed: clicking anywhere on the panel re-expands it
+      panel.addEventListener('click', (e) => {
+        if (!panel.classList.contains('collapsed')) return;
+        // Only fire if not clicking the toggle btn itself or its children (prevent double-fire)
+        if (panelToggleBtn.contains(e.target)) return;
+        panelToggleBtn.click();
       });
     }
 

@@ -411,19 +411,32 @@ export function createVideoPlayer(container, streamData, {
     titleOverlay.className = 'vp-top-title-overlay';
     titleOverlay.id = 'vp-top-title';
     titleOverlay.innerHTML = `
-      <div class="vp-top-left-controls">
-        <button class="vp-btn vp-overlay-btn" id="vp-top-back-btn" title="Back" aria-label="Go Back">
+      <div class="vp-top-left-group">
+        <!-- Back button — pill with left arrow -->
+        <button class="vp-btn vp-overlay-btn vp-top-back" id="vp-top-back-btn" title="Back" aria-label="Go Back">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
         </button>
-        <button class="vp-btn vp-overlay-btn" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
-        </button>
-        <button class="vp-btn vp-overlay-btn" id="vp-top-sub-settings-btn" title="Subtitle Settings" aria-label="Subtitle Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-        </button>
+
+        <!-- Cast + Subtitle Settings — joined pill group -->
+        <div class="vp-overlay-pill-group">
+          <button class="vp-btn vp-overlay-btn vp-pill-left" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+          </button>
+          <div class="vp-pill-divider"></div>
+          <button class="vp-btn vp-overlay-btn vp-pill-right" id="vp-top-sub-settings-btn" title="Subtitle Settings" aria-label="Subtitle Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </button>
+        </div>
       </div>
-      <span class="vp-title-text" id="vp-title-text">Now Playing</span>
-      <button class="vp-btn vp-overlay-btn" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+
+      <!-- Center title -->
+      <div class="vp-top-title-center">
+        <span class="vp-title-text" id="vp-title-text">Now Playing</span>
+        <span class="vp-title-ep-badge" id="vp-title-ep-badge" style="display:none"></span>
+      </div>
+
+      <!-- Fullscreen button — right -->
+      <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     `;
@@ -2016,9 +2029,25 @@ export function createVideoPlayer(container, streamData, {
 
   // ---- MediaSession API (lock screen + notification controls) ----
   function initMediaSession(title, artist, posterUrl, onPrev, onNext) {
-    const topTitle = document.getElementById('vp-title-text') || document.getElementById('vp-top-title');
+    const topTitle = document.getElementById('vp-title-text');
+    const epBadge = document.getElementById('vp-title-ep-badge');
     if (topTitle) {
-      topTitle.textContent = artist ? `${title} · ${artist}` : title;
+      topTitle.textContent = title;
+    }
+    if (epBadge) {
+      if (artist) {
+        // artist is e.g. "Season 3 · Episode 5" or with special characters
+        const match = artist.match(/Season\s*(\d+)\s*.*\s*Episode\s*(\d+)/i);
+        if (match) {
+          epBadge.textContent = `S${match[1]} · E${match[2]}`;
+          epBadge.style.display = 'inline-block';
+        } else {
+          epBadge.textContent = artist;
+          epBadge.style.display = 'inline-block';
+        }
+      } else {
+        epBadge.style.display = 'none';
+      }
     }
     // Activate TV-only bottom bar options if onNext is provided
     if (onNext && typeof container._activateTVOptions === 'function') {

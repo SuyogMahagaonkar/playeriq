@@ -1678,6 +1678,37 @@ body.piq-player-active .page-content {
   width: 48px !important;
   min-width: 48px !important;
   overflow: hidden;
+  position: relative !important;
+  cursor: pointer;
+}
+
+@media (min-width: 992px) {
+  /* When collapsed: show a full-height vertical expand tab */
+  .player-episodes-panel.collapsed::before {
+    content: '› Episodes';
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: color 0.2s ease;
+  }
+
+  .player-episodes-panel.collapsed:hover::before {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Center the toggle button inside the collapsed header */
+  .player-episodes-panel.collapsed .player-episodes-header {
+    padding: 14px 0 !important;
+    justify-content: center !important;
+  }
 }
 
 /* Hide content except the toggle row when collapsed */

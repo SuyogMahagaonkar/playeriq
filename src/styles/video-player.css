@@ -586,18 +586,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 24px 36px;
-  background: transparent;
+  padding: 20px 24px 48px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
   pointer-events: none;   /* overlay transparent to taps except child buttons */
   z-index: 30;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transform: translateY(-8px);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .vp-top-title-overlay.visible {
   opacity: 1;
+  transform: translateY(0);
 }
 
-.vp-top-left-controls {
+.vp-top-left-group {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -617,19 +619,69 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.2s ease;
 }
 .vp-overlay-btn:hover {
   background: rgba(255,255,255,0.12) !important;
+}
+.vp-overlay-btn:active {
+  transform: scale(0.96) !important;
 }
 .vp-overlay-btn svg {
   width: 22px;
   height: 22px;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+  transition: transform 0.2s ease;
+}
+
+/* Back button — pill shape */
+.vp-top-back {
+  padding: 0 14px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  gap: 6px;
+  width: auto;
+}
+.vp-top-back:hover svg {
+  transform: translateX(-3px);
+}
+
+/* Joined pill group (Cast + Subtitle Settings) */
+.vp-overlay-pill-group {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.vp-pill-left, .vp-pill-right {
+  border-radius: 0;
+  background: transparent !important;
+}
+.vp-pill-left:hover, .vp-pill-right:hover {
+  background: rgba(255,255,255,0.1) !important;
+}
+.vp-pill-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,0.2);
+}
+
+/* Title center */
+.vp-top-title-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  animation: vpTitleFadeIn 0.4s ease 0.08s forwards;
 }
 
 .vp-title-text {
-  flex: 1;
   text-align: center;
   font-size: 14px;
   font-weight: 500;
@@ -641,6 +693,40 @@
   text-overflow: ellipsis;
   padding: 0 8px;
   line-height: 40px;
+}
+
+/* Episode badge pill in title */
+.vp-title-ep-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: var(--accent, #a855f7);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Fullscreen circle */
+.vp-top-fs-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  backdrop-filter: blur(12px);
+}
+.vp-top-fs-circle:hover {
+  background: rgba(255,255,255,0.15) !important;
+  transform: scale(1.08) !important;
+}
+.vp-top-fs-circle:active {
+  transform: scale(0.96) !important;
+}
+
+@keyframes vpTitleFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ========================================
@@ -927,35 +1013,41 @@ video::-webkit-media-controls-overlay-cast-button {
 }
 
 /* ========================================
-   VERTICAL BRIGHTNESS SLIDER (DESKTOP)
+   VERTICAL BRIGHTNESS SLIDER (MOBILE ONLY)
    ======================================== */
 .vp-brightness-slider-group {
-  position: absolute !important;
-  left: 28px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 12px !important;
-  z-index: 105 !important;
-  width: 36px !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.3s ease !important;
+  display: none !important; /* Hidden on desktop */
 }
 
-/* Show when controls are visible */
-.vp-controls.vp-visible .vp-brightness-slider-group {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
+@media (max-width: 767px) {
+  .vp-brightness-slider-group {
+    position: absolute !important;
+    left: 28px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    z-index: 105 !important;
+    width: 36px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease !important;
+  }
 
-/* Maintain visibility when actively adjusted or hovered */
-.vp-brightness-slider-group.vp-brightness-active,
-.vp-brightness-slider-group:hover {
-  opacity: 1 !important;
-  pointer-events: auto !important;
+  /* Show when controls are visible */
+  .vp-controls.vp-visible .vp-brightness-slider-group {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Maintain visibility when actively adjusted or hovered */
+  .vp-brightness-slider-group.vp-brightness-active,
+  .vp-brightness-slider-group:hover {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
 }
 
 .vp-brightness-icon {
