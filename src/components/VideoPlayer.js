@@ -193,7 +193,12 @@ export function createVideoPlayer(container, streamData, {
             </button>
 
             <button class="vp-btn" id="vp-cast-btn" title="Cast Video" aria-label="Cast Video" style="display:none;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 17a3 3 0 0 1 3 3" />
+                <path d="M2 13a7 7 0 0 1 7 7" />
+                <path d="M2 9a11 11 0 0 1 11 11" />
+                <rect x="2" y="4" width="20" height="16" rx="2" fill="none" opacity="0.3" />
+              </svg>
             </button>
 
             <button class="vp-btn" id="vp-fs-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
@@ -426,7 +431,12 @@ export function createVideoPlayer(container, streamData, {
         <!-- Cast + Subtitle Settings — joined pill group -->
         <div class="vp-overlay-pill-group">
           <button class="vp-btn vp-overlay-btn vp-pill-left" id="vp-top-cast-btn" title="Cast Video" aria-label="Cast Video">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 17a3 3 0 0 1 3 3" />
+              <path d="M2 13a7 7 0 0 1 7 7" />
+              <path d="M2 9a11 11 0 0 1 11 11" />
+              <rect x="2" y="4" width="20" height="16" rx="2" fill="none" opacity="0.3" />
+            </svg>
           </button>
           <div class="vp-pill-divider"></div>
           <button class="vp-btn vp-overlay-btn vp-pill-right" id="vp-top-sub-settings-btn" title="Subtitle Settings" aria-label="Subtitle Settings">
@@ -508,7 +518,12 @@ export function createVideoPlayer(container, streamData, {
       <div class="vp-options-pill vp-settings-pill">
         <!-- Desktop-only Cast Option -->
         <div class="vp-mobile-opt vp-desktop-only-opt" id="vp-opt-cast-desktop">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 17a3 3 0 0 1 3 3" />
+            <path d="M2 13a7 7 0 0 1 7 7" />
+            <path d="M2 9a11 11 0 0 1 11 11" />
+            <rect x="2" y="4" width="20" height="16" rx="2" fill="none" opacity="0.3" />
+          </svg>
           <span class="vp-opt-text">Cast</span>
         </div>
         <!-- Desktop-only Subtitle Settings Option -->
