@@ -503,11 +503,27 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   const fsBtn = wrapper.querySelector('.player-fs-btn');
   const fsBtnClone = fsBtn ? fsBtn.cloneNode(true) : null;
 
-  // Show loading overlay
+  // Show cinematic loading overlay
+  const backdropUrl = backdropPath ? `https://image.tmdb.org/t/p/w1280${backdropPath}` : (posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '');
   wrapper.innerHTML = `
-    <div class="player-loading-overlay" id="player-loading">
-      <div class="player-loading-spinner"></div>
-      <div class="player-loading-text" id="player-loading-text">Fetching stream...</div>
+    <div class="player-loading-overlay plc-overlay" id="player-loading">
+      ${backdropUrl ? `<div class="plc-backdrop" style="background-image:url('${backdropUrl}')"></div>` : ''}
+      <div class="plc-card">
+        <div class="plc-spinner-ring">
+          <svg viewBox="0 0 52 52" fill="none">
+            <circle cx="26" cy="26" r="22" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+            <circle cx="26" cy="26" r="22" stroke="var(--accent,#e50914)" stroke-width="4"
+              stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="100"
+              class="plc-ring-arc"/>
+          </svg>
+        </div>
+        <div class="plc-title">${title || 'Loading...'}</div>
+        <div class="plc-status" id="player-loading-text">Fetching stream...</div>
+        <div class="plc-hint">Usually ready in 10–30s on first load</div>
+        <button class="plc-escape-btn" id="plc-escape-btn" style="display:none" title="Switch to embedded player">
+          Switch to Embed Player →
+        </button>
+      </div>
     </div>
   `;
 
@@ -635,19 +651,48 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
 
-    // Live countdown in the loading text
+    // Live countdown with contextual status phases + escape hatch after 20s
     let elapsed = 0;
     const loadingTextEl = () => document.getElementById('player-loading-text');
+    const escapeBtn = () => document.getElementById('plc-escape-btn');
+
+    // Contextual loading messages at different time thresholds
+    const loadingPhases = [
+      { at: 0,  msg: 'Fetching stream...' },
+      { at: 5,  msg: 'Resolving stream sources...' },
+      { at: 12, msg: 'Extracting direct stream...' },
+      { at: 22, msg: 'Almost there, decoding quality...' },
+      { at: 35, msg: 'Finalizing stream link...' },
+    ];
+
     countdownInterval = setInterval(() => {
       elapsed += 1;
       const el = loadingTextEl();
-      if (el) el.textContent = `Fetching stream... (${elapsed}s)`;
+      if (el) {
+        // Find highest threshold we've passed
+        const phase = [...loadingPhases].reverse().find(p => elapsed >= p.at);
+        if (phase) el.textContent = `${phase.msg} (${elapsed}s)`;
+      }
+
+      // Show escape hatch after 20s
+      if (elapsed === 20) {
+        const btn = escapeBtn();
+        if (btn) {
+          btn.style.display = 'inline-flex';
+          btn.onclick = () => {
+            clearTimers();
+            controller.abort();
+            loadIframeFallback();
+          };
+        }
+      }
     }, 1000);
 
     const clearTimers = () => {
       clearTimeout(timeoutId);
       clearInterval(countdownInterval);
     };
+
 
     try {
       const endpoint = isTV
@@ -1923,16 +1968,27 @@ export async function renderPlayerPage({ params, container }) {
       const currentSeasonData = validSeasons.find(s => s.season_number === currentSeason);
       totalEpisodes = currentSeasonData?.episode_count || 0;
       seasonsSidebarHTML = `
-        <div class="player-episodes-panel" id="episodes-panel">
+        <div class="player-episodes-panel ${localStorage.getItem('piq_ep_panel_collapsed') === '1' ? 'collapsed' : ''}" id="episodes-panel">
           <div class="player-episodes-header">
             <h3>Episodes</h3>
-            <select class="player-season-select" id="player-season-select">
-              ${validSeasons.map(s => `
-                <option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>
-                  Season ${s.season_number}
-                </option>
-              `).join('')}
-            </select>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <select class="player-season-select" id="player-season-select">
+                ${validSeasons.map(s => `
+                  <option value="${s.season_number}" ${s.season_number === currentSeason ? 'selected' : ''}>
+                    Season ${s.season_number}
+                  </option>
+                `).join('')}
+              </select>
+              <button class="player-panel-toggle" id="player-panel-toggle"
+                aria-label="${localStorage.getItem('piq_ep_panel_collapsed') === '1' ? 'Expand episode list' : 'Collapse episode list'}"
+                title="${localStorage.getItem('piq_ep_panel_collapsed') === '1' ? 'Expand' : 'Collapse'}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  class="panel-toggle-icon">
+                  <polyline points="${localStorage.getItem('piq_ep_panel_collapsed') === '1' ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}"></polyline>
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="player-episodes-list" id="player-episodes-list">
             <div class="player-loading-overlay" style="position:relative;min-height:200px;">
@@ -1996,7 +2052,7 @@ export async function renderPlayerPage({ params, container }) {
         <div class="player-body ${isTV ? 'has-episodes' : ''}">
           <div class="player-main">
             <div class="player-video-wrapper mobile-player-container" id="video-wrapper">
-              <button class="player-fs-btn" id="player-fs-btn" title="Fullscreen (F)">
+              <button class="player-fs-btn" id="player-fs-btn" title="Fullscreen (F)" aria-label="Toggle fullscreen">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fs-expand"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="fs-shrink" style="display:none"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
               </button>
@@ -2056,8 +2112,25 @@ export async function renderPlayerPage({ params, container }) {
       ambientBg.style.backgroundImage = `url(${img.backdrop(data.backdrop_path)})`;
     }
 
+    // ---- Episode panel collapse toggle ----
+    const panelToggleBtn = container.querySelector('#player-panel-toggle');
+    if (panelToggleBtn) {
+      panelToggleBtn.addEventListener('click', () => {
+        const panel = container.querySelector('#episodes-panel');
+        if (!panel) return;
+        const isCollapsed = panel.classList.toggle('collapsed');
+        localStorage.setItem('piq_ep_panel_collapsed', isCollapsed ? '1' : '0');
+        // Swap icon direction and aria-label
+        const icon = panelToggleBtn.querySelector('.panel-toggle-icon polyline');
+        if (icon) icon.setAttribute('points', isCollapsed ? '15 18 9 12 15 6' : '9 18 15 12 9 6');
+        panelToggleBtn.setAttribute('aria-label', isCollapsed ? 'Expand episode list' : 'Collapse episode list');
+        panelToggleBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+      });
+    }
+
     // ---- Load the embed ----
     const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+
 
     // Helper to update episode-related details (title, overview, meta) dynamically in DOM
     function updateEpisodeInfoDOM(season, episode) {

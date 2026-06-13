@@ -173,10 +173,18 @@ export const SOURCE_ID_TO_INDEX = {
  * @param {Function}      onComplete      (results) => void — called when all done
  * @returns {EventSource|null}
  */
-export function streamValidateSources(tmdbId, imdbId, type = 'movie', season = 1, episode = 1, onSourceResult, onComplete) {
-  const cacheKey = `piq_sv_${type}_${tmdbId}_${season}_${episode}`;
+// Per-title TTL cache: caches at the title+type level (not per-episode).
+// Server availability doesn't change per-episode within a single show,
+// so users binging episodes see instant results for the whole session.
+const SV_TITLE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-  // Serve from sessionStorage cache instantly if available
+export function streamValidateSources(tmdbId, imdbId, type = 'movie', season = 1, episode = 1, onSourceResult, onComplete) {
+  // Episode-level exact cache key (written on completion)
+  const cacheKey = `piq_sv_${type}_${tmdbId}_${season}_${episode}`;
+  // Title-level TTL cache key (shared across all episodes of the same show)
+  const titleCacheKey = `piq_sv_title_${type}_${tmdbId}`;
+
+  // 1. Check episode-level exact cache first (no TTL — fastest path)
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -184,6 +192,25 @@ export function streamValidateSources(tmdbId, imdbId, type = 'movie', season = 1
       results.forEach(r => onSourceResult(r));
       onComplete(results);
       return null;
+    }
+  } catch (e) {}
+
+  // 2. Check title-level TTL cache — serves any episode of the same show
+  //    if server results were validated within the last 5 minutes.
+  try {
+    const titleCached = sessionStorage.getItem(titleCacheKey);
+    if (titleCached) {
+      const { results, timestamp } = JSON.parse(titleCached);
+      if (Date.now() - timestamp < SV_TITLE_CACHE_TTL_MS) {
+        // Store under the episode key too for future exact lookups
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(results)); } catch (_) {}
+        results.forEach(r => onSourceResult(r));
+        onComplete(results);
+        return null;
+      } else {
+        // Expired — clean up
+        sessionStorage.removeItem(titleCacheKey);
+      }
     }
   } catch (e) {}
 
@@ -220,7 +247,10 @@ export function streamValidateSources(tmdbId, imdbId, type = 'movie', season = 1
       if (data.type === 'result') {
         onSourceResult(data.result);
       } else if (data.type === 'complete') {
+        // Save to episode-level exact cache
         try { sessionStorage.setItem(cacheKey, JSON.stringify(data.results)); } catch (e) {}
+        // Save to title-level TTL cache (shared across episodes, expires after 5 min)
+        try { sessionStorage.setItem(titleCacheKey, JSON.stringify({ results: data.results, timestamp: Date.now() })); } catch (e) {}
         onComplete(data.results);
         es.close();
       } else if (data.type === 'error') {
