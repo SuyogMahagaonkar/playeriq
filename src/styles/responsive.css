@@ -4315,7 +4315,10 @@
   .mobile-player-container .vp-overlay-pill-group #vp-top-cast-btn {
     border-radius: 22px !important;
   }
-  .mobile-player-container .vp-overlay-pill-group:has(#vp-top-cast-btn[style*="display: none"]) {
+  .mobile-player-container .vp-overlay-pill-group #vp-top-cast-btn[style*="display: none"] ~ #vp-top-sub-settings-btn {
+    border-radius: 22px !important;
+  }
+  .mobile-player-container .vp-overlay-pill-group:has(#vp-top-cast-btn[style*="display: none"]):has(#vp-top-sub-settings-btn[style*="display: none"]) {
     display: none !important;
   }
 
