@@ -443,7 +443,8 @@ export function createVideoPlayer(container, streamData, {
 
       <!-- Fullscreen button — right -->
       <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
       </button>
     `;
     player.appendChild(titleOverlay);
@@ -2582,10 +2583,19 @@ export function createVideoPlayer(container, streamData, {
                     document.webkitFullscreenElement || 
                     document.mozFullScreenElement || 
                     document.msFullscreenElement);
-    const expand = fsBtn.querySelector('.vp-icon-expand');
-    const shrink = fsBtn.querySelector('.vp-icon-shrink');
-    if (expand) expand.style.display = isFs ? 'none' : '';
-    if (shrink) shrink.style.display = isFs ? '' : 'none';
+    if (fsBtn) {
+      const expand = fsBtn.querySelector('.vp-icon-expand');
+      const shrink = fsBtn.querySelector('.vp-icon-shrink');
+      if (expand) expand.style.display = isFs ? 'none' : '';
+      if (shrink) shrink.style.display = isFs ? '' : 'none';
+    }
+    const topFsBtn = document.getElementById('vp-top-fs-btn');
+    if (topFsBtn) {
+      const expand = topFsBtn.querySelector('.vp-top-fs-expand');
+      const shrink = topFsBtn.querySelector('.vp-top-fs-shrink');
+      if (expand) expand.style.display = isFs ? 'none' : '';
+      if (shrink) shrink.style.display = isFs ? '' : 'none';
+    }
   }
 
   ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
