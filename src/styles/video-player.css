@@ -670,6 +670,17 @@
   background: rgba(255,255,255,0.2);
 }
 
+/* Graceful collapse when Cast is hidden inline */
+#vp-top-cast-btn[style*="display: none"] ~ .vp-pill-divider {
+  display: none !important;
+}
+#vp-top-cast-btn[style*="display: none"] ~ #vp-top-sub-settings-btn {
+  border-radius: 20px !important;
+}
+.vp-overlay-pill-group:has(#vp-top-cast-btn[style*="display: none"]):has(#vp-top-sub-settings-btn[style*="display: none"]) {
+  display: none !important;
+}
+
 /* Title center */
 .vp-top-title-center {
   flex: 1;

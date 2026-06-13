@@ -90,7 +90,7 @@ export function createVideoPlayer(container, streamData, {
 
   container.innerHTML = `
     <div class="vp-player" id="vp-player">
-      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous" disableRemotePlayback></video>
+      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous" disableRemotePlayback disablePictureInPicture></video>
 
       <!-- Loading spinner -->
       <div class="vp-loader" id="vp-loader">
@@ -2001,11 +2001,22 @@ export function createVideoPlayer(container, streamData, {
   });
 
   // PiP
-  pipBtn.addEventListener('click', () => {
+  pipBtn.addEventListener('click', async () => {
     if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
+      try {
+        await document.exitPictureInPicture();
+      } catch (err) {
+        console.warn('Failed to exit Picture-in-Picture:', err);
+      }
     } else {
-      video.requestPictureInPicture?.();
+      try {
+        video.disablePictureInPicture = false;
+        await video.requestPictureInPicture?.();
+      } catch (err) {
+        console.warn('Failed to enter Picture-in-Picture:', err);
+      } finally {
+        video.disablePictureInPicture = true;
+      }
     }
   });
 

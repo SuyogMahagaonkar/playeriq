@@ -4305,6 +4305,20 @@
     display: none !important;  /* still hidden from bottom bar on mobile — accessed via desktop */
   }
 
+  /* Graceful pill collapse on mobile viewports */
+  .mobile-player-container .vp-overlay-pill-group {
+    border-radius: 22px !important;
+  }
+  .mobile-player-container .vp-overlay-pill-group .vp-pill-divider {
+    display: none !important;
+  }
+  .mobile-player-container .vp-overlay-pill-group #vp-top-cast-btn {
+    border-radius: 22px !important;
+  }
+  .mobile-player-container .vp-overlay-pill-group:has(#vp-top-cast-btn[style*="display: none"]) {
+    display: none !important;
+  }
+
   /* Next Episode button mobile placement & sliding offsets */
   .mobile-player-container .vp-next-overlay-btn {
     bottom: 80px !important; /* default above mobile progress bar when controls hidden */

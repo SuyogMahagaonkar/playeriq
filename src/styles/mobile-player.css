@@ -306,9 +306,10 @@
     100% { transform: rotate(360deg); opacity: 1; }
   }
 
-  /* When player is locked, hide gesture zones & regular controls */
+  /* When player is locked, hide gesture zones, regular controls & top title overlay */
   .vp-player.vp-locked .vp-gesture-zone,
-  .vp-player.vp-locked #vp-controls {
+  .vp-player.vp-locked #vp-controls,
+  .vp-player.vp-locked .vp-top-title-overlay {
     pointer-events: none !important;
     opacity: 0 !important;
   }
