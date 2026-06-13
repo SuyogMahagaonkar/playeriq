@@ -499,57 +499,63 @@ export function createVideoPlayer(container, streamData, {
     `;
     controls.appendChild(brightSlider);
 
-    // 3. Netflix-style bottom options row
     const isTvShow = streamData.isTV === true || streamData.isTV === 'true';
     const optionsRow = document.createElement('div');
     optionsRow.className = 'vp-mobile-options-row';
     optionsRow.id = 'vp-mobile-options-row';
     optionsRow.innerHTML = `
-      <!-- Speed option: transparent select sits on top -->
-      <div class="vp-mobile-opt" id="vp-opt-speed">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2a10 10 0 1 1-6.88 17.24"/><path d="M12 6v6l4 2"/>
-        </svg>
-        <span class="vp-opt-text" id="vp-opt-speed-label">Speed (1x)</span>
+      <!-- Pill 1: Settings Group -->
+      <div class="vp-options-pill vp-settings-pill">
+        <!-- Speed option: transparent select sits on top -->
+        <div class="vp-mobile-opt" id="vp-opt-speed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 1 1-6.88 17.24"/><path d="M12 6v6l4 2"/>
+          </svg>
+          <span class="vp-opt-text" id="vp-opt-speed-label">Speed (1x)</span>
+        </div>
+        <!-- Episodes / Related option (always visible for movies, dynamic for TV) -->
+        <div class="vp-mobile-opt" id="vp-opt-episodes" style="${isTvShow ? 'display:none' : ''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          <span class="vp-opt-text" id="vp-opt-episodes-label">${isTvShow ? 'Episodes' : 'Related'}</span>
+        </div>
+        <!-- Subtitles option -->
+        <div class="vp-mobile-opt" id="vp-opt-subtitles">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="7" y1="9" x2="17" y2="9"/>
+            <line x1="7" y1="13" x2="15" y2="13"/>
+          </svg>
+          <span class="vp-opt-text" id="vp-opt-subtitles-label">Subtitles</span>
+        </div>
+        <!-- Audio & Quality option: transparent select sits on top -->
+        <div class="vp-mobile-opt" id="vp-opt-quality">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="vp-opt-text">Quality</span>
+        </div>
       </div>
-      <!-- Lock option -->
-      <div class="vp-mobile-opt" id="vp-opt-lock">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <span class="vp-opt-text">Lock</span>
-      </div>
-      <!-- Episodes / Related option (always visible for movies, dynamic for TV) -->
-      <div class="vp-mobile-opt" id="vp-opt-episodes" style="${isTvShow ? 'display:none' : ''}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-        </svg>
-        <span class="vp-opt-text" id="vp-opt-episodes-label">${isTvShow ? 'Episodes' : 'Related'}</span>
-      </div>
-      <!-- Subtitles option -->
-      <div class="vp-mobile-opt" id="vp-opt-subtitles">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <line x1="7" y1="9" x2="17" y2="9"/>
-          <line x1="7" y1="13" x2="15" y2="13"/>
-        </svg>
-        <span class="vp-opt-text" id="vp-opt-subtitles-label">Subtitles</span>
-      </div>
-      <!-- Audio & Quality option: transparent select sits on top -->
-      <div class="vp-mobile-opt" id="vp-opt-quality">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="vp-opt-text">Quality</span>
-      </div>
-      <!-- Next Episode / Watch Next option (hidden by default, shown dynamically) -->
-      <div class="vp-mobile-opt" id="vp-opt-next" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
-        </svg>
-        <span class="vp-opt-text" id="vp-opt-next-label">${isTvShow ? 'Next Episode' : 'Watch Next'}</span>
+
+      <!-- Pill 2: Actions Group -->
+      <div class="vp-options-pill vp-actions-pill">
+        <!-- Lock option -->
+        <div class="vp-mobile-opt" id="vp-opt-lock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span class="vp-opt-text">Lock</span>
+        </div>
+        <!-- Next Episode / Watch Next option (hidden by default, shown dynamically) -->
+        <div class="vp-mobile-opt" id="vp-opt-next" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+          </svg>
+          <span class="vp-opt-text" id="vp-opt-next-label">${isTvShow ? 'Next Episode' : 'Watch Next'}</span>
+        </div>
       </div>
     `;
     controls.appendChild(optionsRow);

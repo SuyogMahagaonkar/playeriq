@@ -4638,7 +4638,6 @@
     display: none !important;
   }
 
-  /* 8. Netflix bottom options row */
   .mobile-player-container .vp-mobile-options-row {
     position: absolute !important;
     bottom: calc(max(12px, env(safe-area-inset-bottom)) + 48px) !important;
@@ -4652,6 +4651,10 @@
     background: transparent !important;
     pointer-events: auto !important;
     z-index: 105 !important;
+  }
+
+  .mobile-player-container .vp-options-pill {
+    display: contents !important;
   }
 
   /* Each option column: icon on top, text label below */
@@ -7560,6 +7563,62 @@
     body.piq-player-active .mobile-bottom-nav {
       display: none !important;
     }
+  }
+}
+
+/* ==========================================================================
+   🎬 DESKTOP-ONLY DOUBLE PILL SPLIT LAYOUT (≥769px)
+   ========================================================================== */
+@media (min-width: 769px) {
+  .mobile-player-container .vp-mobile-options-row {
+    position: absolute !important;
+    bottom: 32px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 32px !important;
+    background: transparent !important;
+    border: none !important;
+    z-index: 105 !important;
+  }
+
+  .mobile-player-container .vp-options-pill {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 32px !important;
+    padding: 8px 24px !important;
+    gap: 24px !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s !important;
+  }
+
+  .mobile-player-container .vp-options-pill:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Specific padding adjustment for the option icons inside the desktop pill */
+  .mobile-player-container .vp-options-pill .vp-mobile-opt {
+    min-width: 64px !important;
+    padding: 4px 6px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+  }
+
+  .mobile-player-container .vp-options-pill .vp-mobile-opt:active {
+    background: rgba(255, 255, 255, 0.1) !important;
   }
 }
 
