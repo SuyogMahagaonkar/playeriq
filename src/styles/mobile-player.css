@@ -301,7 +301,7 @@
     stroke: var(--accent, #e50914) !important;
     stroke-width: 4px !important;
     stroke-dasharray: 276.46 !important;
-    stroke-dashoffset: 276.46 !important;
+    stroke-dashoffset: 276.46; /* No !important so JS can override this dynamically */
     stroke-linecap: round !important;
     transition: stroke 0.2s ease !important;
   }

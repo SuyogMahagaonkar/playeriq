@@ -2448,13 +2448,13 @@ export function createVideoPlayer(container, streamData, {
     let lastTime = 0;
     let rafId = null;
 
-    const circleBar = document.getElementById('vp-unlock-circle-bar');
     const maxOffset = 276.46; // 2 * PI * 44
 
     function setCircleProgress(progress) {
+      const circleBar = document.getElementById('vp-unlock-circle-bar');
       if (circleBar) {
         const offset = maxOffset - (progress * maxOffset);
-        circleBar.style.strokeDashoffset = offset;
+        circleBar.style.setProperty('stroke-dashoffset', offset.toString(), 'important');
       }
     }
 
