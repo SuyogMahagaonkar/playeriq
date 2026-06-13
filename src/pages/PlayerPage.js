@@ -3212,7 +3212,7 @@ function loadGoogleCastSDK() {
         const isCasting = state === cast.framework.CastState.CONNECTED;
         const hasDevices = state !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
 
-        document.querySelectorAll('#action-cast, #vp-cast-btn, #vp-top-cast-btn')
+        document.querySelectorAll('#action-cast, #vp-cast-btn, #vp-top-cast-btn, #vp-opt-cast-desktop')
           .forEach(el => {
             if (el) {
               el.classList.toggle('casting-active', isCasting);
@@ -3221,6 +3221,12 @@ function loadGoogleCastSDK() {
               if (el.id === 'vp-cast-btn') {
                 if (window.innerWidth <= 767) {
                   el.style.display = hasDevices ? 'inline-block' : 'none';
+                } else {
+                  el.style.display = 'none';
+                }
+              } else if (el.id === 'vp-opt-cast-desktop') {
+                if (window.innerWidth >= 768) {
+                  el.style.display = hasDevices ? '' : 'none';
                 } else {
                   el.style.display = 'none';
                 }

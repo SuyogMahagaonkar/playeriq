@@ -4657,6 +4657,10 @@
     display: contents !important;
   }
 
+  .mobile-player-container .vp-desktop-only-opt {
+    display: none !important;
+  }
+
   /* Each option column: icon on top, text label below */
   .mobile-player-container .vp-mobile-opt {
     display: flex !important;
@@ -7619,6 +7623,16 @@
 
   .mobile-player-container .vp-options-pill .vp-mobile-opt:active {
     background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Hide the top pill group containing Cast & Sub settings on desktop */
+  .mobile-player-container .vp-overlay-pill-group {
+    display: none !important;
+  }
+
+  /* Show the desktop-only Cast & Subtitle settings options inside the bottom Settings Pill */
+  .mobile-player-container .vp-desktop-only-opt {
+    display: flex !important;
   }
 }
 

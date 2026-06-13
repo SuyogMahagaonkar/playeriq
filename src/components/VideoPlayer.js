@@ -506,6 +506,16 @@ export function createVideoPlayer(container, streamData, {
     optionsRow.innerHTML = `
       <!-- Pill 1: Settings Group -->
       <div class="vp-options-pill vp-settings-pill">
+        <!-- Desktop-only Cast Option -->
+        <div class="vp-mobile-opt vp-desktop-only-opt" id="vp-opt-cast-desktop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 8.95 20M2 8A13 13 0 0 1 13.99 20M2 20h.01"></path><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"></rect></svg>
+          <span class="vp-opt-text">Cast</span>
+        </div>
+        <!-- Desktop-only Subtitle Settings Option -->
+        <div class="vp-mobile-opt vp-desktop-only-opt" id="vp-opt-sub-settings-desktop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          <span class="vp-opt-text">Sub Settings</span>
+        </div>
         <!-- Speed option: transparent select sits on top -->
         <div class="vp-mobile-opt" id="vp-opt-speed">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -574,6 +584,22 @@ export function createVideoPlayer(container, streamData, {
     const optSubtitlesLabel = document.getElementById('vp-opt-subtitles-label');
     const optNext = document.getElementById('vp-opt-next');
     const optNextLabel = document.getElementById('vp-opt-next-label');
+
+    // Desktop-only Cast & Subtitle settings button delegation click wiring
+    const optCastDesktop = document.getElementById('vp-opt-cast-desktop');
+    if (optCastDesktop) {
+      optCastDesktop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('vp-cast-btn')?.click();
+      });
+    }
+    const optSubSettingsDesktop = document.getElementById('vp-opt-sub-settings-desktop');
+    if (optSubSettingsDesktop) {
+      optSubSettingsDesktop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('vp-sub-settings-btn')?.click();
+      });
+    }
 
     let currentBrightness = parseFloat(localStorage.getItem('piq_brightness') || '1.0');
     if (bSlider && bSliderFill) {
