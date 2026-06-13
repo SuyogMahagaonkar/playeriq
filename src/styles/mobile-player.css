@@ -277,8 +277,8 @@
 
   .vp-unlock-btn.holding {
     transform: scale(1.18);
-    background: rgba(229, 9, 20, 0.2) !important;
-    box-shadow: 0 0 25px rgba(229, 9, 20, 0.5);
+    background: var(--accent-soft, rgba(168, 85, 247, 0.12)) !important;
+    box-shadow: 0 0 25px var(--accent-glow, rgba(168, 85, 247, 0.35)) !important;
   }
 
   /* SVG Circular Progress styling */
@@ -307,7 +307,7 @@
   }
 
   .vp-unlock-btn.holding .vp-unlock-circle-bar {
-    stroke: #ff3344 !important; /* brighter red glow when holding */
+    stroke: var(--accent-hover, var(--accent)) !important; /* brighter glow using primary hover color when holding */
   }
 
   .vp-unlock-lock-icon {

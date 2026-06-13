@@ -2496,6 +2496,7 @@ export function createVideoPlayer(container, streamData, {
         // Reset state
         isHolding = false;
         holdTime = 0;
+        rafId = null;
         setCircleProgress(0);
         if (lockIcon) lockIcon.style.transform = '';
       } else if (holdTime > 0 || isHolding) {
