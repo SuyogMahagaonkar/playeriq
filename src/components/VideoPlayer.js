@@ -273,7 +273,13 @@ export function createVideoPlayer(container, streamData, {
       <div id="vp-locked-overlay" class="vp-locked-overlay hidden" aria-label="Controls locked">
         <div class="vp-locked-hint">Hold 2s to unlock</div>
         <button id="vp-unlock-btn" class="vp-unlock-btn" aria-label="Hold to unlock controls">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;">
+          <!-- Circular progress overlay -->
+          <svg class="vp-unlock-circle" viewBox="0 0 100 100">
+            <circle class="vp-unlock-circle-bg" cx="50" cy="50" r="44"></circle>
+            <circle id="vp-unlock-circle-bar" class="vp-unlock-circle-bar" cx="50" cy="50" r="44"></circle>
+          </svg>
+          <!-- Center padlock icon -->
+          <svg class="vp-unlock-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;z-index:2;position:relative;">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
           </svg>
@@ -2436,12 +2442,48 @@ export function createVideoPlayer(container, streamData, {
       }
     });
 
-    // Helper functions for hold-to-unlock
-    function startUnlockHold(e) {
-      e.stopPropagation();
-      unlockBtn.classList.add('holding');
-      clearTimeout(overlayAutoHideTimer); // prevent auto-hide while holding
-      unlockHoldTimer = setTimeout(() => {
+    // Helper functions for hold-to-unlock (Quartic Ease-Out + Spring Retraction)
+    let holdTime = 0; // 0 to 2000ms
+    let isHolding = false;
+    let lastTime = 0;
+    let rafId = null;
+
+    const circleBar = document.getElementById('vp-unlock-circle-bar');
+    const maxOffset = 276.46; // 2 * PI * 44
+
+    function setCircleProgress(progress) {
+      if (circleBar) {
+        const offset = maxOffset - (progress * maxOffset);
+        circleBar.style.strokeDashoffset = offset;
+      }
+    }
+
+    function unlockLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (isHolding) {
+        holdTime = Math.min(2000, holdTime + elapsed);
+      } else {
+        holdTime = Math.max(0, holdTime - elapsed * 1.5); // retract slightly faster than charging
+      }
+
+      const ratio = holdTime / 2000;
+      const progress = 1 - Math.pow(1 - ratio, 4); // Quartic ease-out
+
+      setCircleProgress(progress);
+
+      // Padlock icon animation feedback (slight scaling + jitter rotation)
+      const lockIcon = unlockBtn.querySelector('.vp-unlock-lock-icon');
+      if (lockIcon) {
+        const scale = 1 + progress * 0.15;
+        const rotate = isHolding ? (Math.sin(holdTime * 0.05) * progress * 4) : 0;
+        lockIcon.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
+      }
+
+      if (holdTime === 2000) {
+        // Successful unlock
         isLocked = false;
         player.classList.remove('vp-locked');
         clearTimeout(overlayAutoHideTimer);
@@ -2449,15 +2491,38 @@ export function createVideoPlayer(container, streamData, {
         unlockBtn.classList.remove('holding');
         lockBtn.style.opacity = '1';
         lockBtn.querySelector('path').setAttribute('d', 'M7 11V7a5 5 0 0 1 10 0v4');
-        showControls(); // restore all controls after unlock
-      }, 2000);
+        showControls();
+
+        // Reset state
+        isHolding = false;
+        holdTime = 0;
+        setCircleProgress(0);
+        if (lockIcon) lockIcon.style.transform = '';
+      } else if (holdTime > 0 || isHolding) {
+        rafId = requestAnimationFrame(unlockLoop);
+      } else {
+        rafId = null;
+        if (lockIcon) lockIcon.style.transform = '';
+      }
+    }
+
+    function startUnlockHold(e) {
+      if (e) e.stopPropagation();
+      isHolding = true;
+      unlockBtn.classList.add('holding');
+      clearTimeout(overlayAutoHideTimer); // prevent auto-hide while holding
+      
+      if (!rafId) {
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(unlockLoop);
+      }
     }
 
     function stopUnlockHold() {
-      clearTimeout(unlockHoldTimer);
+      isHolding = false;
       unlockBtn.classList.remove('holding');
       if (isLocked) {
-        showLockedOverlay(); // Restart the 3s timer when they release
+        showLockedOverlay();
       }
     }
 
