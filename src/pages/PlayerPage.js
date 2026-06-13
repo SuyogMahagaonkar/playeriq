@@ -2118,8 +2118,18 @@ export async function renderPlayerPage({ params, container }) {
       panelToggleBtn.addEventListener('click', () => {
         const panel = container.querySelector('#episodes-panel');
         if (!panel) return;
+
+        // Add animation class ONLY during the toggle — prevents layout transitions
+        // from firing on window resize or CSS breakpoint changes
+        const animClass = panel.classList.contains('collapsed') ? 'is-expanding' : 'is-collapsing';
+        panel.classList.add(animClass);
+
         const isCollapsed = panel.classList.toggle('collapsed');
         localStorage.setItem('piq_ep_panel_collapsed', isCollapsed ? '1' : '0');
+
+        // Remove animation class once transition ends (350ms = our transition duration)
+        setTimeout(() => panel.classList.remove(animClass), 360);
+
         // Swap icon direction and aria-label
         const icon = panelToggleBtn.querySelector('.panel-toggle-icon polyline');
         if (icon) icon.setAttribute('points', isCollapsed ? '15 18 9 12 15 6' : '9 18 15 12 9 6');
@@ -2127,6 +2137,7 @@ export async function renderPlayerPage({ params, container }) {
         panelToggleBtn.title = isCollapsed ? 'Expand' : 'Collapse';
       });
     }
+
 
     // ---- Load the embed ----
     const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
