@@ -9,6 +9,28 @@ import { spawn } from 'child_process';
 import { createRequire } from 'module';
 import { getStreams } from './scrapers/index.js';
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+
+// Parse .env manually if it exists (avoids extra dependencies)
+try {
+  const envPath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    const envConfig = fs.readFileSync(envPath, 'utf8');
+    envConfig.split(/\r?\n/).forEach(line => {
+      const parts = line.split('=');
+      if (parts.length >= 2) {
+        const key = parts[0].trim();
+        const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
+        if (key && !key.startsWith('#')) {
+          process.env[key] = value;
+        }
+      }
+    });
+  }
+} catch (e) {
+  console.warn('[Env Loader] Failed to load .env file:', e.message);
+}
 
 // FFmpeg path (winget install location — works without PATH restart)
 const FFMPEG_PATH = process.env.FFMPEG_PATH || 'ffmpeg';
