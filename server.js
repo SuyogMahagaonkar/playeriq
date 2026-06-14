@@ -845,9 +845,12 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
+  let resolvedTmdbId = tmdbId;
+  let movieBoxResult = null;
+
   try {
     // 1. Try MovieBox Python bridge first (direct .mp4 — best quality)
-    const movieBoxResult = await getMovieBoxStream('movie', tmdbId);
+    movieBoxResult = await getMovieBoxStream('movie', tmdbId);
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
@@ -859,9 +862,41 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
         console.log(`[MovieBox] Skipped HEVC stream for movie ${tmdbId} (client requested H.264 only)`);
       }
     }
+  } catch (err) {
+    console.error('MovieBox fetch error:', err);
+  }
 
+  // If MovieBox stream is HEVC-skipped or fails, we must attempt fallback scrapers.
+  // BUT if the tmdbId is a MovieBox ID starting with "mb_", scrapers (Nontongo/VidSrc) 
+  // will fail because they only accept numeric TMDB IDs.
+  // Resolve the real TMDB ID from the movie title.
+  if (String(tmdbId).startsWith('mb_')) {
+    let title = null;
+    if (movieBoxResult && movieBoxResult.title) {
+      title = movieBoxResult.title;
+    } else {
+      try {
+        const subjectId = tmdbId.replace('mb_', '');
+        const infoUrl = `${PYTHON_BRIDGE_URL}/api/moviebox/info/${subjectId}`;
+        const infoRes = await axios.get(infoUrl, { timeout: 5000 });
+        title = infoRes.data.title || infoRes.data.name || null;
+      } catch (err) {
+        console.warn(`[Stream Fallback] Failed to fetch metadata for MovieBox ID ${tmdbId}:`, err.message);
+      }
+    }
+
+    if (title) {
+      const resolved = await getTmdbIdForMovieBoxItem(title, null, 'movie');
+      if (resolved) {
+        resolvedTmdbId = String(resolved);
+        console.log(`[Stream Fallback] Resolved MovieBox ID ${tmdbId} to TMDB ID ${resolvedTmdbId} for movie "${title}"`);
+      }
+    }
+  }
+
+  try {
     // 2. Fallback: existing scrapers (Nontongo etc.)
-    const result = await getStreams('movie', tmdbId);
+    const result = await getStreams('movie', resolvedTmdbId);
     if (result) {
       const proxyResult = {
         ...result,
@@ -877,7 +912,7 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
       setCache(cacheKey, proxyResult);
       return res.json(proxyResult);
     }
-    res.status(404).json({ error: 'No streams found', tmdbId });
+    res.status(404).json({ error: 'No streams found', tmdbId: resolvedTmdbId });
   } catch (err) {
     console.error('Stream extraction error:', err);
     res.status(500).json({ error: 'Extraction failed', message: err.message });
@@ -892,9 +927,12 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
+  let resolvedTmdbId = tmdbId;
+  let movieBoxResult = null;
+
   try {
     // 1. Try MovieBox Python bridge first
-    const movieBoxResult = await getMovieBoxStream('tv', tmdbId, parseInt(season), parseInt(episode));
+    movieBoxResult = await getMovieBoxStream('tv', tmdbId, parseInt(season), parseInt(episode));
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
@@ -906,9 +944,41 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
         console.log(`[MovieBox] Skipped HEVC stream for TV ${tmdbId} S${season}E${episode} (client requested H.264 only)`);
       }
     }
+  } catch (err) {
+    console.error('MovieBox fetch error:', err);
+  }
 
+  // If MovieBox stream is HEVC-skipped or fails, we must attempt fallback scrapers.
+  // BUT if the tmdbId is a MovieBox ID starting with "mb_", scrapers (Nontongo/VidSrc) 
+  // will fail because they only accept numeric TMDB IDs.
+  // Resolve the real TMDB ID from the TV show title.
+  if (String(tmdbId).startsWith('mb_')) {
+    let title = null;
+    if (movieBoxResult && movieBoxResult.title) {
+      title = movieBoxResult.title;
+    } else {
+      try {
+        const subjectId = tmdbId.replace('mb_', '');
+        const infoUrl = `${PYTHON_BRIDGE_URL}/api/moviebox/info/${subjectId}`;
+        const infoRes = await axios.get(infoUrl, { timeout: 5000 });
+        title = infoRes.data.title || infoRes.data.name || null;
+      } catch (err) {
+        console.warn(`[Stream Fallback] Failed to fetch metadata for MovieBox ID ${tmdbId}:`, err.message);
+      }
+    }
+
+    if (title) {
+      const resolved = await getTmdbIdForMovieBoxItem(title, null, 'tv');
+      if (resolved) {
+        resolvedTmdbId = String(resolved);
+        console.log(`[Stream Fallback] Resolved MovieBox ID ${tmdbId} to TMDB ID ${resolvedTmdbId} for TV "${title}"`);
+      }
+    }
+  }
+
+  try {
     // 2. Fallback: existing scrapers
-    const result = await getStreams('tv', tmdbId, parseInt(season), parseInt(episode));
+    const result = await getStreams('tv', resolvedTmdbId, parseInt(season), parseInt(episode));
     if (result) {
       const proxyResult = {
         ...result,
@@ -924,7 +994,7 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
       setCache(cacheKey, proxyResult);
       return res.json(proxyResult);
     }
-    res.status(404).json({ error: 'No streams found', tmdbId, season, episode });
+    res.status(404).json({ error: 'No streams found', tmdbId: resolvedTmdbId, season, episode });
   } catch (err) {
     console.error('Stream extraction error:', err);
     res.status(500).json({ error: 'Extraction failed', message: err.message });
