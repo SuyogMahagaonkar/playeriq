@@ -693,10 +693,13 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     };
 
 
+    // Detect HEVC support on client (Safari/iOS supports it, Chrome/Firefox on Windows/macOS usually does not)
+    const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') === 'probably';
+
     try {
       const endpoint = isTV
-        ? `/api/stream/tv/${id}/${season}/${episode}`
-        : `/api/stream/movie/${id}`;
+        ? `/api/stream/tv/${id}/${season}/${episode}?hevc=${supportsHEVC}`
+        : `/api/stream/movie/${id}?hevc=${supportsHEVC}`;
 
       // Use NODE_PROXY (production API URL) â€” NOT localhost.
       // On local dev, Vite proxies /api/* to localhost:8788 automatically.

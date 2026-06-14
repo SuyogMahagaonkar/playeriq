@@ -839,7 +839,8 @@ app.get('/api/moviebox/details/tv/:subjectId', async (req, res) => {
 // ---- Stream extraction ----
 app.get('/api/stream/movie/:tmdbId', async (req, res) => {
   const { tmdbId } = req.params;
-  const cacheKey = `movie-${tmdbId}`;
+  const hevcSupport = req.query.hevc !== 'false';
+  const cacheKey = `movie-${tmdbId}-hevc=${hevcSupport}`;
 
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
@@ -848,9 +849,15 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
     // 1. Try MovieBox Python bridge first (direct .mp4 — best quality)
     const movieBoxResult = await getMovieBoxStream('movie', tmdbId);
     if (movieBoxResult) {
-      console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p`);
-      setCache(cacheKey, movieBoxResult);
-      return res.json(movieBoxResult);
+      const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
+                     String(movieBoxResult.codec || '').toLowerCase().includes('h265');
+      if (!isHevc || hevcSupport) {
+        console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p`);
+        setCache(cacheKey, movieBoxResult);
+        return res.json(movieBoxResult);
+      } else {
+        console.log(`[MovieBox] Skipped HEVC stream for movie ${tmdbId} (client requested H.264 only)`);
+      }
     }
 
     // 2. Fallback: existing scrapers (Nontongo etc.)
@@ -879,7 +886,8 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
 
 app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
   const { tmdbId, season, episode } = req.params;
-  const cacheKey = `tv-${tmdbId}-${season}-${episode}`;
+  const hevcSupport = req.query.hevc !== 'false';
+  const cacheKey = `tv-${tmdbId}-${season}-${episode}-hevc=${hevcSupport}`;
 
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
@@ -888,9 +896,15 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
     // 1. Try MovieBox Python bridge first
     const movieBoxResult = await getMovieBoxStream('tv', tmdbId, parseInt(season), parseInt(episode));
     if (movieBoxResult) {
-      console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p`);
-      setCache(cacheKey, movieBoxResult);
-      return res.json(movieBoxResult);
+      const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
+                     String(movieBoxResult.codec || '').toLowerCase().includes('h265');
+      if (!isHevc || hevcSupport) {
+        console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p`);
+        setCache(cacheKey, movieBoxResult);
+        return res.json(movieBoxResult);
+      } else {
+        console.log(`[MovieBox] Skipped HEVC stream for TV ${tmdbId} S${season}E${episode} (client requested H.264 only)`);
+      }
     }
 
     // 2. Fallback: existing scrapers

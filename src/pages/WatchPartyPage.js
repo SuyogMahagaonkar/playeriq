@@ -237,10 +237,13 @@ export async function renderWatchPartyPage({ params, container }) {
       console.warn('[WatchParty] Failed to auto-rejoin party:', joinErr);
     }
 
+    // Detect HEVC support on client (Safari/iOS supports it, Chrome/Firefox on Windows/macOS usually does not)
+    const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') === 'probably';
+
     // 2. Fetch Direct Stream URL from proxy
     const streamEndpoint = partyData.type === 'tv'
-      ? `${NODE_PROXY}/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}`
-      : `${NODE_PROXY}/api/stream/movie/${partyData.id || partyData.partyId}`;
+      ? `${NODE_PROXY}/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}?hevc=${supportsHEVC}`
+      : `${NODE_PROXY}/api/stream/movie/${partyData.id || partyData.partyId}?hevc=${supportsHEVC}`;
 
     const streamResponse = await fetch(streamEndpoint);
     if (!streamResponse.ok) {
