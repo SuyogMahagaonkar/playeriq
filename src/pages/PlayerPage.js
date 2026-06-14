@@ -32,7 +32,7 @@ const SOURCES = [
 let currentSourceIndex = parseInt(localStorage.getItem('piq_source') || '0');
 if (currentSourceIndex >= SOURCES.length) currentSourceIndex = 0;
 
-let currentPlayerMode = localStorage.getItem('piq_player_mode') || 'custom'; // 'custom' or 'embed'
+let currentPlayerMode = 'custom'; // Always start with custom player — user can switch via the dropdown mid-session
 let activePlayer = null;
 let iframeInterval = null;
 let isOfflinePlayback = false;
@@ -2709,7 +2709,7 @@ export async function renderPlayerPage({ params, container }) {
     // Mode selector
     document.getElementById('mode-select')?.addEventListener('change', (e) => {
       currentPlayerMode = e.target.value;
-      localStorage.setItem('piq_player_mode', currentPlayerMode);
+      // Note: do NOT persist to localStorage — mode resets to 'custom' on every page load
 
       const svWrapper = document.getElementById('sv-source-wrapper');
       if (svWrapper) {
