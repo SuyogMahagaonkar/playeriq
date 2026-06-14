@@ -1579,7 +1579,7 @@ app.get('/api/validate/sources/stream', async (req, res) => {
 const smtpHost = process.env.SMTP_HOST || 'smtp.resend.com';
 const smtpPort = parseInt(process.env.SMTP_PORT || '465');
 const smtpUser = process.env.SMTP_USER || 'resend';
-const smtpPass = process.env.SMTP_PASS || 're_123456789'; // Default Resend Key placeholder
+const smtpPass = process.env.SMTP_PASS || 'placeholder_smtp_password'; // Default SMTP password placeholder
 const smtpFrom = process.env.SMTP_FROM || 'PlayerIQ <onboarding@resend.dev>';
 
 const transporter = nodemailer.createTransport({
