@@ -3,7 +3,7 @@
 // ========================================
 
 import { img, getMovieDetails, getTVDetails, NODE_PROXY } from '../services/api.js';
-import { getUser } from '../services/auth.js';
+import { getUser, waitAuthReady } from '../services/auth.js';
 import {
   getWatchPartyFromCloud,
   updateWatchPartyInCloud,
@@ -36,6 +36,7 @@ export async function renderWatchPartyJoinPage({ params, container }) {
   `;
 
   const partyId = params.partyId;
+  await waitAuthReady();
   const user = getUser();
 
   if (!user) {
@@ -83,6 +84,7 @@ export async function renderWatchPartyJoinPage({ params, container }) {
  */
 export async function renderWatchPartyPage({ params, container }) {
   const partyId = params.partyId;
+  await waitAuthReady();
   const user = getUser();
 
   if (!user) {
