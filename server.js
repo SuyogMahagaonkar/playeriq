@@ -1705,16 +1705,19 @@ app.post('/api/email/send-invite', async (req, res) => {
   };
 
   try {
-    if (smtpPass && smtpPass.startsWith('re_')) {
+    const cleanSmtpPass = (smtpPass || '').replace(/^['"]|['"]$/g, '').trim();
+    const cleanSmtFrom = (smtpFrom || '').replace(/^['"]|['"]$/g, '').trim();
+
+    if (cleanSmtpPass && cleanSmtpPass.startsWith('re_')) {
       console.log('[Email] Sending via Resend REST API (HTTPS)...');
       await axios.post('https://api.resend.com/emails', {
-        from: smtpFrom,
+        from: cleanSmtFrom,
         to: [inviteeEmail],
         subject: `🍿 You're Invited! Watch "${title}" with ${hostName} on PlayerIQ`,
         html: mailOptions.html
       }, {
         headers: {
-          'Authorization': `Bearer ${smtpPass}`,
+          'Authorization': `Bearer ${cleanSmtpPass}`,
           'Content-Type': 'application/json'
         },
         timeout: 8000
