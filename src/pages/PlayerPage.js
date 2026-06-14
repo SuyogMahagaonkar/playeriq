@@ -365,6 +365,33 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
   const wrapper = document.getElementById('video-wrapper');
   if (!wrapper) return;
 
+  // Resolve TMDB ID for MovieBox-specific IDs at the very beginning of loadPlayer so that
+  // any fallbacks/iframe loaders can use the correct numeric TMDB ID instead of the "mb_" prefixed ID.
+  if (String(id).startsWith('mb_')) {
+    activeTmdbId = null;
+    if (navigator.onLine) {
+      try {
+        const apiKey = '8e4ad9e56e31ab079517b5be6965b477';
+        const cleanTitle = (title || '').replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+        const searchType = isTV ? 'tv' : 'movie';
+        const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${apiKey}&query=${encodeURIComponent(cleanTitle)}`;
+        const searchRes = await fetch(url);
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const results = searchData.results || [];
+          if (results.length > 0) {
+            activeTmdbId = results[0].id;
+            console.log(`[PlayerPage Initial Match] Resolved MovieBox ID ${id} ("${title}") to TMDB ID ${activeTmdbId}`);
+          }
+        }
+      } catch (err) {
+        console.warn('[PlayerPage Initial Match] Failed to resolve TMDB ID:', err);
+      }
+    }
+  } else {
+    activeTmdbId = id;
+  }
+
   // 1. If actively casting this exact video/episode on TV, directly render the In-Player Cast Remote UI
   if (!bypassCast && window.cast && cast.framework) {
     try {

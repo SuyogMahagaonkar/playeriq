@@ -190,6 +190,50 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
   }
 }
 
+function getTitleFromHomepageJson(subjectId) {
+  try {
+    const filePath = path.resolve(process.cwd(), 'homepage.json');
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const cleanSubjectId = String(subjectId).trim();
+      
+      // Try JSON parsing
+      const data = JSON.parse(content);
+      let foundTitle = null;
+      
+      function search(obj) {
+        if (foundTitle) return;
+        if (!obj || typeof obj !== 'object') return;
+        
+        if (Array.isArray(obj)) {
+          for (const item of obj) {
+            search(item);
+          }
+        } else {
+          if (String(obj.subjectId) === cleanSubjectId && obj.title) {
+            foundTitle = obj.title;
+            return;
+          }
+          for (const key in obj) {
+            search(obj[key]);
+          }
+        }
+      }
+      
+      search(data);
+      if (foundTitle) return foundTitle;
+
+      // Regex fallback
+      const regex = new RegExp(`"subjectId"\\s*:\\s*"${cleanSubjectId}"[\\s\\S]*?"title"\\s*:\\s*"([^"]+)"`, 'i');
+      const match = content.match(regex);
+      if (match && match[1]) return match[1];
+    }
+  } catch (e) {
+    console.warn('[Fallback Title Lookup] Failed to search in homepage.json:', e.message);
+  }
+  return null;
+}
+
 // ---- TMDB safety caches and helper functions ----
 const TMDB_KEY = '8e4ad9e56e31ab079517b5be6965b477';
 const tmdbSafetyCache = new Map(); // TMDB ID -> boolean (isSafe)
@@ -882,6 +926,12 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
         title = infoRes.data.title || infoRes.data.name || null;
       } catch (err) {
         console.warn(`[Stream Fallback] Failed to fetch metadata for MovieBox ID ${tmdbId}:`, err.message);
+        // Fallback to local homepage.json lookup
+        const subjectId = tmdbId.replace('mb_', '');
+        title = getTitleFromHomepageJson(subjectId);
+        if (title) {
+          console.log(`[Stream Fallback] Found title in local homepage.json: "${title}"`);
+        }
       }
     }
 
@@ -912,9 +962,22 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
       setCache(cacheKey, proxyResult);
       return res.json(proxyResult);
     }
+
+    // 3. Last resort fallback: if scrapers returned nothing, but we skipped a MovieBox HEVC stream, serve it!
+    if (movieBoxResult) {
+      console.log(`[MovieBox Last Resort] Serving skipped HEVC stream for movie ${tmdbId} as no H.264 fallbacks exist`);
+      setCache(cacheKey, movieBoxResult);
+      return res.json(movieBoxResult);
+    }
+
     res.status(404).json({ error: 'No streams found', tmdbId: resolvedTmdbId });
   } catch (err) {
     console.error('Stream extraction error:', err);
+    if (movieBoxResult) {
+      console.log(`[MovieBox Last Resort] Serving skipped HEVC stream for movie ${tmdbId} after extraction failure`);
+      setCache(cacheKey, movieBoxResult);
+      return res.json(movieBoxResult);
+    }
     res.status(500).json({ error: 'Extraction failed', message: err.message });
   }
 });
@@ -964,6 +1027,12 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
         title = infoRes.data.title || infoRes.data.name || null;
       } catch (err) {
         console.warn(`[Stream Fallback] Failed to fetch metadata for MovieBox ID ${tmdbId}:`, err.message);
+        // Fallback to local homepage.json lookup
+        const subjectId = tmdbId.replace('mb_', '');
+        title = getTitleFromHomepageJson(subjectId);
+        if (title) {
+          console.log(`[Stream Fallback] Found title in local homepage.json: "${title}"`);
+        }
       }
     }
 
@@ -994,9 +1063,22 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
       setCache(cacheKey, proxyResult);
       return res.json(proxyResult);
     }
+
+    // 3. Last resort fallback: if scrapers returned nothing, but we skipped a MovieBox HEVC stream, serve it!
+    if (movieBoxResult) {
+      console.log(`[MovieBox Last Resort] Serving skipped HEVC stream for TV ${tmdbId} S${season}E${episode} as no H.264 fallbacks exist`);
+      setCache(cacheKey, movieBoxResult);
+      return res.json(movieBoxResult);
+    }
+
     res.status(404).json({ error: 'No streams found', tmdbId: resolvedTmdbId, season, episode });
   } catch (err) {
     console.error('Stream extraction error:', err);
+    if (movieBoxResult) {
+      console.log(`[MovieBox Last Resort] Serving skipped HEVC stream for TV ${tmdbId} S${season}E${episode} after extraction failure`);
+      setCache(cacheKey, movieBoxResult);
+      return res.json(movieBoxResult);
+    }
     res.status(500).json({ error: 'Extraction failed', message: err.message });
   }
 });
