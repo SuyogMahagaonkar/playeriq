@@ -600,6 +600,15 @@ export function createVideoPlayer(container, streamData, {
     const optNext = document.getElementById('vp-opt-next');
     const optNextLabel = document.getElementById('vp-opt-next-label');
 
+    if (optNext) {
+      optNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof optNext._onNextCallback === 'function') {
+          optNext._onNextCallback();
+        }
+      });
+    }
+
     // Desktop-only Cast & Subtitle settings button delegation click wiring
     const optCastDesktop = document.getElementById('vp-opt-cast-desktop');
     if (optCastDesktop) {
@@ -1232,11 +1241,13 @@ export function createVideoPlayer(container, streamData, {
     container._activateTVOptions = function(onNext) {
       if (optEpisodes) optEpisodes.style.display = '';
       if (optNext) {
-        optNext.style.display = '';
-        optNext.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (typeof onNext === 'function') onNext();
-        });
+        if (onNext) {
+          optNext.style.display = '';
+          optNext._onNextCallback = onNext;
+        } else {
+          optNext.style.display = 'none';
+          optNext._onNextCallback = null;
+        }
       }
     };
   }
@@ -2114,8 +2125,8 @@ export function createVideoPlayer(container, streamData, {
         epBadge.style.display = 'none';
       }
     }
-    // Activate TV-only bottom bar options if onNext is provided
-    if (onNext && typeof container._activateTVOptions === 'function') {
+    // Activate TV-only bottom bar options if it is a TV show
+    if (isTvShow && typeof container._activateTVOptions === 'function') {
       container._activateTVOptions(onNext);
     }
     if (!('mediaSession' in navigator)) return;

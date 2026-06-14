@@ -6,7 +6,7 @@ import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
-import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud } from '../services/firebase.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
 import '../styles/detail.css';
 
@@ -406,6 +406,10 @@ export async function renderDetailPage({ params, container }) {
                   <i data-lucide="bookmark" style="width:18px;height:18px"></i>
                   <span id="watchlist-btn-text">Watchlist</span>
                 </button>
+                <button class="detail-btn detail-btn-secondary" id="watch-together-btn">
+                  <i data-lucide="users" style="width:18px;height:18px"></i>
+                  <span>Watch Together</span>
+                </button>
                 ${!isTV && window.innerWidth <= 767 ? `
                   <button class="detail-btn detail-btn-secondary detail-btn-download" id="detail-download-btn">
                     <i data-lucide="download" style="width:18px;height:18px"></i>
@@ -701,6 +705,26 @@ export async function renderDetailPage({ params, container }) {
     } else if (watchlistBtn && !user) {
       watchlistBtn.addEventListener('click', () => navigate('/watchlist'));
     }
+
+    // Watch Together Button click handler
+    document.getElementById('watch-together-btn')?.addEventListener('click', async () => {
+      const currentUserObj = getUser();
+      if (!currentUserObj) {
+        showToast('Please sign in to start a watch party!', 'info');
+        navigate('/settings');
+        return;
+      }
+
+      if (isTV) {
+        // Series: Show selection modal
+        showTvSelectionModal(id, title, year, data.seasons, (seasonNum, epNum) => {
+          showWatchPartySetupModal(currentUserObj, id, title, type, seasonNum, epNum, data.poster_path);
+        });
+      } else {
+        // Movie: Skip selection, open setup immediately
+        showWatchPartySetupModal(currentUserObj, id, title, type, null, null, data.poster_path);
+      }
+    });
 
     // Details button modal
     document.getElementById('details-btn')?.addEventListener('click', () => {
@@ -1327,5 +1351,287 @@ function updateWatchlistBtn(btn, textEl, inList) {
     const icon = btn.querySelector('i[data-lucide]');
     if (icon) { icon.setAttribute('data-lucide', 'bookmark'); if (window.lucide) window.lucide.createIcons(); }
   }
+}
+
+function showTvSelectionModal(mediaId, title, year, seasons, callback) {
+  const modal = document.createElement('div');
+  modal.className = 'detail-modal';
+  modal.id = 'watch-together-tv-modal';
+  modal.style.cssText = `
+    display: flex;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    z-index: 1010;
+    justify-content: center; align-items: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  `;
+
+  const cleanSeasons = seasons.filter(s => s.season_number > 0);
+
+  modal.innerHTML = `
+    <div style="background: rgba(20, 20, 25, 0.85); border: 1.5px solid rgba(255,255,255,0.08); backdrop-filter: blur(20px); max-width: 480px; width: 100%; border-radius: 16px; padding: 28px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+      <button id="close-tv-modal-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+      <h2 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; font-weight: 800; color: #fff;">Select Episode</h2>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Choose the season and episode you want to watch together.</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Season</label>
+          <select id="party-season-select" class="login-input" style="background: rgba(255,255,255,0.03); color: #fff;">
+            ${cleanSeasons.map(s => `<option value="${s.season_number}" style="background: #141419; color: #fff;">Season ${s.season_number}</option>`).join('')}
+          </select>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Episode</label>
+          <select id="party-episode-select" class="login-input" style="background: rgba(255,255,255,0.03); color: #fff;" disabled>
+            <option value="" style="background: #141419; color: #fff;">Loading episodes...</option>
+          </select>
+        </div>
+
+        <button id="party-tv-submit-btn" class="login-submit-btn" style="margin-top: 12px; background: var(--gradient-accent); font-weight: var(--weight-bold);" disabled>
+          <span>Continue</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  if (window.lucide) window.lucide.createIcons();
+
+  const closeBtn = modal.querySelector('#close-tv-modal-btn');
+  const seasonSelect = modal.querySelector('#party-season-select');
+  const episodeSelect = modal.querySelector('#party-episode-select');
+  const submitBtn = modal.querySelector('#party-tv-submit-btn');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+
+  const cleanTitle = title.replace(/\[.*?\]/g, '').trim();
+
+  const updateEpisodesList = async (seasonNum) => {
+    episodeSelect.disabled = true;
+    submitBtn.disabled = true;
+    episodeSelect.innerHTML = `<option value="" style="background: #141419;">Loading episodes...</option>`;
+
+    try {
+      const seasonDetails = await getSeasonDetails(mediaId, seasonNum, cleanTitle, year);
+      const eps = seasonDetails.episodes || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      
+      const releasedEps = eps.filter(ep => ep.air_date && ep.air_date <= todayStr);
+      
+      if (releasedEps.length === 0) {
+        episodeSelect.innerHTML = `<option value="" style="background: #141419;">No released episodes</option>`;
+      } else {
+        episodeSelect.innerHTML = releasedEps.map(ep => `
+          <option value="${ep.episode_number}" style="background: #141419; color: #fff;">Episode ${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}</option>
+        `).join('');
+        episodeSelect.disabled = false;
+        submitBtn.disabled = false;
+      }
+    } catch (err) {
+      console.error(err);
+      episodeSelect.innerHTML = `<option value="" style="background: #141419;">Error loading episodes</option>`;
+    }
+  };
+
+  if (cleanSeasons.length > 0) {
+    updateEpisodesList(cleanSeasons[0].season_number);
+  }
+
+  seasonSelect.addEventListener('change', () => {
+    updateEpisodesList(parseInt(seasonSelect.value));
+  });
+
+  submitBtn.addEventListener('click', () => {
+    const s = parseInt(seasonSelect.value);
+    const e = parseInt(episodeSelect.value);
+    modal.remove();
+    callback(s, e);
+  });
+}
+
+function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epNum, posterPath) {
+  const partyId = Math.random().toString(36).substring(2, 11);
+  const hostName = hostUser.displayName || hostUser.email.split('@')[0] || 'Host';
+  const joinLink = `https://playeriq.suyogmahagaonkar.me/#/watch-party/join/${partyId}`;
+
+  const modal = document.createElement('div');
+  modal.className = 'detail-modal';
+  modal.id = 'watch-together-setup-modal';
+  modal.style.cssText = `
+    display: flex;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    z-index: 1010;
+    justify-content: center; align-items: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  `;
+
+  const displayTitle = title + (type === 'tv' ? ` (Season ${seasonNum} Episode ${epNum})` : '');
+
+  modal.innerHTML = `
+    <div style="background: rgba(20, 20, 25, 0.85); border: 1.5px solid rgba(255,255,255,0.08); backdrop-filter: blur(20px); max-width: 480px; width: 100%; border-radius: 16px; padding: 28px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center;">
+      <button id="close-setup-modal-btn" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.05); border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+      
+      <div style="font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Watch Together</div>
+      <h2 style="margin-top: 0; margin-bottom: 6px; font-size: 20px; font-weight: 800; color: #fff;">Host a Watch Party</h2>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">You are starting a party for <strong>${displayTitle}</strong>. Share the link or send email invites to start watching together.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; text-align: left; margin-bottom: 20px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Party Invite Link</label>
+        <div style="display: flex; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1.5px solid var(--border-color); border-radius: 8px; padding: 6px 12px; align-items: center;">
+          <input type="text" value="${joinLink}" readonly style="flex: 1; background: none; border: none; color: #e2e8f0; font-size: 12px; outline: none; text-overflow: ellipsis;" id="party-link-input" />
+          <button id="copy-party-link-btn" style="background: var(--accent-soft); border: none; color: var(--accent); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="copy" style="width:12px;height:12px;"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; text-align: left; margin-bottom: 28px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Invite Friends via Email</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="email" placeholder="friend@example.com" class="login-input" id="invite-email-input" style="flex: 1; padding: 10px 14px; font-size: 13px; background: rgba(255,255,255,0.02); height: 38px; box-sizing: border-box;" />
+          <button id="send-invite-email-btn" style="background: var(--gradient-accent); border: none; color: #fff; padding: 0 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; height: 38px; display: flex; align-items: center; gap: 6px;">
+            <span>Invite</span>
+          </button>
+        </div>
+        <span id="invite-email-status" style="font-size: 11px; color: var(--text-muted); display: none; margin-top: 4px;"></span>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="cancel-party-btn" class="login-input" style="background: rgba(255,255,255,0.02); border: 1.5px solid var(--border-color); cursor: pointer; flex: 1; font-weight: 600; padding: 10px 0;">
+          Cancel
+        </button>
+        <button id="start-party-btn" class="login-submit-btn" style="flex: 1; font-weight: var(--weight-bold); background: var(--gradient-accent); padding: 10px 0;">
+          Start Party
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  if (window.lucide) window.lucide.createIcons();
+
+  const closeBtn = modal.querySelector('#close-setup-modal-btn');
+  const copyBtn = modal.querySelector('#copy-party-link-btn');
+  const partyLinkInput = modal.querySelector('#party-link-input');
+  const sendInviteBtn = modal.querySelector('#send-invite-email-btn');
+  const inviteEmailInput = modal.querySelector('#invite-email-input');
+  const inviteStatus = modal.querySelector('#invite-email-status');
+  const cancelBtn = modal.querySelector('#cancel-party-btn');
+  const startPartyBtn = modal.querySelector('#start-party-btn');
+
+  copyBtn.addEventListener('click', () => {
+    partyLinkInput.select();
+    navigator.clipboard.writeText(joinLink);
+    copyBtn.innerHTML = `<i data-lucide="check" style="width:12px;height:12px;"></i> Copied`;
+    if (window.lucide) window.lucide.createIcons();
+    setTimeout(() => {
+      copyBtn.innerHTML = `<i data-lucide="copy" style="width:12px;height:12px;"></i> Copy`;
+      if (window.lucide) window.lucide.createIcons();
+    }, 2000);
+    showToast('Party link copied to clipboard!', 'check');
+  });
+
+  const removeModal = () => modal.remove();
+  closeBtn.addEventListener('click', removeModal);
+  cancelBtn.addEventListener('click', removeModal);
+
+  sendInviteBtn.addEventListener('click', async () => {
+    const inviteeEmail = inviteEmailInput.value.trim();
+    if (!inviteeEmail) {
+      inviteStatus.textContent = 'Please enter a valid email address.';
+      inviteStatus.style.color = '#ef4444';
+      inviteStatus.style.display = 'block';
+      return;
+    }
+
+    sendInviteBtn.disabled = true;
+    sendInviteBtn.innerHTML = 'Sending...';
+    inviteStatus.style.display = 'none';
+
+    try {
+      const response = await fetch('/api/email/send-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          hostName,
+          inviteeEmail,
+          title: displayTitle,
+          partyId,
+          mediaType: type,
+          posterPath
+        })
+      });
+
+      const resData = await response.json();
+      if (response.ok) {
+        inviteStatus.textContent = `Invitation sent to ${inviteeEmail}!`;
+        inviteStatus.style.color = '#10b981';
+        inviteStatus.style.display = 'block';
+        inviteEmailInput.value = '';
+        showToast('Invitation email sent!', 'mail');
+      } else {
+        throw new Error(resData.error || 'Failed to send invite.');
+      }
+    } catch (err) {
+      console.error(err);
+      inviteStatus.textContent = `Error: ${err.message}. Link logged to server console.`;
+      inviteStatus.style.color = '#fbbf24';
+      inviteStatus.style.display = 'block';
+      showToast('Invite sent (Fallback: Local Link).', 'alert-circle');
+    } finally {
+      sendInviteBtn.disabled = false;
+      sendInviteBtn.innerHTML = 'Invite';
+    }
+  });
+
+  startPartyBtn.addEventListener('click', async () => {
+    startPartyBtn.disabled = true;
+    startPartyBtn.innerHTML = 'Starting...';
+
+    const hostMember = {
+      uid: hostUser.uid,
+      name: hostName,
+      avatar: hostUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      role: 'host'
+    };
+
+    const partyData = {
+      partyId,
+      hostId: hostUser.uid,
+      hostName,
+      title: title,
+      type: type,
+      season: seasonNum || null,
+      episode: epNum || null,
+      status: 'waiting',
+      currentTime: 0,
+      posterPath: posterPath || '',
+      members: [hostMember]
+    };
+
+    try {
+      await createWatchPartyInCloud(partyId, partyData);
+      modal.remove();
+      navigate(`/watch-party/${partyId}`);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to start party: ' + err.message, 'alert-triangle');
+      startPartyBtn.disabled = false;
+      startPartyBtn.innerHTML = 'Start Party';
+    }
+  });
 }
 

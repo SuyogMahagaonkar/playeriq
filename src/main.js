@@ -12,6 +12,7 @@ import './styles/responsive.css';
 import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
 import './styles/connectivity.css';
+import './styles/watch-party.css';
 // Core component styles — imported here so they are always in the initial bundle
 // regardless of which route the user lands on first (fixes hero CSS not loading until /ranking visited)
 import './styles/hero.css';
@@ -346,8 +347,47 @@ function initApp() {
 
   // Bootstrap Firebase auth listener
   initAuth();
-  onUserChange(() => {
+
+  let loginOverlayContainer = null;
+  let verificationOverlayContainer = null;
+
+  onUserChange((user) => {
     refreshSidebarNav();
+
+    // Clean up existing overlays
+    if (loginOverlayContainer) {
+      loginOverlayContainer.remove();
+      loginOverlayContainer = null;
+    }
+    if (verificationOverlayContainer) {
+      verificationOverlayContainer.remove();
+      verificationOverlayContainer = null;
+    }
+
+    if (!user) {
+      // User is logged out: show login overlay
+      loginOverlayContainer = document.createElement('div');
+      loginOverlayContainer.id = 'login-overlay';
+      document.body.appendChild(loginOverlayContainer);
+      import('./pages/LoginPage.js').then(({ renderLoginPage }) => {
+        if (loginOverlayContainer) {
+          renderLoginPage(loginOverlayContainer);
+        }
+      });
+    } else {
+      // User is logged in: check verification
+      const isPasswordProvider = user.providerData && user.providerData.some(p => p.providerId === 'password');
+      if (isPasswordProvider && !user.emailVerified) {
+        verificationOverlayContainer = document.createElement('div');
+        verificationOverlayContainer.id = 'verification-overlay';
+        document.body.appendChild(verificationOverlayContainer);
+        import('./pages/LoginPage.js').then(({ showVerificationOverlay }) => {
+          if (verificationOverlayContainer) {
+            showVerificationOverlay(verificationOverlayContainer, user);
+          }
+        });
+      }
+    }
   });
 
   // Boot collapsible sidebar toggle
@@ -480,6 +520,18 @@ function initApp() {
     return await renderCalendarPage(ctx);
   });
 
+  addRoute('/watch-party/join/:partyId', async (ctx) => {
+    updateSidebarActive();
+    const { renderWatchPartyJoinPage } = await import('./pages/WatchPartyPage.js');
+    return await renderWatchPartyJoinPage(ctx);
+  });
+
+  addRoute('/watch-party/:partyId', async (ctx) => {
+    updateSidebarActive();
+    const { renderWatchPartyPage } = await import('./pages/WatchPartyPage.js');
+    return await renderWatchPartyPage(ctx);
+  });
+
   // Start routing
   initRouter();
 
@@ -494,26 +546,6 @@ function initApp() {
 
     setTimeout(() => {
       splash?.remove();
-
-      // Show login page only if user is not signed in
-      if (!getUser()) {
-        const loginContainer = document.createElement('div');
-        loginContainer.id = 'login-overlay';
-        document.body.appendChild(loginContainer);
-
-        // Unsubscribe once user signs in via the page itself
-        const unsub = onUserChange((user) => {
-          if (user) {
-            const overlay = document.getElementById('login-overlay');
-            if (overlay) overlay.remove();
-            unsub();
-          }
-        });
-
-        import('./pages/LoginPage.js').then(({ renderLoginPage }) => {
-          renderLoginPage(loginContainer);
-        });
-      }
     }, 600);
   }, 800);
 }

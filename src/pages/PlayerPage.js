@@ -599,9 +599,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
             // Floating Next Episode button in last 15 seconds
             const remaining = duration - currentTime;
-            const nextEpNum = episode + 1;
-            if (isTV && nextEpNum <= totalEpisodes && remaining <= 15 && remaining > 0) {
-              showNextEpisodeFloatingButton(nextEpNum);
+            if (isTV && onNextEpisodeClick && remaining <= 15 && remaining > 0) {
+              showNextEpisodeFloatingButton();
             } else {
               hideNextEpisodeFloatingButton();
             }
@@ -892,9 +891,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
 
               // Floating Next Episode button in last 15 seconds
               const remaining = duration - currentTime;
-              const nextEpNum = episode + 1;
-              if (isTV && nextEpNum <= totalEpisodes && remaining <= 15 && remaining > 0) {
-                showNextEpisodeFloatingButton(nextEpNum);
+              if (isTV && onNextEpisodeClick && remaining <= 15 && remaining > 0) {
+                showNextEpisodeFloatingButton();
               } else {
                 hideNextEpisodeFloatingButton();
               }
@@ -1558,7 +1556,7 @@ export async function renderPlayerPage({ params, container }) {
               : resumeTime;
             
             console.log(`[Cast] TV playback stopped. Seamlessly resuming locally at t=${tvTime.toFixed(1)}s...`);
-            loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode, tvTime);
+            playCurrentVideo(tvTime);
           };
 
           // Hook global trigger for page restores
@@ -1919,7 +1917,7 @@ export async function renderPlayerPage({ params, container }) {
     window._triggerInPlayerRemoteUI = (devName) => renderInPlayerRemoteUI(devName);
     
     window._triggerLocalPlaybackResume = (tvTime) => {
-      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode, tvTime);
+      playCurrentVideo(tvTime);
     };
 
 
@@ -2245,12 +2243,35 @@ export async function renderPlayerPage({ params, container }) {
         logo_path: activeLogoUrl
       });
 
-      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      playCurrentVideo();
     } else {
-      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      playCurrentVideo();
     }
 
     // ---- Helper functions for episode navigation ----
+    function getNextEpisodeInfo() {
+      if (!isTV) return null;
+      const validSeasons = data.seasons ? data.seasons.filter(s => s.season_number > 0) : [];
+      validSeasons.sort((a, b) => a.season_number - b.season_number);
+      
+      if (currentEpisode < totalEpisodes) {
+        return { season: currentSeason, episode: currentEpisode + 1 };
+      } else {
+        const currentSeasonIdx = validSeasons.findIndex(s => s.season_number === currentSeason);
+        if (currentSeasonIdx !== -1 && currentSeasonIdx < validSeasons.length - 1) {
+          const nextSeasonNum = validSeasons[currentSeasonIdx + 1].season_number;
+          return { season: nextSeasonNum, episode: 1 };
+        }
+      }
+      return null;
+    }
+
+    function playCurrentVideo(seekTime = null) {
+      const nextEp = getNextEpisodeInfo();
+      const nextEpHandler = nextEp ? nextEpisode : null;
+      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpHandler, goToEpisode, seekTime);
+    }
+
     async function goToEpisode(season, episode) {
       currentSeason = season;
       currentEpisode = episode;
@@ -2293,13 +2314,15 @@ export async function renderPlayerPage({ params, container }) {
         logo_path: activeLogoUrl
       });
 
-      loadPlayer(activeId, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      playCurrentVideo();
       updateNowPlaying(currentSeason, currentEpisode);
     }
 
     function nextEpisode() {
-      if (currentEpisode < totalEpisodes) {
-        goToEpisode(currentSeason, currentEpisode + 1);
+      if (!isTV) return;
+      const nextEp = getNextEpisodeInfo();
+      if (nextEp) {
+        goToEpisode(nextEp.season, nextEp.episode);
       }
     }
 
@@ -2314,17 +2337,17 @@ export async function renderPlayerPage({ params, container }) {
       // Remove any existing countdown or recommendations first to prevent duplicate overlays
       wrapper.querySelectorAll('.vp-countdown-overlay, .vp-recommendations-overlay').forEach(el => el.remove());
 
-      const nextEpNum = currentEpisode + 1;
+      const nextEp = getNextEpisodeInfo();
       // If TV show and has next episode, show countdown
-      if (isTV && nextEpNum <= totalEpisodes) {
-        showAutoPlayCountdown(nextEpNum);
+      if (isTV && nextEp) {
+        showAutoPlayCountdown(nextEp.season, nextEp.episode);
       } else {
         // If movie or last episode, show recommendations overlay
         showRecommendationsOverlay();
       }
     }
 
-    function showAutoPlayCountdown(nextEpNum) {
+    function showAutoPlayCountdown(nextSeasonNum, nextEpNum) {
       let count = 5;
       const overlay = document.createElement('div');
       overlay.className = 'vp-countdown-overlay';
@@ -2347,7 +2370,7 @@ export async function renderPlayerPage({ params, container }) {
       overlay.innerHTML = `
         <div style="font-size: var(--text-lg); font-weight: var(--weight-medium); color: var(--text-secondary); margin-bottom: var(--space-xs);">Up Next</div>
         <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); margin-bottom: var(--space-lg); text-align: center; max-width: 80%; text-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-          S${currentSeason} E${nextEpNum}
+          S${nextSeasonNum} E${nextEpNum}
         </div>
         
         <!-- Circular Progress Ring & Number -->
@@ -2556,7 +2579,7 @@ export async function renderPlayerPage({ params, container }) {
       // Replay button
       overlay.querySelector('.rec-replay-btn').addEventListener('click', () => {
         overlay.remove();
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+        playCurrentVideo();
       });
     }
 
@@ -2631,7 +2654,7 @@ export async function renderPlayerPage({ params, container }) {
           if (triggerLabel) triggerLabel.textContent = item.querySelector('.sv-item-name')?.textContent || '';
 
           closeDropdown();
-          loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+          playCurrentVideo();
         });
 
         // Keyboard: Enter/Space to select
@@ -2651,7 +2674,7 @@ export async function renderPlayerPage({ params, container }) {
         svWrapper.style.display = currentPlayerMode === 'custom' ? 'none' : 'flex';
       }
 
-      loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+      playCurrentVideo();
     });
 
     // TV season/episode handling
@@ -2663,7 +2686,7 @@ export async function renderPlayerPage({ params, container }) {
         currentEpisode = 1;
         // Update total episodes from the actual loaded season
         totalEpisodes = await loadPlayerEpisodes(id, currentSeason, currentEpisode, title, data.poster_path, data.backdrop_path, cleanTitle, year, handlePlaybackEnded, goToEpisode);
-        loadPlayer(id, isTV, currentSeason, currentEpisode, title, imdbId, data.poster_path, data.backdrop_path, handlePlaybackEnded, nextEpisode, goToEpisode);
+        playCurrentVideo();
         updateNowPlaying(currentSeason, currentEpisode);
       });
     }

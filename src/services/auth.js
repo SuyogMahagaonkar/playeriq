@@ -14,7 +14,8 @@ import {
   exportUserLibrary,
   importUserLibrary,
   loginWithEmail,
-  signUpWithEmail
+  signUpWithEmail,
+  sendVerificationEmail
 } from './firebase.js';
 import { getProgress, saveProgressLocal, removeProgressLocal, clearProgressLocal } from './storage.js';
 
@@ -151,6 +152,21 @@ export async function signUpEmail(email, password, displayName) {
     console.error('[Auth] Email sign-up failed:', err);
     throw err;
   }
+}
+
+export async function resendVerification() {
+  if (currentUser) {
+    await sendVerificationEmail(currentUser);
+  }
+}
+
+export async function reloadUser() {
+  if (currentUser) {
+    await currentUser.reload();
+    notifyListeners();
+    return currentUser;
+  }
+  return null;
 }
 
 export async function logout() {

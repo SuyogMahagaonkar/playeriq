@@ -8,6 +8,7 @@ import axios from 'axios';
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
 import { getStreams } from './scrapers/index.js';
+import nodemailer from 'nodemailer';
 
 // FFmpeg path (winget install location — works without PATH restart)
 const FFMPEG_PATH = process.env.FFMPEG_PATH || 'ffmpeg';
@@ -1571,6 +1572,147 @@ app.get('/api/validate/sources/stream', async (req, res) => {
     console.error('[SourceValidator/SSE] Error:', err.message);
     send({ type: 'error', message: err.message });
     if (!res.writableEnded) res.end();
+  }
+});
+
+// ---- Nodemailer Transporter Configuration (Resend/SMTP fallback) ----
+const smtpHost = process.env.SMTP_HOST || 'smtp.resend.com';
+const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+const smtpUser = process.env.SMTP_USER || 'resend';
+const smtpPass = process.env.SMTP_PASS || 're_123456789'; // Default Resend Key placeholder
+const smtpFrom = process.env.SMTP_FROM || 'PlayerIQ <onboarding@resend.dev>';
+
+const transporter = nodemailer.createTransport({
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpPort === 465,
+  auth: {
+    user: smtpUser,
+    pass: smtpPass
+  }
+});
+
+// ---- Watch Together Invitation Email Endpoint ----
+app.post('/api/email/send-invite', async (req, res) => {
+  const { hostName, inviteeEmail, title, partyId, mediaType, posterPath } = req.body;
+  
+  if (!hostName || !inviteeEmail || !title || !partyId) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+
+  const joinLink = `https://playeriq.suyogmahagaonkar.me/#/watch-party/join/${partyId}`;
+  const posterUrl = posterPath 
+    ? (posterPath.startsWith('http') ? posterPath : `https://image.tmdb.org/t/p/w300${posterPath}`)
+    : 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300&auto=format&fit=crop&q=60';
+
+  const mailOptions = {
+    from: smtpFrom,
+    to: inviteeEmail,
+    subject: `🍿 You're Invited! Watch "${title}" with ${hostName} on PlayerIQ`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Watch Together Invitation</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #050505;
+            color: #e8e8ed;
+            margin: 0;
+            padding: 40px 20px;
+          }
+          .card {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #0c0c0f;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+          }
+          .title {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+          }
+          .subtitle {
+            color: #a855f7;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 24px;
+          }
+          .poster {
+            width: 140px;
+            height: 210px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid rgba(168,85,247,0.3);
+            margin-bottom: 24px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+          }
+          .message {
+            color: #b8b8cc;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+          }
+          .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 20px rgba(168,85,247,0.35);
+            transition: all 0.3s;
+          }
+          .footer {
+            margin-top: 32px;
+            color: #4a4a5e;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="subtitle">Watch Together</div>
+          <div class="title">Join ${hostName}</div>
+          <p class="message">${hostName} has invited you to watch <strong>${title}</strong> (${mediaType === 'tv' ? 'Series' : 'Movie'}) together in real-time on PlayerIQ!</p>
+          <img class="poster" src="${posterUrl}" alt="${title} Poster">
+          <div>
+            <a class="btn" href="${joinLink}" target="_blank">Accept Invitation</a>
+          </div>
+          <div class="footer">
+            If you do not have an account, you will be prompted to sign up or sign in first.<br/>
+            PlayerIQ &copy; 2026. All rights reserved.
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Invitation successfully sent to ${inviteeEmail} for party room ${partyId}`);
+    res.json({ success: true, message: 'Invitation email sent successfully.' });
+  } catch (err) {
+    console.error('[Email Error] Failed to send invite email:', err);
+    console.log(`\n  [Mock Invite Link]: ${joinLink}\n`);
+    res.status(500).json({ 
+      error: 'Failed to send invite email.', 
+      details: err.message,
+      mockLink: joinLink
+    });
   }
 });
 

@@ -2,7 +2,7 @@
 // PlayerIQ — Login Page
 // ========================================
 
-import { login, loginEmail, signUpEmail, onUserChange } from '../services/auth.js';
+import { login, loginEmail, signUpEmail, onUserChange, logout, resendVerification, reloadUser } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import '../styles/login.css';
 
@@ -276,4 +276,129 @@ function destroyLoginPage(container) {
       if (overlay) overlay.remove();
     }, 350);
   }
+}
+
+export function showVerificationOverlay(container, user) {
+  container.innerHTML = '';
+  
+  const card = document.createElement('div');
+  card.className = 'login-page verification-page';
+  card.innerHTML = `
+    <div class="login-panel" style="max-width: 480px; margin: 0 auto; text-align: center; justify-content: center; align-items: center;">
+      <!-- Brand -->
+      <div class="login-brand" style="margin-bottom: var(--space-xl);">
+        <div class="login-brand-icon">▶</div>
+        <div class="login-brand-name">Player<span>IQ</span></div>
+      </div>
+
+      <div class="login-heading" style="margin-bottom: var(--space-lg);">
+        <h1 style="font-size: var(--text-2xl); font-weight: var(--weight-extrabold); color: var(--text-primary);">Verify Your Email</h1>
+        <p style="color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-relaxed); margin-top: var(--space-xs);">
+          We sent a verification link to <strong style="color: var(--accent);">${user.email}</strong>.<br/>
+          Check your inbox and click the link to verify your account.
+        </p>
+      </div>
+
+      <!-- Success / Error Status Info -->
+      <div class="login-error" id="verify-status" style="margin-bottom: var(--space-md); width: 100%; border-radius: var(--radius-md); text-align: center;">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--space-sm); width: 100%;">
+        <button id="verify-check-btn" class="login-submit-btn" style="background: var(--gradient-accent); font-weight: var(--weight-bold);">
+          <span>I've Verified My Email</span>
+        </button>
+
+        <button id="verify-resend-btn" class="login-input" style="background: rgba(255,255,255,0.02); border: 1.5px solid var(--border-color); cursor: pointer; transition: all var(--transition-normal); font-weight: var(--weight-semibold);">
+          <span>Resend Verification Link</span>
+        </button>
+
+        <button id="verify-logout-btn" class="login-skip" style="background: none; border: none; cursor: pointer; color: var(--text-dim); text-decoration: underline; margin-top: var(--space-md);">
+          Log Out
+        </button>
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+
+  const checkBtn = card.querySelector('#verify-check-btn');
+  const resendBtn = card.querySelector('#verify-resend-btn');
+  const logoutBtn = card.querySelector('#verify-logout-btn');
+  const statusEl = card.querySelector('#verify-status');
+
+  const showStatus = (text, isSuccess) => {
+    statusEl.textContent = text;
+    statusEl.style.display = 'block';
+    if (isSuccess) {
+      statusEl.style.background = 'rgba(16, 185, 129, 0.1)';
+      statusEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      statusEl.style.color = '#34d399';
+    } else {
+      statusEl.style.background = 'rgba(229, 9, 20, 0.1)';
+      statusEl.style.borderColor = 'rgba(229, 9, 20, 0.3)';
+      statusEl.style.color = '#ff6b6b';
+    }
+  };
+
+  checkBtn.addEventListener('click', async () => {
+    checkBtn.classList.add('loading');
+    checkBtn.innerHTML = `<div class="btn-spinner"></div><span>Checking...</span>`;
+    statusEl.style.display = 'none';
+
+    try {
+      const updatedUser = await reloadUser();
+      if (updatedUser && updatedUser.emailVerified) {
+        // Verification succeeded, global listener will remove container
+      } else {
+        showStatus("Email not verified yet. Please click the link in the email and try again.", false);
+        checkBtn.classList.remove('loading');
+        checkBtn.innerHTML = `<span>I've Verified My Email</span>`;
+      }
+    } catch (err) {
+      console.error(err);
+      showStatus("Error checking status: " + err.message, false);
+      checkBtn.classList.remove('loading');
+      checkBtn.innerHTML = `<span>I've Verified My Email</span>`;
+    }
+  });
+
+  resendBtn.addEventListener('click', async () => {
+    resendBtn.disabled = true;
+    resendBtn.style.opacity = '0.5';
+    resendBtn.textContent = 'Sending...';
+    statusEl.style.display = 'none';
+
+    try {
+      await resendVerification();
+      showStatus("Verification link resent successfully!", true);
+      // Wait 30s before allowing another resend
+      let cooldown = 30;
+      const interval = setInterval(() => {
+        cooldown--;
+        if (cooldown <= 0) {
+          clearInterval(interval);
+          resendBtn.disabled = false;
+          resendBtn.style.opacity = '1';
+          resendBtn.textContent = 'Resend Verification Link';
+        } else {
+          resendBtn.textContent = `Resend in ${cooldown}s`;
+        }
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      showStatus("Failed to send: " + err.message, false);
+      resendBtn.disabled = false;
+      resendBtn.style.opacity = '1';
+      resendBtn.textContent = 'Resend Verification Link';
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    statusEl.style.display = 'none';
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+      showStatus("Failed to log out: " + err.message, false);
+    }
+  });
 }

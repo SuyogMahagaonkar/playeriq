@@ -82,15 +82,32 @@ export async function loginWithEmail(email, password) {
 
 export async function signUpWithEmail(email, password, displayName) {
   await ensureFirebaseInitialized();
-  const { createUserWithEmailAndPassword, updateProfile } = authExports;
+  const { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } = authExports;
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) {
       await updateProfile(result.user, { displayName });
     }
+    try {
+      await sendEmailVerification(result.user);
+      console.log('[Firebase] Sent verification email on signup');
+    } catch (sendErr) {
+      console.error('[Firebase] Failed to send verification email on signup:', sendErr);
+    }
     return result.user;
   } catch (err) {
     console.error('[Firebase] Email sign-up error:', err);
+    throw err;
+  }
+}
+
+export async function sendVerificationEmail(user) {
+  await ensureFirebaseInitialized();
+  const { sendEmailVerification } = authExports;
+  try {
+    await sendEmailVerification(user);
+  } catch (err) {
+    console.error('[Firebase] Send verification email error:', err);
     throw err;
   }
 }
@@ -663,4 +680,148 @@ export async function importUserLibrary(userId, data) {
     console.error('[Firebase] Failed to import library:', err);
     throw err;
   }
+}
+
+// ========================================
+// Firestore: Watch Together Rooms
+// ========================================
+
+export async function createWatchPartyInCloud(partyId, partyData) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    await setDoc(ref, {
+      ...partyData,
+      createdAt: serverTimestamp()
+    });
+    console.log('[Firebase] Watch party room created:', partyId);
+  } catch (err) {
+    console.error('[Firebase] Failed to create watch party:', err);
+    throw err;
+  }
+}
+
+export async function getWatchPartyFromCloud(partyId) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : null;
+  } catch (err) {
+    console.error('[Firebase] Failed to get watch party:', err);
+    throw err;
+  }
+}
+
+export async function updateWatchPartyInCloud(partyId, updates) {
+  await ensureFirebaseInitialized();
+  const { doc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    await updateDoc(ref, updates);
+  } catch (err) {
+    console.error('[Firebase] Failed to update watch party:', err);
+    throw err;
+  }
+}
+
+export async function joinWatchPartyInCloud(partyId, member) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      throw new Error('Party not found');
+    }
+    const data = snap.data();
+    const existing = (data.members || []).find(m => m.uid === member.uid);
+    if (!existing) {
+      const updatedMembers = [...(data.members || []), member];
+      await updateDoc(ref, {
+        members: updatedMembers
+      });
+    }
+  } catch (err) {
+    console.error('[Firebase] Failed to join watch party:', err);
+    throw err;
+  }
+}
+
+export async function leaveWatchPartyInCloud(partyId, memberUid) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const updatedMembers = (data.members || []).filter(m => m.uid !== memberUid);
+      await updateDoc(ref, {
+        members: updatedMembers
+      });
+    }
+  } catch (err) {
+    console.error('[Firebase] Failed to leave watch party:', err);
+  }
+}
+
+export function subscribeToWatchParty(partyId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { doc, onSnapshot } = firestoreExports;
+    const ref = doc(db, 'watch_parties', partyId);
+    unsub = onSnapshot(ref, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate(docSnap.data());
+      } else {
+        onUpdate(null);
+      }
+    }, (err) => {
+      console.error('[Firebase] Watch party sync error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export async function sendChatMessageInCloud(partyId, messageData) {
+  await ensureFirebaseInitialized();
+  const { collection, addDoc, serverTimestamp } = firestoreExports;
+  try {
+    const colRef = collection(db, 'watch_parties', partyId, 'messages');
+    await addDoc(colRef, {
+      ...messageData,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to send chat message:', err);
+    throw err;
+  }
+}
+
+export function subscribeToChatMessages(partyId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, query, orderBy, onSnapshot } = firestoreExports;
+    const colRef = collection(db, 'watch_parties', partyId, 'messages');
+    const q = query(colRef, orderBy('timestamp', 'asc'));
+    unsub = onSnapshot(q, (snapshot) => {
+      const msgs = [];
+      snapshot.forEach(docSnap => {
+        msgs.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      onUpdate(msgs);
+    }, (err) => {
+      console.error('[Firebase] Chat message sync error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
 }
