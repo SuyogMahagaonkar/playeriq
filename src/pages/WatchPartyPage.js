@@ -15,6 +15,9 @@ import {
 } from '../services/firebase.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { navigate } from '../services/router.js';
+import '../styles/player.css';
+import '../styles/video-player.css';
+import '../styles/mobile-player.css';
 
 // Default emojis for the reaction bar
 const REACTION_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
@@ -231,6 +234,20 @@ export async function renderWatchPartyPage({ params, container }) {
       throw new Error('Streaming source endpoint failed.');
     }
     const streamData = await streamResponse.json();
+
+    // Rewrite relative /api/* proxy URLs to absolute using NODE_PROXY
+    const toAbsolute = (url) => {
+      if (!url) return url;
+      if (url.startsWith('/api/')) return `${NODE_PROXY}${url}`;
+      return url;
+    };
+    streamData.url = toAbsolute(streamData.url);
+    if (Array.isArray(streamData.all_streams)) {
+      streamData.all_streams = streamData.all_streams.map(s => ({
+        ...s,
+        url: toAbsolute(s.url)
+      }));
+    }
 
     // 3. Clear loading overlay and mount VideoPlayer
     videoWrapper.innerHTML = '';
