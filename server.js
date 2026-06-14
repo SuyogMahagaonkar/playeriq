@@ -1589,7 +1589,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: smtpUser,
     pass: smtpPass
-  }
+  },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000
 });
 
 // ---- Watch Together Invitation Email Endpoint ----
