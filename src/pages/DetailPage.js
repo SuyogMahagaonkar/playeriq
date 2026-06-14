@@ -2,7 +2,7 @@
 // PlayerIQ — Detail Page
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders, getMediaImages } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders, getMediaImages, NODE_PROXY } from '../services/api.js';
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
@@ -1560,7 +1560,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
     inviteStatus.style.display = 'none';
 
     try {
-      const response = await fetch('/api/email/send-invite', {
+      const response = await fetch(`${NODE_PROXY}/api/email/send-invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

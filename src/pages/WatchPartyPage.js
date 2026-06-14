@@ -2,7 +2,7 @@
 // PlayerIQ — Watch Together Room Page
 // ========================================
 
-import { img, getMovieDetails, getTVDetails } from '../services/api.js';
+import { img, getMovieDetails, getTVDetails, NODE_PROXY } from '../services/api.js';
 import { getUser } from '../services/auth.js';
 import {
   getWatchPartyFromCloud,
@@ -221,8 +221,8 @@ export async function renderWatchPartyPage({ params, container }) {
 
     // 2. Fetch Direct Stream URL from proxy
     const streamEndpoint = partyData.type === 'tv'
-      ? `/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}`
-      : `/api/stream/movie/${partyData.id || partyData.partyId}`;
+      ? `${NODE_PROXY}/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}`
+      : `${NODE_PROXY}/api/stream/movie/${partyData.id || partyData.partyId}`;
 
     const streamResponse = await fetch(streamEndpoint);
     if (!streamResponse.ok) {
