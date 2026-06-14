@@ -14,9 +14,13 @@ const HEADERS = {
 
 /**
  * Extract stream from Nontongo
- * Flow:
- *   1. GET /embed/movie/{tmdbId} → parse HTML to find IMDB ID in the play button JS
- *   2. GET /embed/movie/play-movie.php?id={imdbId} → extract stream URL from JS/HTML
+ * Multi-step flow:
+ *   1. Fetch landing page (tv/movie)
+ *   2. Find inner player URL (tv_nontongo.php or play-movie.php) and fetch it
+ *   3. Find server link (getPlayTV.php or getPlay.php) and fetch it
+ *   4. Capture JS redirection to subdomain load page (/x1/.../load) and fetch it
+ *   5. Decode base64 payload to find playerFrame src, resolve it relative to load page, and fetch it
+ *   6. Parse JS sources and tracks arrays to get video streaming URL and subtitles
  */
 export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
   try {
@@ -24,184 +28,217 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       ? `https://www.nontongo.win/embed/tv/${tmdbId}/${season}/${episode}`
       : `https://www.nontongo.win/embed/movie/${tmdbId}`;
 
-    // Step 1: Fetch the embed landing page
+    console.log(`[Nontongo] Step 1: Fetching landing page: ${embedPath}`);
     const { data: embedHtml } = await axios.get(embedPath, {
       headers: HEADERS,
       timeout: 10000,
     });
 
-    // Parse the HTML to find the inner player URL
-    // Nontongo has a loadIframe() function with the actual player URL
-    // Pattern: src:'https://nontongo.win/embed/movie/play-movie.php?id=tt0848228'
-    const innerUrlMatch = embedHtml.match(/src:\s*['"]([^'"]*play-(?:movie|tv)\.php\?[^'"]*)['"]/);
-    if (!innerUrlMatch) {
-      // Try alternate pattern for TV shows
-      const altMatch = embedHtml.match(/src:\s*['"]([^'"]*(?:play|embed)[^'"]*\.php\?[^'"]*)['"]/);
-      if (!altMatch) {
-        console.log('[Nontongo] Could not find inner player URL');
-        return null;
+    // Find inner player PHP (e.g. tv_nontongo.php or play-movie.php)
+    let innerUrl = null;
+    const match = embedHtml.match(/src:\s*['"]([^'"]*(?:play|embed|tv_nontongo|movie_nontongo)[^'"]*\.php\?[^'"]*)['"]/i);
+    if (match) {
+      innerUrl = match[1];
+    } else {
+      // General match for php scripts containing parameters
+      const scriptRegex = /['"]([^'"]+\.php\?[^'"]+)['"]/g;
+      let m;
+      while ((m = scriptRegex.exec(embedHtml)) !== null) {
+        if (m[1].includes('id=')) {
+          innerUrl = m[1];
+          break;
+        }
       }
-      return await extractFromInnerPlayer(altMatch[1]);
     }
 
-    return await extractFromInnerPlayer(innerUrlMatch[1]);
+    if (!innerUrl) {
+      console.log('[Nontongo] Failed: Could not locate inner player URL');
+      return null;
+    }
+
+    if (innerUrl.startsWith('//')) innerUrl = 'https:' + innerUrl;
+    if (!innerUrl.startsWith('http')) innerUrl = 'https://nontongo.win' + innerUrl;
+
+    console.log(`[Nontongo] Step 2: Fetching inner player page: ${innerUrl}`);
+    const { data: innerHtml } = await axios.get(innerUrl, {
+      headers: { ...HEADERS, Referer: embedPath },
+      timeout: 10000,
+    });
+
+    // Extract server link (e.g., getPlayTV.php or getPlay.php)
+    let getPlayUrl = null;
+    const $ = cheerio.load(innerHtml);
+    const iframeDataSrc = $('#iframePlayer').attr('data-src') || $('#iframePlayer').attr('src');
+    if (iframeDataSrc && iframeDataSrc !== 'undefined') {
+      getPlayUrl = iframeDataSrc;
+    } else {
+      // Look for server switch buttons
+      $('.iframe-server-button').each((i, el) => {
+        const link = $(el).attr('data-link');
+        if (link && !getPlayUrl) {
+          getPlayUrl = link;
+        }
+      });
+    }
+
+    if (!getPlayUrl) {
+      // Fallback regex scan for data-link
+      const linkMatch = innerHtml.match(/data-link=['"]([^'"]+)['"]/);
+      if (linkMatch) {
+        getPlayUrl = linkMatch[1];
+      }
+    }
+
+    if (!getPlayUrl) {
+      console.log('[Nontongo] Failed: Could not locate server/getPlay URL');
+      return null;
+    }
+
+    if (getPlayUrl.startsWith('//')) getPlayUrl = 'https:' + getPlayUrl;
+    if (!getPlayUrl.startsWith('http')) getPlayUrl = 'https://nontongo.win' + getPlayUrl;
+
+    console.log(`[Nontongo] Step 3: Fetching server switch URL: ${getPlayUrl}`);
+    const { data: playData } = await axios.get(getPlayUrl, {
+      headers: { ...HEADERS, Referer: innerUrl },
+      timeout: 10000,
+    });
+
+    // Extract JS redirection target (window.location.href)
+    const redirectMatch = playData.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]/);
+    if (!redirectMatch) {
+      console.log('[Nontongo] Failed: Redirect script not found in getPlay response');
+      return null;
+    }
+
+    const loadUrl = redirectMatch[1];
+    console.log(`[Nontongo] Step 4: Fetching load page: ${loadUrl}`);
+    const { data: loadHtml } = await axios.get(loadUrl, {
+      headers: { ...HEADERS, Referer: getPlayUrl },
+      timeout: 10000,
+    });
+
+    // Decode base64 payload if wrapped
+    let decodedHtml = loadHtml;
+    const b64Match = loadHtml.match(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/);
+    if (b64Match) {
+      try {
+        decodedHtml = Buffer.from(b64Match[1], 'base64').toString('utf8');
+      } catch (e) {
+        console.warn('[Nontongo] Failed to decode base64 wrapper:', e.message);
+      }
+    }
+
+    // Find nested playerFrame src
+    const playerFrameMatch = decodedHtml.match(/iframe[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
+    if (!playerFrameMatch) {
+      console.log('[Nontongo] Failed: playerFrame src not found in load page');
+      return null;
+    }
+
+    let playerFrameUrl = playerFrameMatch[1];
+    if (playerFrameUrl.startsWith('//')) playerFrameUrl = 'https:' + playerFrameUrl;
+    if (!playerFrameUrl.startsWith('http')) {
+      playerFrameUrl = new URL(playerFrameUrl, loadUrl).href;
+    }
+
+    console.log(`[Nontongo] Step 5: Fetching final player frame: ${playerFrameUrl}`);
+    const { data: playerFrameHtml } = await axios.get(playerFrameUrl, {
+      headers: { ...HEADERS, Referer: loadUrl },
+      timeout: 10000,
+    });
+
+    let decodedFrameHtml = playerFrameHtml;
+    const frameB64Match = playerFrameHtml.match(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/);
+    if (frameB64Match) {
+      try {
+        decodedFrameHtml = Buffer.from(frameB64Match[1], 'base64').toString('utf8');
+        console.log('[Nontongo] Decoded playerFrame base64 payload successfully');
+      } catch (e) {
+        console.warn('[Nontongo] Failed to decode playerFrame base64:', e.message);
+      }
+    }
+
+    // Extract video streaming source from sources variable
+    const sourcesMatch = decodedFrameHtml.match(/const\s+sources\s*=\s*(\[[^\]]+\])/);
+    if (!sourcesMatch) {
+      // Fallback: check if vibuxer iframe or third-party embed is rendered directly
+      const fallbackIframe = decodedFrameHtml.match(/iframe[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
+      if (fallbackIframe) {
+        let fallbackUrl = fallbackIframe[1];
+        if (fallbackUrl.startsWith('//')) fallbackUrl = 'https:' + fallbackUrl;
+        console.log(`[Nontongo] Found third-party nested embed iframe: ${fallbackUrl}`);
+        return {
+          url: fallbackUrl,
+          type: 'embed',
+          provider: 'nontongo',
+          referer: playerFrameUrl,
+          subtitles: []
+        };
+      }
+      console.log('[Nontongo] Failed: Could not locate sources or fallback iframe in player frame');
+      return null;
+    }
+
+    let sources = [];
+    try {
+      let cleaned = sourcesMatch[1].replace(/\\\/([^\/])/g, '/$1');
+      cleaned = cleaned.replace(/\\"/g, '"');
+      sources = JSON.parse(cleaned);
+    } catch (e) {
+      // Regex fallback
+      const fileRegex = /"file"\s*:\s*"([^"]+)"/g;
+      let m;
+      while ((m = fileRegex.exec(sourcesMatch[1])) !== null) {
+        sources.push({ file: m[1].replace(/\\/g, '') });
+      }
+    }
+
+    if (sources.length === 0) {
+      console.log('[Nontongo] Failed: Sources array is empty');
+      return null;
+    }
+
+    // Extract tracks/subtitles
+    let subtitles = [];
+    const tracksMatch = playerFrameHtml.match(/const\s+tracks\s*=\s*(\[[^\]]+\])/);
+    if (tracksMatch) {
+      try {
+        let cleaned = tracksMatch[1].replace(/\\\/([^\/])/g, '/$1');
+        cleaned = cleaned.replace(/\\"/g, '"');
+        const parsedTracks = JSON.parse(cleaned);
+        subtitles = parsedTracks
+          .filter(t => t.kind === 'captions' || t.file?.includes('.vtt') || t.file?.includes('.srt'))
+          .map(t => ({
+            url: t.file.startsWith('http') ? t.file : new URL(t.file, playerFrameUrl).href,
+            label: t.label || 'Unknown'
+          }));
+      } catch (e) {
+        const trackRegex = /"file"\s*:\s*"([^"]+)"\s*,\s*"label"\s*:\s*"([^"]+)"/g;
+        let m;
+        while ((m = trackRegex.exec(tracksMatch[1])) !== null) {
+          subtitles.push({
+            url: m[1].replace(/\\/g, ''),
+            label: m[2]
+          });
+        }
+      }
+    }
+
+    const bestSource = sources[0];
+    const streamUrl = bestSource.file || bestSource.src;
+    const streamType = bestSource.type || (streamUrl.includes('.m3u8') ? 'hls' : 'mp4');
+
+    console.log(`[Nontongo] Success: Extracted stream: ${streamUrl}`);
+    return {
+      url: streamUrl,
+      type: streamType === 'hls' ? 'hls' : 'mp4',
+      provider: 'nontongo',
+      referer: playerFrameUrl,
+      subtitles
+    };
 
   } catch (err) {
     console.error('[Nontongo] Extraction failed:', err.message);
     return null;
   }
-}
-
-async function extractFromInnerPlayer(playerUrl) {
-  try {
-    // Ensure full URL
-    if (playerUrl.startsWith('//')) playerUrl = 'https:' + playerUrl;
-    if (!playerUrl.startsWith('http')) playerUrl = 'https://nontongo.win' + playerUrl;
-
-    console.log('[Nontongo] Fetching inner player:', playerUrl);
-
-    const { data: playerHtml } = await axios.get(playerUrl, {
-      headers: {
-        ...HEADERS,
-        'Referer': 'https://www.nontongo.win/',
-      },
-      timeout: 10000,
-    });
-
-    // Look for m3u8 URL patterns
-    const m3u8Match = playerHtml.match(/(?:file|source|src|url)\s*[:=]\s*['"]([^'"]*\.m3u8[^'"]*)['"]/i);
-    if (m3u8Match) {
-      console.log('[Nontongo] Found m3u8:', m3u8Match[1]);
-      return {
-        url: m3u8Match[1],
-        type: 'hls',
-        provider: 'nontongo',
-        referer: playerUrl,
-        subtitles: extractSubtitles(playerHtml),
-      };
-    }
-
-    // Look for mp4 URL patterns
-    const mp4Match = playerHtml.match(/(?:file|source|src|url)\s*[:=]\s*['"]([^'"]*\.mp4[^'"]*)['"]/i);
-    if (mp4Match) {
-      console.log('[Nontongo] Found mp4:', mp4Match[1]);
-      return {
-        url: mp4Match[1],
-        type: 'mp4',
-        provider: 'nontongo',
-        referer: playerUrl,
-        subtitles: extractSubtitles(playerHtml),
-      };
-    }
-
-    // Look for embedded player sources — sometimes the URL is in a nested iframe
-    const nestedIframeMatch = playerHtml.match(/(?:iframe|embed)[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
-    if (nestedIframeMatch) {
-      let nestedUrl = nestedIframeMatch[1];
-      if (nestedUrl.startsWith('//')) {
-        nestedUrl = 'https:' + nestedUrl;
-      } else if (nestedUrl.startsWith('/')) {
-        nestedUrl = new URL(nestedUrl, playerUrl).href;
-      } else if (!nestedUrl.startsWith('http')) {
-        nestedUrl = new URL(nestedUrl, playerUrl).href;
-      }
-      console.log('[Nontongo] Found nested iframe, fetching:', nestedUrl);
-
-      // Try to extract from the nested page
-      const { data: nestedHtml } = await axios.get(nestedUrl, {
-        headers: { ...HEADERS, 'Referer': playerUrl },
-        timeout: 10000,
-      });
-
-      const nestedM3u8 = nestedHtml.match(/(?:file|source|src|url)\s*[:=]\s*['"]([^'"]*\.m3u8[^'"]*)['"]/i);
-      if (nestedM3u8) {
-        return {
-          url: nestedM3u8[1],
-          type: 'hls',
-          provider: 'nontongo',
-          referer: nestedUrl,
-          subtitles: extractSubtitles(nestedHtml),
-        };
-      }
-
-      const nestedMp4 = nestedHtml.match(/(?:file|source|src|url)\s*[:=]\s*['"]([^'"]*\.mp4[^'"]*)['"]/i);
-      if (nestedMp4) {
-        return {
-          url: nestedMp4[1],
-          type: 'mp4',
-          provider: 'nontongo',
-          referer: nestedUrl,
-          subtitles: extractSubtitles(nestedHtml),
-        };
-      }
-
-      // Try to find encoded/obfuscated URLs
-      return extractObfuscatedUrls(nestedHtml, nestedUrl);
-    }
-
-    // Last resort: look for obfuscated URLs
-    return extractObfuscatedUrls(playerHtml, playerUrl);
-
-  } catch (err) {
-    console.error('[Nontongo] Inner player extraction failed:', err.message);
-    return null;
-  }
-}
-
-function extractSubtitles(html) {
-  const subs = [];
-  // Pattern: { file: 'url.vtt', label: 'English' }
-  const subRegex = /\{\s*(?:file|src)\s*:\s*['"]([^'"]*\.(?:vtt|srt)[^'"]*)['"]\s*,\s*(?:label|lang)\s*:\s*['"]([^'"]*)['"]/gi;
-  let match;
-  while ((match = subRegex.exec(html)) !== null) {
-    subs.push({ url: match[1], label: match[2] });
-  }
-  // Also try track elements
-  const trackRegex = /<track[^>]*src=['"]([^'"]*\.(?:vtt|srt)[^'"]*)['""][^>]*label=['"]([^'"]*)['"]/gi;
-  while ((match = trackRegex.exec(html)) !== null) {
-    subs.push({ url: match[1], label: match[2] });
-  }
-  return subs;
-}
-
-function extractObfuscatedUrls(html, referer) {
-  // Try base64 encoded URLs
-  const b64Matches = html.match(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/g);
-  if (b64Matches) {
-    for (const match of b64Matches) {
-      try {
-        const b64 = match.match(/atob\(['"]([^'"]+)['"]\)/)[1];
-        const decoded = Buffer.from(b64, 'base64').toString('utf8');
-        if (decoded.includes('.m3u8')) {
-          console.log('[Nontongo] Found base64 m3u8:', decoded);
-          return { url: decoded, type: 'hls', provider: 'nontongo', referer, subtitles: [] };
-        }
-        if (decoded.includes('.mp4')) {
-          return { url: decoded, type: 'mp4', provider: 'nontongo', referer, subtitles: [] };
-        }
-      } catch (e) { /* skip */ }
-    }
-  }
-
-  // Try hex-encoded URLs
-  const hexMatch = html.match(/\\x68\\x74\\x74\\x70[^'"]+/);
-  if (hexMatch) {
-    try {
-      const decoded = hexMatch[0].replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) =>
-        String.fromCharCode(parseInt(hex, 16))
-      );
-      if (decoded.includes('.m3u8') || decoded.includes('.mp4')) {
-        return {
-          url: decoded,
-          type: decoded.includes('.m3u8') ? 'hls' : 'mp4',
-          provider: 'nontongo',
-          referer,
-          subtitles: [],
-        };
-      }
-    } catch (e) { /* skip */ }
-  }
-
-  console.log('[Nontongo] No stream URLs found in page');
-  return null;
 }

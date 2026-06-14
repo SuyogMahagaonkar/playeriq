@@ -951,9 +951,11 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
       const proxyResult = {
         ...result,
         originalUrl: result.url,
-        url: result.type === 'hls'
-          ? `/api/proxy/m3u8?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`
-          : `/api/proxy/segment?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`,
+        url: result.type === 'embed'
+          ? result.url
+          : (result.type === 'hls'
+              ? `/api/proxy/m3u8?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`
+              : `/api/proxy/segment?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`),
         subtitles: (result.subtitles || []).map(sub => ({
           ...sub,
           url: `/api/proxy/subtitle?url=${encodeURIComponent(sub.url)}&referer=${encodeURIComponent(result.referer || '')}`,
@@ -1058,9 +1060,11 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
       const proxyResult = {
         ...result,
         originalUrl: result.url,
-        url: result.type === 'hls'
-          ? `/api/proxy/m3u8?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`
-          : `/api/proxy/segment?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`,
+        url: result.type === 'embed'
+          ? result.url
+          : (result.type === 'hls'
+              ? `/api/proxy/m3u8?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`
+              : `/api/proxy/segment?url=${encodeURIComponent(result.url)}&referer=${encodeURIComponent(result.referer || '')}`),
         subtitles: (result.subtitles || []).map(sub => ({
           ...sub,
           url: `/api/proxy/subtitle?url=${encodeURIComponent(sub.url)}&referer=${encodeURIComponent(result.referer || '')}`,
