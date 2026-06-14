@@ -224,6 +224,19 @@ export async function renderWatchPartyPage({ params, container }) {
     const displayNameStr = partyData.title + (partyData.type === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
     mediaTitleEl.textContent = displayNameStr;
 
+    // Auto-rejoin the user to the active members list if they refreshed or loaded directly
+    const currentMember = {
+      uid: user.uid,
+      name: user.displayName || user.email.split('@')[0] || 'Guest',
+      avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      role: isHost ? 'host' : 'guest'
+    };
+    try {
+      await joinWatchPartyInCloud(partyId, currentMember);
+    } catch (joinErr) {
+      console.warn('[WatchParty] Failed to auto-rejoin party:', joinErr);
+    }
+
     // 2. Fetch Direct Stream URL from proxy
     const streamEndpoint = partyData.type === 'tv'
       ? `${NODE_PROXY}/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}`
