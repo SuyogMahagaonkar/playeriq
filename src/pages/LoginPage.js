@@ -385,7 +385,13 @@ export function showVerificationOverlay(container, user) {
       }, 1000);
     } catch (err) {
       console.error(err);
-      showStatus("Failed to send: " + err.message, false);
+      let userFriendlyMsg = 'Failed to send verification link. Please try again.';
+      if (err.code === 'auth/too-many-requests') {
+        userFriendlyMsg = 'Too many requests. Please wait a few minutes before trying again.';
+      } else if (err.message) {
+        userFriendlyMsg = err.message;
+      }
+      showStatus(userFriendlyMsg, false);
       resendBtn.disabled = false;
       resendBtn.style.opacity = '1';
       resendBtn.textContent = 'Resend Verification Link';
