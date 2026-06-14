@@ -1705,15 +1705,34 @@ app.post('/api/email/send-invite', async (req, res) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`[Email] Invitation successfully sent to ${inviteeEmail} for party room ${partyId}`);
+    if (smtpPass && smtpPass.startsWith('re_')) {
+      console.log('[Email] Sending via Resend REST API (HTTPS)...');
+      await axios.post('https://api.resend.com/emails', {
+        from: smtpFrom,
+        to: [inviteeEmail],
+        subject: `🍿 You're Invited! Watch "${title}" with ${hostName} on PlayerIQ`,
+        html: mailOptions.html
+      }, {
+        headers: {
+          'Authorization': `Bearer ${smtpPass}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 8000
+      });
+      console.log(`[Email] Invitation successfully sent (REST API) to ${inviteeEmail} for party room ${partyId}`);
+    } else {
+      console.log('[Email] Sending via SMTP...');
+      await transporter.sendMail(mailOptions);
+      console.log(`[Email] Invitation successfully sent (SMTP) to ${inviteeEmail} for party room ${partyId}`);
+    }
     res.json({ success: true, message: 'Invitation email sent successfully.' });
   } catch (err) {
-    console.error('[Email Error] Failed to send invite email:', err);
+    const errMsg = err.response?.data?.message || err.response?.data || err.message;
+    console.error('[Email Error] Failed to send invite email:', errMsg);
     console.log(`\n  [Mock Invite Link]: ${joinLink}\n`);
     res.status(500).json({ 
       error: 'Failed to send invite email.', 
-      details: err.message,
+      details: typeof errMsg === 'object' ? JSON.stringify(errMsg) : errMsg,
       mockLink: joinLink
     });
   }
