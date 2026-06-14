@@ -888,43 +888,7 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
           startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
         };
 
-        // If the stream type is embed (third-party nested iframe), load it directly in the player wrapper
-        if (streamData.type === 'embed') {
-          console.warn('[Player] streamData has type "embed". Rendering player-iframe with url:', streamData.url);
-          const iframe = document.createElement('iframe');
-          iframe.id = 'player-iframe';
-          iframe.src = streamData.url;
-          iframe.title = title;
-          iframe.setAttribute('allowfullscreen', '');
-          iframe.setAttribute('webkitallowfullscreen', '');
-          iframe.setAttribute('mozallowfullscreen', '');
-          iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock');
-          iframe.referrerPolicy = 'origin';
-          iframe.style.cssText = 'width:100%;height:100%;border:none;position:relative;z-index:1;';
-
-          iframe.onload = () => {
-            const loadingEl = document.getElementById('player-loading');
-            if (loadingEl) {
-              loadingEl.style.opacity = '0';
-              loadingEl.style.transition = 'opacity 0.4s';
-              setTimeout(() => loadingEl.remove(), 400);
-            }
-          };
-
-          wrapper.innerHTML = '';
-          wrapper.appendChild(iframe);
-
-          if (fsBtnClone) {
-            fsBtnClone.addEventListener('click', toggleFullscreen);
-            wrapper.appendChild(fsBtnClone);
-          }
-
-          startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
-          return;
-        }
-
-        // Clear wrapper and init custom player
+        // Clear wrapper and init custom player — embed type is handled inside createVideoPlayer()
         wrapper.innerHTML = '';
         activePlayer = createVideoPlayer(
           wrapper,
@@ -987,6 +951,11 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
             goToEpisode
           }
         );
+
+        // For embed-type streams, start iframe tracker to save watch progress
+        if (streamData.type === 'embed') {
+          startIframeTracker(id, isTV, season, episode, title, posterPath, backdropPath);
+        }
 
         // MediaSession & Video Title: show title + artwork on lock screen/top bar
         if (wrapper._initMediaSession) {

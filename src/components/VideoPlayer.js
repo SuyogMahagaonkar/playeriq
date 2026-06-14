@@ -384,6 +384,123 @@ export function createVideoPlayer(container, streamData, {
     try { ScreenOrientation.unlock().catch(() => {}); } catch(e) {}
   }
 
+  // ============================================================
+  // EMBED MODE: If the stream is a third-party embed (iframe),
+  // replace <video> with an <iframe> inside the player shell,
+  // hide all video-specific controls, and keep back + fullscreen.
+  // ============================================================
+  if (streamData.type === 'embed') {
+    const player = document.getElementById('vp-player');
+
+    // Replace <video> with the embed <iframe>
+    const videoPlaceholder = container.querySelector('#vp-video');
+    const embedIframe = document.createElement('iframe');
+    embedIframe.id = 'vp-embed-iframe';
+    embedIframe.src = streamData.url;
+    embedIframe.title = 'Embedded Player';
+    embedIframe.setAttribute('allowfullscreen', '');
+    embedIframe.setAttribute('webkitallowfullscreen', '');
+    embedIframe.setAttribute('mozallowfullscreen', '');
+    embedIframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+    embedIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-popups');
+    embedIframe.referrerPolicy = 'origin';
+    embedIframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1;';
+    if (videoPlaceholder) {
+      videoPlaceholder.parentNode.replaceChild(embedIframe, videoPlaceholder);
+    } else {
+      player.appendChild(embedIframe);
+    }
+
+    // Hide all controls except the top overlay (back + fullscreen)
+    const controlsEl = container.querySelector('#vp-controls');
+    if (controlsEl) controlsEl.style.display = 'none';
+    const loaderEl = container.querySelector('#vp-loader');
+    if (loaderEl) loaderEl.style.display = 'none';
+    const bigPlayEl = container.querySelector('#vp-big-play');
+    if (bigPlayEl) bigPlayEl.style.display = 'none';
+    const lockBtn = container.querySelector('#vp-lock-btn');
+    if (lockBtn) lockBtn.style.display = 'none';
+    const diagBtn = container.querySelector('#vp-diag-btn');
+    if (diagBtn) diagBtn.style.display = 'none';
+    // Hide gesture zones to avoid interfering with the iframe
+    ['vp-gesture-left','vp-gesture-right'].forEach(id => {
+      const el = container.querySelector('#' + id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Build minimal top bar with Back + Fullscreen
+    if (player && !container.querySelector('#vp-top-title')) {
+      const titleOverlay = document.createElement('div');
+      titleOverlay.className = 'vp-top-title-overlay';
+      titleOverlay.id = 'vp-top-title';
+      titleOverlay.style.zIndex = '10'; // above iframe
+      titleOverlay.innerHTML = `
+        <div class="vp-top-left-group">
+          <button class="vp-btn vp-overlay-btn vp-top-back" id="vp-top-back-btn" title="Back" aria-label="Go Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+        </div>
+        <div class="vp-top-title-center">
+          <span class="vp-title-text" id="vp-title-text">Embed Player</span>
+        </div>
+        <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+          <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      `;
+      player.appendChild(titleOverlay);
+      titleOverlay.classList.add('visible');
+
+      document.getElementById('vp-top-back-btn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        if (window.history.length > 1) window.history.back();
+        else window.location.hash = '#/';
+      });
+
+      const topFsBtn = document.getElementById('vp-top-fs-btn');
+      if (topFsBtn) {
+        topFsBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const wrapper = document.getElementById('video-wrapper') || player;
+          const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+          if (isFs) {
+            (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+          } else {
+            (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen)?.call(wrapper);
+          }
+        });
+      }
+
+      // Toggle overlay visibility on click
+      player.addEventListener('click', () => {
+        titleOverlay.classList.toggle('visible');
+      });
+    }
+
+    // Update fullscreen icons on change
+    const onFsChange = () => {
+      const expand = container.querySelector('.vp-top-fs-expand');
+      const shrink = container.querySelector('.vp-top-fs-shrink');
+      const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (expand) expand.style.display = isFs ? 'none' : '';
+      if (shrink) shrink.style.display = isFs ? '' : 'none';
+    };
+    ['fullscreenchange','webkitfullscreenchange'].forEach(evt => document.addEventListener(evt, onFsChange));
+
+    subStyle.remove(); // no subtitles in embed mode
+
+    return {
+      destroy(preserveVideo = false, preserveFullscreen = false) {
+        ['fullscreenchange','webkitfullscreenchange'].forEach(evt => document.removeEventListener(evt, onFsChange));
+        if (document.fullscreenElement && !preserveFullscreen) {
+          document.exitFullscreen?.().catch(() => {});
+        }
+        if (!preserveVideo && container) container.innerHTML = '';
+      }
+    };
+  }
+  // ============================================================
+
   // ---- Elements ----
   const player = document.getElementById('vp-player');
   const video = existingVideo || document.getElementById('vp-video');
