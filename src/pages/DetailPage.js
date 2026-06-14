@@ -1610,6 +1610,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
 
     const partyData = {
       partyId,
+      id: mediaId,
       hostId: hostUser.uid,
       hostName,
       title: title,
