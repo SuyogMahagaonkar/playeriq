@@ -4657,10 +4657,6 @@
     display: contents !important;
   }
 
-  .mobile-player-container .vp-desktop-only-opt {
-    display: none !important;
-  }
-
   /* Each option column: icon on top, text label below */
   .mobile-player-container .vp-mobile-opt {
     display: flex !important;
@@ -4698,6 +4694,10 @@
     text-align: center !important;
     white-space: nowrap !important;
     font-family: var(--font-display, 'Inter', sans-serif) !important;
+  }
+
+  .mobile-player-container .vp-desktop-only-opt {
+    display: none !important;
   }
 
   /* Transparent select overlay on top of Speed / Quality option columns */
