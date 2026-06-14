@@ -141,100 +141,13 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       playerFrameUrl = new URL(playerFrameUrl, loadUrl).href;
     }
 
-    console.log(`[Nontongo] Step 5: Fetching final player frame: ${playerFrameUrl}`);
-    const { data: playerFrameHtml } = await axios.get(playerFrameUrl, {
-      headers: { ...HEADERS, Referer: loadUrl },
-      timeout: 10000,
-    });
-
-    let decodedFrameHtml = playerFrameHtml;
-    const frameB64Match = playerFrameHtml.match(/atob\(['"]([A-Za-z0-9+/=]+)['"]\)/);
-    if (frameB64Match) {
-      try {
-        decodedFrameHtml = Buffer.from(frameB64Match[1], 'base64').toString('utf8');
-        console.log('[Nontongo] Decoded playerFrame base64 payload successfully');
-      } catch (e) {
-        console.warn('[Nontongo] Failed to decode playerFrame base64:', e.message);
-      }
-    }
-
-    // Extract video streaming source from sources variable
-    const sourcesMatch = decodedFrameHtml.match(/const\s+sources\s*=\s*(\[[^\]]+\])/);
-    if (!sourcesMatch) {
-      // Fallback: check if vibuxer iframe or third-party embed is rendered directly
-      const fallbackIframe = decodedFrameHtml.match(/iframe[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
-      if (fallbackIframe) {
-        let fallbackUrl = fallbackIframe[1];
-        if (fallbackUrl.startsWith('//')) fallbackUrl = 'https:' + fallbackUrl;
-        console.log(`[Nontongo] Found third-party nested embed iframe: ${fallbackUrl}`);
-        return {
-          url: fallbackUrl,
-          type: 'embed',
-          provider: 'nontongo',
-          referer: playerFrameUrl,
-          subtitles: []
-        };
-      }
-      console.log('[Nontongo] Failed: Could not locate sources or fallback iframe in player frame');
-      return null;
-    }
-
-    let sources = [];
-    try {
-      let cleaned = sourcesMatch[1].replace(/\\\/([^\/])/g, '/$1');
-      cleaned = cleaned.replace(/\\"/g, '"');
-      sources = JSON.parse(cleaned);
-    } catch (e) {
-      // Regex fallback
-      const fileRegex = /"file"\s*:\s*"([^"]+)"/g;
-      let m;
-      while ((m = fileRegex.exec(sourcesMatch[1])) !== null) {
-        sources.push({ file: m[1].replace(/\\/g, '') });
-      }
-    }
-
-    if (sources.length === 0) {
-      console.log('[Nontongo] Failed: Sources array is empty');
-      return null;
-    }
-
-    // Extract tracks/subtitles
-    let subtitles = [];
-    const tracksMatch = playerFrameHtml.match(/const\s+tracks\s*=\s*(\[[^\]]+\])/);
-    if (tracksMatch) {
-      try {
-        let cleaned = tracksMatch[1].replace(/\\\/([^\/])/g, '/$1');
-        cleaned = cleaned.replace(/\\"/g, '"');
-        const parsedTracks = JSON.parse(cleaned);
-        subtitles = parsedTracks
-          .filter(t => t.kind === 'captions' || t.file?.includes('.vtt') || t.file?.includes('.srt'))
-          .map(t => ({
-            url: t.file.startsWith('http') ? t.file : new URL(t.file, playerFrameUrl).href,
-            label: t.label || 'Unknown'
-          }));
-      } catch (e) {
-        const trackRegex = /"file"\s*:\s*"([^"]+)"\s*,\s*"label"\s*:\s*"([^"]+)"/g;
-        let m;
-        while ((m = trackRegex.exec(tracksMatch[1])) !== null) {
-          subtitles.push({
-            url: m[1].replace(/\\/g, ''),
-            label: m[2]
-          });
-        }
-      }
-    }
-
-    const bestSource = sources[0];
-    const streamUrl = bestSource.file || bestSource.src;
-    const streamType = bestSource.type || (streamUrl.includes('.m3u8') ? 'hls' : 'mp4');
-
-    console.log(`[Nontongo] Success: Extracted stream: ${streamUrl}`);
+    console.log(`[Nontongo] Success: Extracted embed frame URL: ${playerFrameUrl}`);
     return {
-      url: streamUrl,
-      type: streamType === 'hls' ? 'hls' : 'mp4',
+      url: playerFrameUrl,
+      type: 'embed',
       provider: 'nontongo',
-      referer: playerFrameUrl,
-      subtitles
+      referer: loadUrl,
+      subtitles: []
     };
 
   } catch (err) {
