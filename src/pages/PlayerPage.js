@@ -255,7 +255,8 @@ async function cacheSeasonEpisodesWithProgress(tvId, seasonNumber, episodes) {
 function getEmbedUrl(tmdbId, isTV, season = 1, episode = 1, imdbId = null) {
   const source = SOURCES[currentSourceIndex] || SOURCES[0];
   const realId = activeTmdbId || tmdbId;
-  return isTV ? source.getTVUrl(realId, season, episode, imdbId) : source.getMovieUrl(realId, imdbId);
+  const mappedSeason = (String(realId) === '124364' && parseInt(season) > 1) ? parseInt(season) - 1 : season;
+  return isTV ? source.getTVUrl(realId, mappedSeason, episode, imdbId) : source.getMovieUrl(realId, imdbId);
 }
 
 // ---- Redirect Protection ----
