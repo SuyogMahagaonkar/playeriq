@@ -20,7 +20,8 @@ import {
   addPartyHistoryToCloud,
   createScheduledPartyInCloud,
   subscribeToScheduledParties,
-  deleteScheduledPartyInCloud
+  deleteScheduledPartyInCloud,
+  getInitialsAvatar
 } from '../services/firebase.js';
 import { navigate } from '../services/router.js';
 
@@ -480,7 +481,7 @@ export async function renderPartyWatchDashboard({ container }) {
                 partyId,
                 hostId: user.uid,
                 hostName: user.displayName || user.email.split('@')[0] || 'Host',
-                hostAvatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+                hostAvatar: getInitialsAvatar(user.displayName, user.email, user.photoURL),
                 title: schItem.title,
                 posterPath: schItem.posterPath,
                 type: schItem.mediaType,
@@ -1038,7 +1039,7 @@ END:VCALENDAR`;
             await sendPartyInviteNotification(
               user.uid,
               scheduledData.hostName,
-              user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+              getInitialsAvatar(user.displayName, user.email, user.photoURL),
               email,
               partyId,
               `${name} (Scheduled: ${selectedMedia.title})`,
@@ -1246,7 +1247,7 @@ END:VCALENDAR`;
         partyId,
         hostId: user.uid,
         hostName: user.displayName || user.email.split('@')[0] || 'Host',
-        hostAvatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+        hostAvatar: getInitialsAvatar(user.displayName, user.email, user.photoURL),
         title: name,
         mediaTitle: selectedMedia.title,
         mediaId: selectedMedia.id,

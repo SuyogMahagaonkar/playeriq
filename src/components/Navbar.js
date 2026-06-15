@@ -7,6 +7,7 @@ import { searchMovieBox } from '../services/api.js';
 import { addRecentSearch } from '../services/state.js';
 import { toggleSidebar, refreshSidebarNav } from './Sidebar.js';
 import { getUser, login, logout, onUserChange } from '../services/auth.js';
+import { getInitialsAvatar } from '../services/firebase.js';
 
 let searchTimeout = null;
 
@@ -118,10 +119,8 @@ function buildDropdownContent(user) {
   if (!dropdown) return;
 
   if (user) {
-    // ---- Signed-in view ----
-    const avatarHtml = user.photoURL
-      ? `<img src="${user.photoURL}" alt="${user.displayName ?? 'User'}" />`
-      : `<span>${user.displayName?.[0]?.toUpperCase() ?? 'U'}</span>`;
+    const avatarUrl = getInitialsAvatar(user.displayName, user.email, user.photoURL);
+    const avatarHtml = `<img src="${avatarUrl}" alt="${user.displayName ?? 'User'}" />`;
 
     dropdown.innerHTML = `
       <div class="profile-dropdown-header">
@@ -338,12 +337,8 @@ export function updateNavbarAvatar(user) {
   }
 
   if (user) {
-    if (user.photoURL) {
-      inner.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName ?? 'User'}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
-    } else {
-      inner.innerHTML = '';
-      inner.textContent = user.displayName?.[0]?.toUpperCase() ?? 'U';
-    }
+    const avatarUrl = getInitialsAvatar(user.displayName, user.email, user.photoURL);
+    inner.innerHTML = `<img src="${avatarUrl}" alt="${user.displayName ?? 'User'}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
     avatar.title = user.displayName ?? user.email ?? 'Profile';
     avatar.classList.add('signed-in');
   } else {

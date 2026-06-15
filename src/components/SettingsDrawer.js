@@ -3,7 +3,7 @@
 // ========================================
 
 import { getUser, login, logout, waitAuthReady, exportLibrary, importLibrary, applyGlobalTheme } from '../services/auth.js';
-import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig } from '../services/firebase.js';
+import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig, getInitialsAvatar } from '../services/firebase.js';
 import { navigate, getCurrentPath } from '../services/router.js';
 import { refreshSidebarNav } from './Sidebar.js';
 
@@ -109,9 +109,7 @@ export async function openSettingsDrawer() {
           <div class="settings-section-title">Profile</div>
           <div class="settings-profile-row" style="margin-bottom: 16px;">
             <div class="settings-profile-avatar" style="width: 60px; height: 60px; font-size: 1.4rem;">
-              ${user.photoURL
-                ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />`
-                : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+              <img src="${getInitialsAvatar(user.displayName, user.email, user.photoURL)}" alt="${user.displayName ?? ''}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />
             </div>
             <div class="settings-profile-info" style="flex: 1; text-align: left; display: flex; flex-direction: column; align-items: flex-start; justify-content: center;">
               <div class="settings-profile-name-container" id="drawer-name-container" style="display:flex;align-items:center;gap:8px">
@@ -556,17 +554,15 @@ export async function openSettingsDrawer() {
         
         // Refresh sidebar and navbar updates
         refreshSidebarNav();
+        const newAvatarUrl = getInitialsAvatar(newName, user.email, user.photoURL);
         const navbarAvatar = document.getElementById('navbar-avatar');
         if (navbarAvatar) {
-          const inner = navbarAvatar.querySelector('.navbar-avatar-inner');
-          if (inner) {
-            if (user.photoURL) {
-              inner.innerHTML = `<img src="${user.photoURL}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
-            } else {
-              inner.innerHTML = '';
-              inner.textContent = newName[0]?.toUpperCase() ?? 'U';
-            }
-          }
+          const inner = navbarAvatar.querySelector('.navbar-avatar-inner') || navbarAvatar;
+          inner.innerHTML = `<img src="${newAvatarUrl}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        }
+        const drawerAvatar = drawer.querySelector('.settings-profile-avatar');
+        if (drawerAvatar) {
+          drawerAvatar.innerHTML = `<img src="${newAvatarUrl}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
         }
       } catch (err) {
         console.error('Failed to update profile name:', err);

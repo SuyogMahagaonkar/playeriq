@@ -15,7 +15,11 @@ import {
   lockWatchPartyInCloud,
   promoteMemberRoleInCloud,
   removeMemberFromCloud,
-  deleteChatMessageInCloud
+  deleteChatMessageInCloud,
+  createScheduledPartyInCloud,
+  subscribeToScheduledParties,
+  deleteScheduledPartyInCloud,
+  getInitialsAvatar
 } from '../services/firebase.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { navigate } from '../services/router.js';
@@ -88,7 +92,7 @@ export async function renderWatchPartyJoinPage({ params, container }) {
     const member = {
       uid: user.uid,
       name: user.displayName || user.email.split('@')[0] || 'Guest',
-      avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      avatar: getInitialsAvatar(user.displayName, user.email, user.photoURL),
       role: 'guest',
       sessionToken: currentSessionToken
     };
@@ -371,7 +375,7 @@ export async function renderWatchPartyPage({ params, container }) {
     const currentMember = {
       uid: user.uid,
       name: user.displayName || user.email.split('@')[0] || 'Guest',
-      avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      avatar: getInitialsAvatar(user.displayName, user.email, user.photoURL),
       role: isHost ? 'host' : 'guest',
       sessionToken: currentSessionToken
     };
@@ -682,7 +686,7 @@ export async function renderWatchPartyPage({ params, container }) {
 
     // 6. Chat & Floating Emoji Reactions Sync
     const senderName = user.displayName || user.email.split('@')[0] || 'User';
-    const senderAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60';
+    const senderAvatar = getInitialsAvatar(user.displayName, user.email, user.photoURL);
 
     const sendChatMessage = async (text, type = 'chat', reactionEmoji = null, gifUrl = null) => {
       const msgObj = {

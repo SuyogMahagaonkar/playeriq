@@ -4,7 +4,7 @@
 
 import { getUser, login, logout, waitAuthReady, exportLibrary, importLibrary, applyGlobalTheme } from '../services/auth.js';
 import { navigate } from '../services/router.js';
-import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig } from '../services/firebase.js';
+import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig, getInitialsAvatar } from '../services/firebase.js';
 import { createFooter } from '../components/Footer.js';
 import { refreshSidebarNav } from '../components/Sidebar.js';
 import { DownloadManager } from '../services/download.js';
@@ -54,9 +54,7 @@ export async function renderSettingsPage({ container }) {
           <div class="mobile-profile-avatar-container">
             <div class="mobile-profile-avatar-wrapper">
               <div class="mobile-profile-avatar">
-                ${user.photoURL
-                  ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
-                  : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+                <img src="${getInitialsAvatar(user.displayName, user.email, user.photoURL)}" alt="${user.displayName ?? ''}" />
               </div>
             </div>
           </div>
@@ -551,9 +549,7 @@ export async function renderSettingsPage({ container }) {
                   <div class="settings-section-title">Profile</div>
                   <div class="settings-profile-row">
                     <div class="settings-profile-avatar">
-                      ${user.photoURL
-                        ? `<img src="${user.photoURL}" alt="${user.displayName ?? ''}" />`
-                        : (user.displayName?.[0]?.toUpperCase() ?? 'U')}
+                      <img src="${getInitialsAvatar(user.displayName, user.email, user.photoURL)}" alt="${user.displayName ?? ''}" />
                     </div>
                     <div class="settings-profile-info" style="flex:1; display:flex; flex-direction:column; align-items:flex-start;">
                       <div class="settings-profile-name-container" style="display:flex;align-items:center;gap:8px">
@@ -1347,18 +1343,16 @@ export async function renderSettingsPage({ container }) {
         
         // Refresh sidebar and navbar updates
         refreshSidebarNav();
+        const newAvatarUrl = getInitialsAvatar(newName, user.email, user.photoURL);
         const navbarAvatar = document.getElementById('navbar-avatar');
         if (navbarAvatar) {
-          const inner = navbarAvatar.querySelector('.navbar-avatar-inner');
-          if (inner) {
-            if (user.photoURL) {
-              inner.innerHTML = `<img src="${user.photoURL}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
-            } else {
-              inner.innerHTML = '';
-              inner.textContent = newName[0]?.toUpperCase() ?? 'U';
-            }
-          }
+          const inner = navbarAvatar.querySelector('.navbar-avatar-inner') || navbarAvatar;
+          inner.innerHTML = `<img src="${newAvatarUrl}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
         }
+        const pageAvatars = container.querySelectorAll('.mobile-profile-avatar, .settings-profile-avatar');
+        pageAvatars.forEach(av => {
+          av.innerHTML = `<img src="${newAvatarUrl}" alt="${newName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        });
       } catch (err) {
         console.error('Failed to update profile name:', err);
         showToast('❌ Failed to update name');

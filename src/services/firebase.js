@@ -299,6 +299,53 @@ export async function fetchWatchHistory(userId) {
   }
 }
 
+export function getInitials(name) {
+  if (!name) return 'U';
+  const cleanName = name.trim();
+  const parts = cleanName.split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  if (cleanName.length >= 2) {
+    return cleanName.substring(0, 2).toUpperCase();
+  }
+  return cleanName.toUpperCase();
+}
+
+export function getInitialsAvatar(displayName, email, photoURL) {
+  if (photoURL && photoURL.trim() !== '') return photoURL;
+  
+  const name = displayName || email?.split('@')[0] || 'User';
+  const initials = getInitials(name);
+  
+  // Hash name to get a consistent background color
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const colors = [
+    '#6366f1', // Indigo
+    '#a855f7', // Purple
+    '#ec4899', // Pink
+    '#f43f5e', // Rose
+    '#ef4444', // Red
+    '#3b82f6', // Blue
+    '#10b981', // Emerald
+    '#f59e0b', // Amber
+    '#06b6d4', // Cyan
+  ];
+  const colorIndex = Math.abs(hash) % colors.length;
+  const bgColor = colors[colorIndex];
+  
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <rect width="100%" height="100%" fill="${bgColor}"/>
+    <text x="50%" y="54%" font-family="'Outfit', 'Inter', system-ui, sans-serif" font-size="38" font-weight="700" fill="#ffffff" dominant-baseline="middle" text-anchor="middle">${initials}</text>
+  </svg>`;
+  
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 /**
  * Save/update user profile data in Firestore.
  * @param {string} userId
@@ -309,7 +356,12 @@ export async function saveUserProfile(userId, data) {
   const { doc, setDoc } = firestoreExports;
   try {
     const ref = doc(db, 'users', userId);
-    await setDoc(ref, data, { merge: true });
+    const avatar = getInitialsAvatar(data.displayName, data.email, data.photoURL);
+    const updatedData = {
+      ...data,
+      photoURL: avatar
+    };
+    await setDoc(ref, updatedData, { merge: true });
 
     // Also write to users_by_email mapping
     if (data.email) {
@@ -317,7 +369,7 @@ export async function saveUserProfile(userId, data) {
       await setDoc(emailRef, {
         uid: userId,
         displayName: data.displayName || data.email.split('@')[0],
-        photoURL: data.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+        photoURL: avatar
       }, { merge: true });
     }
   } catch (err) {
@@ -923,11 +975,11 @@ export async function sendFriendRequestInCloud(senderUid, targetEmail) {
       senderUid,
       senderName: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'User',
       senderEmail: myProfile?.email || '',
-      senderAvatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      senderAvatar: getInitialsAvatar(myProfile?.displayName, myProfile?.email, myProfile?.photoURL),
       targetUid,
       targetName: targetProfile?.displayName || emailKey.split('@')[0] || 'Friend',
       targetEmail: emailKey,
-      targetAvatar: targetProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      targetAvatar: getInitialsAvatar(targetProfile?.displayName, emailKey, targetProfile?.photoURL),
       status: 'pending',
       timestamp: serverTimestamp()
     });
@@ -1011,11 +1063,12 @@ export function subscribeToFriendsList(userId, onUpdate) {
       list1.forEach(item => {
         if (!seen.has(item.targetUid)) {
           seen.add(item.targetUid);
+          const name = item.targetName || item.targetEmail?.split('@')[0] || 'Friend';
           combined.push({
             uid: item.targetUid,
-            name: item.targetName || item.targetEmail?.split('@')[0] || 'Friend',
+            name: name,
             email: item.targetEmail || '',
-            avatar: item.targetAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+            avatar: getInitialsAvatar(name, item.targetEmail, item.targetAvatar)
           });
         }
       });
@@ -1023,11 +1076,12 @@ export function subscribeToFriendsList(userId, onUpdate) {
       list2.forEach(item => {
         if (!seen.has(item.senderUid)) {
           seen.add(item.senderUid);
+          const name = item.senderName || item.senderEmail?.split('@')[0] || 'Friend';
           combined.push({
             uid: item.senderUid,
-            name: item.senderName || item.senderEmail?.split('@')[0] || 'Friend',
+            name: name,
             email: item.senderEmail || '',
-            avatar: item.senderAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+            avatar: getInitialsAvatar(name, item.senderEmail, item.senderAvatar)
           });
         }
       });
@@ -1101,7 +1155,7 @@ export async function updateUserStatusInCloud(userId, status, activePartyId = nu
       uid: userId,
       name: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'User',
       email: myProfile?.email || '',
-      avatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      avatar: getInitialsAvatar(myProfile?.displayName, myProfile?.email, myProfile?.photoURL),
       status,
       activePartyId,
       activeWatchMedia,
@@ -1287,7 +1341,7 @@ export async function sendJoinRequestInCloud(partyId, user) {
     await setDoc(ref, {
       uid: user.uid,
       name: user.displayName || user.email.split('@')[0] || 'Guest',
-      avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      avatar: getInitialsAvatar(user.displayName, user.email, user.photoURL),
       status: 'pending',
       timestamp: serverTimestamp()
     });

@@ -6,7 +6,7 @@ import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
-import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud } from '../services/firebase.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud, getInitialsAvatar } from '../services/firebase.js';
 import { DownloadManager } from '../services/download.js';
 import '../styles/detail.css';
 
@@ -1604,7 +1604,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
     const hostMember = {
       uid: hostUser.uid,
       name: hostName,
-      avatar: hostUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      avatar: getInitialsAvatar(hostUser.displayName, hostUser.email, hostUser.photoURL),
       role: 'host'
     };
 
