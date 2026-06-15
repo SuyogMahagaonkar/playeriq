@@ -27,7 +27,9 @@ export function createVideoPlayer(container, streamData, {
   episodes = [],
   currentSeason = 1,
   currentEpisode = 1,
-  goToEpisode = null
+  goToEpisode = null,
+  isWatchParty = false,
+  hasPlaybackControl = true
 } = {}) {
   let hls = null;
   let controlsTimeout = null;
@@ -1392,6 +1394,38 @@ export function createVideoPlayer(container, streamData, {
     vpCastBtn.style.display = 'inline-block';
   }
 
+  function applyWatchPartyUIControls() {
+    if (isWatchParty && !hasPlaybackControl) {
+      if (skipBack) skipBack.style.display = 'none';
+      if (skipForward) skipForward.style.display = 'none';
+      if (bigPlay) bigPlay.style.display = 'none';
+      if (progressInput) progressInput.disabled = true;
+      if (progressWrap) progressWrap.style.pointerEvents = 'none';
+      if (speedSelect) speedSelect.disabled = true;
+      const optSpeed = document.getElementById('vp-opt-speed');
+      if (optSpeed) optSpeed.style.pointerEvents = 'none';
+      const optNext = document.getElementById('vp-opt-next');
+      if (optNext) optNext.style.display = 'none';
+      const optEpisodes = document.getElementById('vp-opt-episodes');
+      if (optEpisodes) optEpisodes.style.display = 'none';
+    } else {
+      if (skipBack) skipBack.style.display = '';
+      if (skipForward) skipForward.style.display = '';
+      if (progressInput) progressInput.disabled = false;
+      if (progressWrap) progressWrap.style.pointerEvents = 'auto';
+      if (speedSelect) speedSelect.disabled = false;
+      const optSpeed = document.getElementById('vp-opt-speed');
+      if (optSpeed) optSpeed.style.pointerEvents = 'auto';
+      if (isTvShow) {
+        const optEpisodes = document.getElementById('vp-opt-episodes');
+        if (optEpisodes) optEpisodes.style.display = '';
+      }
+    }
+  }
+
+  // Initial application of watch party locks
+  applyWatchPartyUIControls();
+
   // Telemetry play event
   let playTelemetryFired = false;
   video.addEventListener('play', () => {
@@ -1831,6 +1865,11 @@ export function createVideoPlayer(container, streamData, {
   }
 
   function togglePlay() {
+    if (isWatchParty && !hasPlaybackControl) {
+      showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
     if (video.paused) {
       video.play();
       // On mobile: go fullscreen immediately (this is inside a user-gesture handler)
@@ -2352,6 +2391,11 @@ export function createVideoPlayer(container, streamData, {
       // Long-press → 2× speed
       longPressTimer = setTimeout(() => {
         if (!touchMoved) {
+          if (isWatchParty && !hasPlaybackControl) {
+            showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+            if (window.lucide) window.lucide.createIcons();
+            return;
+          }
           video.playbackRate = 2.0;
           if (speedToast) {
             speedToast.classList.add('visible');
@@ -2451,6 +2495,12 @@ export function createVideoPlayer(container, streamData, {
       const now = Date.now();
       const lastTap = lastTapTime[side];
       if (now - lastTap < 300) {
+        if (isWatchParty && !hasPlaybackControl) {
+          showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+          if (window.lucide) window.lucide.createIcons();
+          lastTapTime[side] = 0;
+          return;
+        }
         // Double tap!
         lastTapTime[side] = 0;
         if (Capacitor && Capacitor.isNativePlatform()) {
@@ -2516,6 +2566,11 @@ export function createVideoPlayer(container, streamData, {
       // Direct double-click support for desktop mouse seeking
       gLeft.addEventListener('dblclick', (e) => {
         e.stopPropagation();
+        if (isWatchParty && !hasPlaybackControl) {
+          showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+          if (window.lucide) window.lucide.createIcons();
+          return;
+        }
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
         if (isTranscoded && window._playerPerformSeek) window._playerPerformSeek(Math.max(0, cur - 30));
@@ -2543,6 +2598,11 @@ export function createVideoPlayer(container, streamData, {
       // Direct double-click support for desktop mouse seeking
       gRight.addEventListener('dblclick', (e) => {
         e.stopPropagation();
+        if (isWatchParty && !hasPlaybackControl) {
+          showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+          if (window.lucide) window.lucide.createIcons();
+          return;
+        }
         const off = (isTranscoded && window._playerGetSeekOffset) ? window._playerGetSeekOffset() : 0;
         const cur = video.currentTime + off;
         const dur = getEffectiveDuration();
@@ -2796,6 +2856,16 @@ export function createVideoPlayer(container, streamData, {
   function onKeyDown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
+    if (isWatchParty && !hasPlaybackControl) {
+      const blockedKeys = [' ', 'k', 'j', 'l', '.', ',', 'ArrowLeft', 'ArrowRight', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+      if (blockedKeys.includes(e.key)) {
+        showPlayerHUD('<i data-lucide="lock" style="width:14px;height:14px;color:#ef4444"></i> Only host/co-host can control playback');
+        if (window.lucide) window.lucide.createIcons();
+        e.preventDefault();
+        return;
+      }
+    }
+
     if (isEpisodesVisible) {
       if (e.key === 'Escape') {
         isEpisodesVisible = false;
@@ -2995,6 +3065,10 @@ export function createVideoPlayer(container, streamData, {
 
   // ---- Cleanup ----
   return {
+    setPlaybackControl(enabled) {
+      hasPlaybackControl = enabled;
+      applyWatchPartyUIControls();
+    },
     destroy(preserveVideo = false, preserveFullscreen = false) {
       if (diagInterval) {
         clearInterval(diagInterval);

@@ -727,6 +727,56 @@ export async function updateWatchPartyInCloud(partyId, updates) {
   }
 }
 
+export async function lockWatchPartyInCloud(partyId, locked) {
+  await ensureFirebaseInitialized();
+  const { doc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    await updateDoc(ref, { locked });
+  } catch (err) {
+    console.error('[Firebase] Failed to lock/unlock watch party:', err);
+    throw err;
+  }
+}
+
+export async function promoteMemberRoleInCloud(partyId, memberUid, role) {
+  await ensureFirebaseInitialized();
+  const { doc, getDoc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const updatedMembers = (data.members || []).map(m => {
+        if (m.uid === memberUid) {
+          return { ...m, role };
+        }
+        return m;
+      });
+      await updateDoc(ref, { members: updatedMembers });
+    }
+  } catch (err) {
+    console.error('[Firebase] Failed to promote/demote member role:', err);
+    throw err;
+  }
+}
+
+export async function removeMemberFromCloud(partyId, memberUid) {
+  return leaveWatchPartyInCloud(partyId, memberUid);
+}
+
+export async function deleteChatMessageInCloud(partyId, messageId) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId, 'messages', messageId);
+    await deleteDoc(ref);
+  } catch (err) {
+    console.error('[Firebase] Failed to delete chat message:', err);
+    throw err;
+  }
+}
+
 export async function joinWatchPartyInCloud(partyId, member) {
   await ensureFirebaseInitialized();
   const { doc, getDoc, updateDoc } = firestoreExports;

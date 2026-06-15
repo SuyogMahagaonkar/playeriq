@@ -11,7 +11,11 @@ import {
   leaveWatchPartyInCloud,
   subscribeToWatchParty,
   sendChatMessageInCloud,
-  subscribeToChatMessages
+  subscribeToChatMessages,
+  lockWatchPartyInCloud,
+  promoteMemberRoleInCloud,
+  removeMemberFromCloud,
+  deleteChatMessageInCloud
 } from '../services/firebase.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { navigate } from '../services/router.js';
@@ -59,6 +63,20 @@ export async function renderWatchPartyJoinPage({ params, container }) {
         </div>
       `;
       return;
+    }
+
+    if (party.locked === true) {
+      const isAlreadyMember = (party.members || []).some(m => m.uid === user.uid);
+      if (!isAlreadyMember) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-title">Room Locked</div>
+            <div class="empty-state-text">This watch party has been locked by the host. New participants cannot join.</div>
+            <button class="login-submit-btn" style="margin-top:20px; width:auto; padding:10px 24px;" onclick="window.location.hash='#/'">Go to Home</button>
+          </div>
+        `;
+        return;
+      }
     }
 
     const member = {
@@ -125,14 +143,39 @@ export async function renderWatchPartyPage({ params, container }) {
 
         <div class="party-sidebar-content">
           <!-- Room Title -->
-          <div class="party-room-header">
-            <h2 id="party-media-title">Watch Together</h2>
-            <div class="party-room-id-tag">Room ID: ${partyId}</div>
+          <div class="party-room-header" style="position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h2 id="party-media-title" style="flex:1; margin-right:8px;">Watch Together</h2>
+              <button class="party-exit-btn" id="party-exit-btn" title="Leave Watch Party" aria-label="Leave Watch Party">
+                <i data-lucide="log-out" style="width:16px; height:16px;"></i>
+              </button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
+              <div class="party-room-id-tag">Room ID: ${partyId}</div>
+              <div id="room-lock-control-wrapper"></div>
+            </div>
           </div>
 
           <!-- Active Members List -->
           <div class="party-members-block">
-            <div class="party-section-label">Active Members</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div class="party-section-label" style="margin:0;">Active Members</div>
+              <button class="party-invite-toggle-btn" id="party-invite-toggle-btn" title="Invite Friends" aria-label="Invite Friends">
+                <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
+              </button>
+            </div>
+
+            <!-- Invite Drawer -->
+            <div class="party-invite-drawer collapsed" id="party-invite-drawer">
+              <div style="display:flex; gap:6px; margin-top:4px; margin-bottom:12px;">
+                <input type="email" placeholder="friend@example.com" class="party-chat-input" id="sidebar-invite-email" style="padding:6px 10px; font-size:12px; height:32px; box-sizing:border-box;" />
+                <button class="party-chat-send-btn" id="sidebar-send-invite-btn" style="width:32px; height:32px; flex-shrink:0;" aria-label="Send Invite">
+                  <i data-lucide="mail" style="width:14px; height:14px;"></i>
+                </button>
+              </div>
+              <div id="sidebar-invite-status" style="font-size:11px; display:none; margin-bottom:8px;"></div>
+            </div>
+
             <div class="party-members-list" id="party-members-list">
               <!-- Rendered dynamically -->
             </div>
@@ -147,18 +190,30 @@ export async function renderWatchPartyPage({ params, container }) {
           </div>
 
           <!-- Chat input and reactions -->
-          <div class="party-chat-input-area">
+          <div class="party-chat-input-area" style="position:relative;">
             <!-- Default Emoji Reactions Row -->
             <div class="party-reactions-row" id="party-reactions-row">
               ${REACTION_EMOJIS.map(emoji => `<button class="reaction-emoji-btn" data-emoji="${emoji}">${emoji}</button>`).join('')}
             </div>
 
             <!-- Input Box -->
-            <form class="party-chat-form" id="party-chat-form">
-              <input type="text" placeholder="Type a message..." class="party-chat-input" id="party-chat-input" required autocomplete="off" />
+            <form class="party-chat-form" id="party-chat-form" style="position:relative;">
+              <button type="button" class="party-gif-toggle-btn" id="party-gif-toggle-btn" aria-label="Insert GIF">
+                GIF
+              </button>
+              <input type="text" placeholder="Type a message..." class="party-chat-input" id="party-chat-input" required autocomplete="off" style="padding-left:46px;" />
               <button type="submit" class="party-chat-send-btn" aria-label="Send message">
                 <i data-lucide="send" style="width:16px; height:16px;"></i>
               </button>
+
+              <!-- GIF Popover Panel -->
+              <div class="party-gif-panel hidden" id="party-gif-panel">
+                <div class="gif-panel-header">
+                  <input type="text" placeholder="Search GIPHY..." class="gif-search-input" id="gif-search-input" />
+                </div>
+                <div class="gif-results-grid" id="gif-results-grid"></div>
+                <div class="gif-attribution">Powered by GIPHY</div>
+              </div>
             </form>
           </div>
         </div>
@@ -221,6 +276,11 @@ export async function renderWatchPartyPage({ params, container }) {
     }
 
     isHost = partyData.hostId === user.uid;
+    let currentUserRole = isHost ? 'host' : 'guest';
+    let hasPlaybackControl = isHost;
+    let hostDisconnectCountdown = 30;
+    let countdownInterval = null;
+
     const displayNameStr = partyData.title + (partyData.type === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
     mediaTitleEl.textContent = displayNameStr;
 
@@ -271,9 +331,11 @@ export async function renderWatchPartyPage({ params, container }) {
     videoWrapper.innerHTML = '';
     activePlayer = createVideoPlayer(videoWrapper, streamData, {
       startTime: partyData.currentTime || 0,
+      isWatchParty: true,
+      hasPlaybackControl: hasPlaybackControl,
       onEnded: () => {
-        if (isHost) {
-          updateWatchPartyInCloud(partyId, { status: 'paused', currentTime: 0 });
+        if (currentUserRole === 'host' || currentUserRole === 'co-host') {
+          updateWatchPartyInCloud(partyId, { status: 'paused', currentTime: 0, lastUpdatedBy: user.uid });
         }
       }
     });
@@ -284,55 +346,225 @@ export async function renderWatchPartyPage({ params, container }) {
     }
 
     // 4. Synchronization Logic Bindings
-    if (isHost) {
-      // Host: sends playback changes to database
-      const updateHostStateInCloud = async () => {
-        if (!videoEl || isApplyingSync) return;
+    const updateRoomStateInCloud = async (event) => {
+      if (!videoEl || isApplyingSync) return;
+      if (currentUserRole === 'host' || currentUserRole === 'co-host') {
         await updateWatchPartyInCloud(partyId, {
           status: videoEl.paused ? 'paused' : 'playing',
-          currentTime: videoEl.currentTime
+          currentTime: videoEl.currentTime,
+          lastUpdatedBy: user.uid
         });
-      };
+      }
+    };
 
-      videoEl.addEventListener('play', updateHostStateInCloud);
-      videoEl.addEventListener('pause', updateHostStateInCloud);
-      videoEl.addEventListener('seeked', updateHostStateInCloud);
+    videoEl.addEventListener('play', () => updateRoomStateInCloud('play'));
+    videoEl.addEventListener('pause', () => updateRoomStateInCloud('pause'));
+    videoEl.addEventListener('seeked', () => updateRoomStateInCloud('seeked'));
 
-      // Periodic timer to sync current playtime in Firestore while playing
-      syncInterval = setInterval(() => {
-        if (videoEl && !videoEl.paused && !isApplyingSync) {
+    // Periodic timer to sync current playtime in Firestore while playing
+    syncInterval = setInterval(() => {
+      if (videoEl && !videoEl.paused && !isApplyingSync) {
+        if (currentUserRole === 'host' || currentUserRole === 'co-host') {
           updateWatchPartyInCloud(partyId, {
-            currentTime: videoEl.currentTime
+            currentTime: videoEl.currentTime,
+            lastUpdatedBy: user.uid
           });
         }
-      }, 2000);
+      }
+    }, 2000);
 
-    } else {
-      // Guest: timeline updates from Host (Firestore subscriber)
-      // Standard video controls remain usable, but drift check snaps them back to Host
+    function showHostDisconnectOverlay() {
+      const parent = document.getElementById('vp-player') || videoWrapper;
+      if (!parent) return;
+      if (document.getElementById('host-disconnect-overlay')) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'host-disconnect-overlay';
+      overlay.className = 'host-disconnect-overlay';
+      overlay.innerHTML = `
+        <div class="disconnect-card">
+          <div class="disconnect-icon-wrap">
+            <svg class="disconnect-circle" viewBox="0 0 100 100">
+              <circle class="disconnect-circle-bg" cx="50" cy="50" r="44"></circle>
+              <circle id="disconnect-circle-bar" class="disconnect-circle-bar" cx="50" cy="50" r="44" stroke-dasharray="276.4" stroke-dashoffset="0"></circle>
+            </svg>
+            <i data-lucide="wifi-off" class="disconnect-icon"></i>
+          </div>
+          <div class="disconnect-title">Host Disconnected</div>
+          <div class="disconnect-subtitle">Waiting for host to return... <span id="disconnect-timer">30</span>s</div>
+        </div>
+      `;
+      parent.appendChild(overlay);
+      if (window.lucide) window.lucide.createIcons();
+
+      let count = 30;
+      const bar = overlay.querySelector('#disconnect-circle-bar');
+      const timerText = overlay.querySelector('#disconnect-timer');
+
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        count--;
+        if (timerText) timerText.textContent = count;
+        if (bar) {
+          const offset = 276.4 - (count / 30) * 276.4;
+          bar.style.strokeDashoffset = offset;
+        }
+
+        if (count <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          overlay.remove();
+          showToastAlert('Watch party ended: host disconnected.');
+          navigate('/');
+        }
+      }, 1000);
     }
 
     // 5. Subscribe to Room State in Cloud
     const unsubRoom = subscribeToWatchParty(partyId, (partyDoc) => {
-      if (!partyDoc) {
-        // Party deleted
+      if (!partyDoc || partyDoc.status === 'ended') {
+        // Party closed
         showToastAlert('Watch party has been closed by the host.');
         navigate('/');
         return;
       }
 
+      // Check if current user is still in the room members (not kicked)
+      const myMember = (partyDoc.members || []).find(m => m.uid === user.uid);
+      if (!myMember) {
+        showToastAlert('You have been removed from the watch party by the host.');
+        navigate('/');
+        return;
+      }
+
+      // Dynamic role updates
+      currentUserRole = myMember.role;
+      const oldControl = hasPlaybackControl;
+      hasPlaybackControl = currentUserRole === 'host' || currentUserRole === 'co-host';
+      if (activePlayer && oldControl !== hasPlaybackControl) {
+        activePlayer.setPlaybackControl(hasPlaybackControl);
+      }
+
       // Sync members list
       const members = partyDoc.members || [];
-      membersListEl.innerHTML = members.map(m => `
-        <div class="party-member-avatar-wrap" title="${m.name} (${m.role})">
-          <img class="party-member-avatar" src="${m.avatar}" alt="${m.name}" />
-          <span class="party-member-role-dot ${m.role}"></span>
-          <div class="party-member-tooltip">${m.name} (${m.role})</div>
-        </div>
-      `).join('');
+      membersListEl._latestMembers = members; // cache for exit modal
+      membersListEl.innerHTML = members.map(m => {
+        const isMe = m.uid === user.uid;
+        let actionsHtml = '';
+        if (!isMe) {
+          if (currentUserRole === 'host') {
+            actionsHtml = `
+              <div class="party-member-actions">
+                <button class="member-action-btn promote" data-uid="${m.uid}" data-role="${m.role}">
+                  ${m.role === 'co-host' ? 'Demote Guest' : 'Promote Co-host'}
+                </button>
+                <button class="member-action-btn kick" data-uid="${m.uid}">Kick</button>
+              </div>
+            `;
+          } else if (currentUserRole === 'co-host' && m.role === 'guest') {
+            actionsHtml = `
+              <div class="party-member-actions">
+                <button class="member-action-btn kick" data-uid="${m.uid}">Kick</button>
+              </div>
+            `;
+          }
+        }
+        return `
+          <div class="party-member-item" id="member-item-${m.uid}">
+            <div class="party-member-avatar-wrap" title="${m.name} (${m.role})">
+              <img class="party-member-avatar" src="${m.avatar}" alt="${m.name}" />
+              <span class="party-member-role-dot ${m.role}"></span>
+              <div class="party-member-tooltip">
+                <div class="tooltip-name">${m.name}</div>
+                <div class="tooltip-role">${m.role}</div>
+                ${actionsHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
 
-      // If Guest, apply Host playback sync updates
-      if (!isHost && videoEl) {
+      // Wire Admin Clicks on updated members list
+      membersListEl.querySelectorAll('.member-action-btn.promote').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const uid = btn.dataset.uid;
+          const currentRole = btn.dataset.role;
+          const nextRole = currentRole === 'co-host' ? 'guest' : 'co-host';
+          try {
+            await promoteMemberRoleInCloud(partyId, uid, nextRole);
+            showToastAlert(nextRole === 'co-host' ? 'Promoted guest to Co-host' : 'Revoked Co-host privileges');
+          } catch(err) {
+            console.error(err);
+          }
+        });
+      });
+
+      membersListEl.querySelectorAll('.member-action-btn.kick').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const uid = btn.dataset.uid;
+          try {
+            await removeMemberFromCloud(partyId, uid);
+            showToastAlert('Kicked guest from room');
+          } catch(err) {
+            console.error(err);
+          }
+        });
+      });
+
+      // Lock toggle button rendering (for Host only, passive badge for guests)
+      const lockWrapper = container.querySelector('#room-lock-control-wrapper');
+      if (lockWrapper) {
+        const isLocked = partyDoc.locked === true;
+        if (currentUserRole === 'host') {
+          lockWrapper.innerHTML = `
+            <button class="party-lock-btn ${isLocked ? 'locked' : ''}" id="party-lock-toggle">
+              <i data-lucide="${isLocked ? 'lock' : 'unlock'}" style="width:12px;height:12px;"></i>
+              <span>${isLocked ? 'Locked' : 'Unlocked'}</span>
+            </button>
+          `;
+          const btn = lockWrapper.querySelector('#party-lock-toggle');
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            btn.disabled = true;
+            try {
+              await lockWatchPartyInCloud(partyId, !isLocked);
+              showToastAlert(!isLocked ? 'Watch Together room is now LOCKED.' : 'Watch Together room is now UNLOCKED.');
+            } catch(e) {
+              console.error(e);
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        } else {
+          lockWrapper.innerHTML = `
+            <span class="party-lock-status-badge ${isLocked ? 'locked' : ''}">
+              <i data-lucide="${isLocked ? 'lock' : 'unlock'}" style="width:10px;height:10px;"></i>
+              <span>${isLocked ? 'Locked' : 'Public'}</span>
+            </span>
+          `;
+        }
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      // Check Host presence (grace countdown warning overlay)
+      const isHostActive = members.some(m => m.uid === partyDoc.hostId);
+      const hostWarningEl = document.getElementById('host-disconnect-overlay');
+      if (!isHostActive) {
+        if (!hostWarningEl) {
+          showHostDisconnectOverlay();
+        }
+      } else {
+        if (hostWarningEl) {
+          hostWarningEl.remove();
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }
+
+      // If Guest/Co-host (who is not the event initiator), apply Host playback sync updates
+      if (partyDoc.lastUpdatedBy !== user.uid && videoEl) {
         isApplyingSync = true;
         
         // Pause / Play Sync
@@ -357,17 +589,264 @@ export async function renderWatchPartyPage({ params, container }) {
     const senderName = user.displayName || user.email.split('@')[0] || 'User';
     const senderAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60';
 
-    const sendChatMessage = async (text, type = 'chat', reactionEmoji = null) => {
+    const sendChatMessage = async (text, type = 'chat', reactionEmoji = null, gifUrl = null) => {
       const msgObj = {
         senderId: user.uid,
         senderName,
         senderAvatar,
         text,
         type,
-        reactionEmoji
+        reactionEmoji,
+        gifUrl
       };
       await sendChatMessageInCloud(partyId, msgObj);
     };
+
+    // Exit button logic
+    const exitBtn = container.querySelector('#party-exit-btn');
+    if (exitBtn) {
+      exitBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleExitFlow();
+      });
+    }
+
+    function handleExitFlow() {
+      if (currentUserRole === 'host') {
+        showHostExitModal();
+      } else {
+        try { leaveWatchPartyInCloud(partyId, user.uid); } catch(e){}
+        navigate('/');
+      }
+    }
+
+    function showHostExitModal() {
+      const modal = document.createElement('div');
+      modal.className = 'detail-modal';
+      modal.style.cssText = `
+        display: flex;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(12px);
+        z-index: 1010;
+        justify-content: center; align-items: center;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+      `;
+
+      const otherMembers = (membersListEl._latestMembers || []).filter(m => m.uid !== user.uid);
+      let transferHtml = '';
+      if (otherMembers.length > 0) {
+        transferHtml = `
+          <div style="margin-top:20px; text-align:left;">
+            <label style="font-size:12px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Transfer Host Role</label>
+            <select id="transfer-host-select" class="login-input" style="background: rgba(255,255,255,0.03); color: #fff; margin-top:8px; display:block; width:100%;">
+              ${otherMembers.map(m => `<option value="${m.uid}" style="background:#141419; color:#fff;">${m.name} (${m.role})</option>`).join('')}
+            </select>
+            <button id="exit-transfer-btn" class="login-submit-btn" style="margin-top:12px; background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent); font-weight:600; padding:8px 0; font-size:13px; height:auto; display:block; width:100%;">
+              Transfer & Leave
+            </button>
+          </div>
+        `;
+      }
+
+      modal.innerHTML = `
+        <div style="background: rgba(20, 20, 25, 0.85); border: 1.5px solid rgba(255,255,255,0.08); backdrop-filter: blur(20px); max-width: 420px; width: 100%; border-radius: 16px; padding: 28px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align:center;">
+          <h2 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; font-weight: 800; color: #fff;">Exit Watch Party</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">You are the host. Ending the party will close the room for everyone.</p>
+          
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <button id="exit-end-btn" class="login-submit-btn" style="background:#ef4444; font-weight:700; font-size:14px; padding:10px 0; height:auto;">
+              End Party for Everyone
+            </button>
+            ${transferHtml}
+            <button id="exit-cancel-btn" class="login-input" style="background:rgba(255,255,255,0.02); border:1.5px solid var(--border-color); cursor:pointer; font-weight:600; padding:10px 0; height:auto; margin-top:8px;">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('#exit-cancel-btn').addEventListener('click', () => modal.remove());
+      
+      modal.querySelector('#exit-end-btn').addEventListener('click', async () => {
+        modal.remove();
+        try {
+          await updateWatchPartyInCloud(partyId, { status: 'ended' });
+          await leaveWatchPartyInCloud(partyId, user.uid);
+        } catch(e){}
+        navigate('/');
+      });
+
+      const transferBtn = modal.querySelector('#exit-transfer-btn');
+      if (transferBtn) {
+        transferBtn.addEventListener('click', async () => {
+          const targetUid = modal.querySelector('#transfer-host-select').value;
+          modal.remove();
+          try {
+            await promoteMemberRoleInCloud(partyId, targetUid, 'host');
+            await updateWatchPartyInCloud(partyId, { hostId: targetUid });
+            await leaveWatchPartyInCloud(partyId, user.uid);
+          } catch(e){}
+          navigate('/');
+        });
+      }
+    }
+
+    // Invite Friends Drawer logic
+    const inviteToggleBtn = container.querySelector('#party-invite-toggle-btn');
+    const inviteDrawer = container.querySelector('#party-invite-drawer');
+    const inviteStatus = container.querySelector('#sidebar-invite-status');
+    const inviteEmailInput = container.querySelector('#sidebar-invite-email');
+    const sendInviteBtn = container.querySelector('#sidebar-send-invite-btn');
+
+    if (inviteToggleBtn) {
+      inviteToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        inviteDrawer.classList.toggle('collapsed');
+      });
+    }
+
+    if (sendInviteBtn) {
+      sendInviteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const email = inviteEmailInput.value.trim();
+        if (!email) return;
+
+        sendInviteBtn.disabled = true;
+        inviteStatus.style.display = 'block';
+        inviteStatus.style.color = 'var(--text-muted)';
+        inviteStatus.textContent = 'Sending...';
+
+        try {
+          const response = await fetch(`${NODE_PROXY}/api/email/send-invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              hostName: user.displayName || user.email.split('@')[0] || 'Host',
+              inviteeEmail: email,
+              title: displayNameStr,
+              partyId,
+              mediaType: partyData.type,
+              posterPath: partyData.posterPath
+            })
+          });
+
+          if (response.ok) {
+            inviteStatus.style.color = '#10b981';
+            inviteStatus.textContent = 'Invite sent!';
+            inviteEmailInput.value = '';
+            setTimeout(() => { inviteStatus.style.display = 'none'; }, 3000);
+          } else {
+            const resData = await response.json();
+            throw new Error(resData.error || 'Failed to send invite.');
+          }
+        } catch(err) {
+          inviteStatus.style.color = '#fbbf24';
+          inviteStatus.textContent = 'Fallback: logged to console.';
+          console.log('\n  [Mock Invite Link]:', `https://playeriq.suyogmahagaonkar.me/#/watch-party/join/${partyId}\n`);
+        } finally {
+          sendInviteBtn.disabled = false;
+        }
+      });
+    }
+
+    // GIF Panel logic
+    const gifToggleBtn = container.querySelector('#party-gif-toggle-btn');
+    const gifPanel = container.querySelector('#party-gif-panel');
+    const gifSearchInput = container.querySelector('#gif-search-input');
+    const gifResultsGrid = container.querySelector('#gif-results-grid');
+
+    if (gifToggleBtn) {
+      gifToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gifPanel.classList.toggle('hidden');
+        if (!gifPanel.classList.contains('hidden')) {
+          loadTrendingGIFs();
+        }
+      });
+    }
+
+    // Close GIF panel when clicking outside
+    document.addEventListener('click', (e) => {
+      if (gifPanel && !gifPanel.classList.contains('hidden') && !gifPanel.contains(e.target) && e.target !== gifToggleBtn) {
+        gifPanel.classList.add('hidden');
+      }
+    });
+
+    async function loadTrendingGIFs() {
+      gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">Loading...</div>';
+      try {
+        const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=15&rating=g`);
+        const data = await res.json();
+        renderGIFs(data.data);
+      } catch(e) {
+        gifResultsGrid.innerHTML = '<div style="color:#ef4444; font-size:11px; padding:12px; text-align:center;">Failed to load trending.</div>';
+      }
+    }
+
+    let debounceTimer = null;
+    if (gifSearchInput) {
+      gifSearchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const query = gifSearchInput.value.trim();
+          if (query) {
+            searchGIFs(query);
+          } else {
+            loadTrendingGIFs();
+          }
+        }, 300); // 300ms debounce
+      });
+      gifSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          clearTimeout(debounceTimer);
+          const query = gifSearchInput.value.trim();
+          if (query) searchGIFs(query);
+        }
+      });
+    }
+
+    async function searchGIFs(query) {
+      gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">Searching...</div>';
+      try {
+        const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=dc6zaTOxFJmzC&q=${encodeURIComponent(query)}&limit=15&rating=g`);
+        const data = await res.json();
+        renderGIFs(data.data);
+      } catch(e) {
+        gifResultsGrid.innerHTML = '<div style="color:#ef4444; font-size:11px; padding:12px; text-align:center;">Failed to search.</div>';
+      }
+    }
+
+    function renderGIFs(gifs) {
+      if (!gifs || gifs.length === 0) {
+        gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">No GIFs found.</div>';
+        return;
+      }
+
+      gifResultsGrid.innerHTML = gifs.map(g => `
+        <img class="gif-grid-thumb" src="${g.images.fixed_width_small.url}" data-full-url="${g.images.fixed_height.url}" alt="${g.title}" />
+      `).join('');
+
+      gifResultsGrid.querySelectorAll('.gif-grid-thumb').forEach(img => {
+        img.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const fullUrl = img.dataset.fullUrl;
+          gifPanel.classList.add('hidden');
+          if (gifSearchInput) gifSearchInput.value = '';
+          try {
+            await sendChatMessage('', 'gif', null, fullUrl);
+          } catch(err) {
+            console.error(err);
+          }
+        });
+      });
+    }
 
     // Form submit
     chatForm.addEventListener('submit', async (e) => {
@@ -405,12 +884,37 @@ export async function renderWatchPartyPage({ params, container }) {
             </div>
           `;
         }
+
         const isSelf = m.senderId === user.uid;
+        const deleteBtn = (currentUserRole === 'host' || currentUserRole === 'co-host') 
+          ? `<button class="chat-delete-btn" data-msg-id="${m.id}" title="Delete Message"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>`
+          : '';
+
+        if (m.type === 'gif') {
+          return `
+            <div class="chat-message ${isSelf ? 'self' : ''}">
+              <img class="chat-msg-avatar" src="${m.senderAvatar}" alt="" />
+              <div class="chat-msg-body">
+                <div class="chat-msg-sender-name" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>${m.senderName}</span>
+                  ${deleteBtn}
+                </div>
+                <div class="chat-msg-text gif" style="padding:4px; background:transparent; border:none; display:block;">
+                  <img src="${m.gifUrl}" alt="GIF" style="border-radius:8px; max-width:180px; display:block; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" />
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
         return `
           <div class="chat-message ${isSelf ? 'self' : ''}">
             <img class="chat-msg-avatar" src="${m.senderAvatar}" alt="" />
             <div class="chat-msg-body">
-              <div class="chat-msg-sender-name">${m.senderName}</div>
+              <div class="chat-msg-sender-name" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>${m.senderName}</span>
+                ${deleteBtn}
+              </div>
               <div class="chat-msg-text">${m.text}</div>
             </div>
           </div>
@@ -419,6 +923,21 @@ export async function renderWatchPartyPage({ params, container }) {
 
       // Auto scroll chat to bottom
       chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+      if (window.lucide) window.lucide.createIcons();
+
+      // Wire Chat delete clicks
+      chatMessagesEl.querySelectorAll('.chat-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const msgId = btn.dataset.msgId;
+          try {
+            await deleteChatMessageInCloud(partyId, msgId);
+          } catch(err) {
+            console.error(err);
+          }
+        });
+      });
 
       // Handle floating reactions spawn on latest message
       if (messages.length > 0) {
@@ -434,6 +953,7 @@ export async function renderWatchPartyPage({ params, container }) {
     return () => {
       console.log('[Room Cleanup] Cleaning up WatchTogether subscriptions and resources...');
       if (syncInterval) clearInterval(syncInterval);
+      if (countdownInterval) clearInterval(countdownInterval);
       if (unsubRoom) unsubRoom();
       if (unsubChat) unsubChat();
       if (activePlayer) activePlayer.destroy();
