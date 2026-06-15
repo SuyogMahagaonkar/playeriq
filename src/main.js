@@ -354,6 +354,15 @@ function initApp() {
   let partyInviteUnsub = null;
   const shownInvites = new Set();
 
+  // Friend System Notifications & Listeners States
+  let friendRequestsUnsub = null;
+  let friendsListUnsub = null;
+  const friendStatusUnsubs = {}; // uid -> unsubscribe function
+  const shownFriendRequests = new Set();
+  const shownActiveParties = new Set();
+  const friendActiveParties = {}; // uid -> last activePartyId
+  const friendPresences = {}; // uid -> latest presence status
+
   function showPartyInviteBanner(inv, userId) {
     if (shownInvites.has(inv.id)) return;
     shownInvites.add(inv.id);
@@ -424,6 +433,122 @@ function initApp() {
     }, 10000);
   }
 
+  function showFriendRequestBanner(req, userId) {
+    if (shownFriendRequests.has(req.senderUid)) return;
+    shownFriendRequests.add(req.senderUid);
+
+    let container = document.getElementById('piq-top-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'piq-top-toast-container';
+      container.className = 'piq-top-toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'piq-top-toast show';
+
+    toast.innerHTML = `
+      <img src="${req.senderAvatar}" alt="" style="width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0; border: 1.5px solid var(--accent, #a855f7);" />
+      <div style="flex:1; min-width:0; text-align:left;">
+        <div style="font-weight:700; font-size:13px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Friend Request</div>
+        <div style="font-size:12px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><strong>${req.senderName}</strong> wants to be friends!</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="banner-accept-btn" style="background:var(--accent, #a855f7); border:none; color:#fff; font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Accept</button>
+        <button class="banner-decline-btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Decline</button>
+      </div>
+    `;
+
+    container.appendChild(toast);
+
+    const acceptBtn = toast.querySelector('.banner-accept-btn');
+    const declineBtn = toast.querySelector('.banner-decline-btn');
+
+    const cleanUp = () => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 550);
+    };
+
+    acceptBtn.addEventListener('click', async () => {
+      cleanUp();
+      try {
+        const { acceptFriendRequestInCloud } = await import('./services/firebase.js');
+        await acceptFriendRequestInCloud(userId, req.senderUid);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    declineBtn.addEventListener('click', async () => {
+      cleanUp();
+      try {
+        const { declineFriendRequestInCloud } = await import('./services/firebase.js');
+        await declineFriendRequestInCloud(userId, req.senderUid);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Auto dismiss after 10 seconds if not acted upon
+    setTimeout(() => {
+      if (toast.parentNode) {
+        cleanUp();
+      }
+    }, 10000);
+  }
+
+  function showActivePartyBanner(friendName, friendAvatar, partyId, mediaTitle) {
+    let container = document.getElementById('piq-top-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'piq-top-toast-container';
+      container.className = 'piq-top-toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'piq-top-toast show';
+
+    toast.innerHTML = `
+      <img src="${friendAvatar}" alt="" style="width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0; border: 1.5px solid var(--success, #10b981);" />
+      <div style="flex:1; min-width:0; text-align:left;">
+        <div style="font-weight:700; font-size:13px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${friendName} started a Party!</div>
+        <div style="font-size:12px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Watching: ${mediaTitle || 'Movie/Show'}</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="banner-join-btn" style="background:var(--success, #10b981); border:none; color:#fff; font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Join</button>
+        <button class="banner-dismiss-btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Dismiss</button>
+      </div>
+    `;
+
+    container.appendChild(toast);
+
+    const joinBtn = toast.querySelector('.banner-join-btn');
+    const dismissBtn = toast.querySelector('.banner-dismiss-btn');
+
+    const cleanUp = () => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 550);
+    };
+
+    joinBtn.addEventListener('click', () => {
+      cleanUp();
+      window.location.hash = `#/watch-party/join/${partyId}`;
+    });
+
+    dismissBtn.addEventListener('click', () => {
+      cleanUp();
+    });
+
+    // Auto dismiss after 10 seconds if not acted upon
+    setTimeout(() => {
+      if (toast.parentNode) {
+        cleanUp();
+      }
+    }, 10000);
+  }
+
   window.addEventListener('beforeunload', () => {
     const user = getUser();
     if (user) {
@@ -451,6 +576,33 @@ function initApp() {
         partyInviteUnsub();
         partyInviteUnsub = null;
       }
+      
+      // Clean up Friend listeners
+      if (friendRequestsUnsub) {
+        friendRequestsUnsub();
+        friendRequestsUnsub = null;
+      }
+      if (friendsListUnsub) {
+        friendsListUnsub();
+        friendsListUnsub = null;
+      }
+      Object.keys(friendStatusUnsubs).forEach(uid => {
+        if (typeof friendStatusUnsubs[uid] === 'function') {
+          friendStatusUnsubs[uid]();
+        }
+        delete friendStatusUnsubs[uid];
+      });
+      shownFriendRequests.clear();
+      shownActiveParties.clear();
+      Object.keys(friendActiveParties).forEach(uid => delete friendActiveParties[uid]);
+      Object.keys(friendPresences).forEach(uid => delete friendPresences[uid]);
+      
+      // Clear navbar globals
+      import('./components/Navbar.js').then(({ setGlobalFriendRequests, setGlobalActiveFriendParties }) => {
+        setGlobalFriendRequests([]);
+        setGlobalActiveFriendParties([]);
+      });
+
       // User is logged out: show login overlay
       loginOverlayContainer = document.createElement('div');
       loginOverlayContainer.id = 'login-overlay';
@@ -462,7 +614,13 @@ function initApp() {
       });
     } else {
       // Set presence online and listen for invites
-      import('./services/firebase.js').then(({ subscribeToPartyNotifications, updateUserStatusInCloud }) => {
+      import('./services/firebase.js').then(({ 
+        subscribeToPartyNotifications, 
+        updateUserStatusInCloud,
+        subscribeToFriendRequests,
+        subscribeToFriendsList,
+        subscribeToFriendStatus
+      }) => {
         updateUserStatusInCloud(user.uid, 'online');
         
         if (partyInviteUnsub) partyInviteUnsub();
@@ -472,6 +630,104 @@ function initApp() {
               showPartyInviteBanner(inv, user.uid);
             });
           }
+        });
+
+        // 1. Friend Requests Subscription
+        if (friendRequestsUnsub) friendRequestsUnsub();
+        let isInitialRequestLoad = true;
+        friendRequestsUnsub = subscribeToFriendRequests(user.uid, (requests) => {
+          // Sync with Navbar notifications drawer
+          import('./components/Navbar.js').then(({ setGlobalFriendRequests }) => {
+            setGlobalFriendRequests(requests);
+          });
+
+          if (Array.isArray(requests)) {
+            if (isInitialRequestLoad) {
+              // Add all pre-existing request senders to shownFriendRequests to avoid toast storms on load
+              requests.forEach(req => shownFriendRequests.add(req.senderUid));
+              isInitialRequestLoad = false;
+            } else {
+              // Toast new requests
+              requests.forEach(req => {
+                if (!shownFriendRequests.has(req.senderUid)) {
+                  showFriendRequestBanner(req, user.uid);
+                }
+              });
+            }
+          }
+        });
+
+        // 2. Friends List & Statuses Subscription
+        if (friendsListUnsub) friendsListUnsub();
+        friendsListUnsub = subscribeToFriendsList(user.uid, (friends) => {
+          if (!Array.isArray(friends)) return;
+
+          const activeFriendUids = new Set(friends.map(f => f.uid));
+
+          // Clean up unsubscribed friends
+          Object.keys(friendStatusUnsubs).forEach(uid => {
+            if (!activeFriendUids.has(uid)) {
+              if (typeof friendStatusUnsubs[uid] === 'function') {
+                friendStatusUnsubs[uid]();
+              }
+              delete friendStatusUnsubs[uid];
+              delete friendActiveParties[uid];
+              delete friendPresences[uid];
+            }
+          });
+
+          // Helper to rebuild active friend parties list for Navbar Drawer
+          const updateNavbarActiveParties = () => {
+            const activePartiesList = [];
+            const partySeen = new Set();
+            friends.forEach(f => {
+              const pres = friendPresences[f.uid];
+              if (pres && pres.activePartyId) {
+                if (!partySeen.has(pres.activePartyId)) {
+                  partySeen.add(pres.activePartyId);
+                  activePartiesList.push({
+                    friendUid: f.uid,
+                    friendName: f.name,
+                    friendAvatar: f.avatar,
+                    partyId: pres.activePartyId,
+                    mediaTitle: pres.activeWatchMedia
+                  });
+                }
+              }
+            });
+            import('./components/Navbar.js').then(({ setGlobalActiveFriendParties }) => {
+              setGlobalActiveFriendParties(activePartiesList);
+            });
+          };
+
+          // Subscribe to status updates for new friends
+          friends.forEach(friend => {
+            if (!friendStatusUnsubs[friend.uid]) {
+              let isFirstStatusCall = true;
+              friendStatusUnsubs[friend.uid] = subscribeToFriendStatus(friend.uid, (status) => {
+                friendPresences[friend.uid] = status;
+
+                const newPartyId = status?.activePartyId || null;
+                const oldPartyId = friendActiveParties[friend.uid] || null;
+
+                if (isFirstStatusCall) {
+                  isFirstStatusCall = false;
+                  friendActiveParties[friend.uid] = newPartyId;
+                } else {
+                  if (newPartyId && newPartyId !== oldPartyId && !shownActiveParties.has(newPartyId)) {
+                    shownActiveParties.add(newPartyId);
+                    showActivePartyBanner(friend.name, friend.avatar, newPartyId, status.activeWatchMedia);
+                  }
+                  friendActiveParties[friend.uid] = newPartyId;
+                }
+
+                updateNavbarActiveParties();
+              });
+            }
+          });
+
+          // Rebuild immediately when friend list changes
+          updateNavbarActiveParties();
         });
       });
 

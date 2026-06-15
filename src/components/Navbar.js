@@ -611,6 +611,22 @@ function renderSuggestions(results, container) {
 
 // ---- Notifications Management Helpers ----
 
+// Shared state for friend requests and active friend watch parties
+let currentFriendRequests = [];
+let currentActiveFriendParties = [];
+
+export function setGlobalFriendRequests(requests) {
+  currentFriendRequests = requests || [];
+  refreshNotifBadge();
+  renderNotificationsDropdown();
+}
+
+export function setGlobalActiveFriendParties(parties) {
+  currentActiveFriendParties = parties || [];
+  refreshNotifBadge();
+  renderNotificationsDropdown();
+}
+
 export function refreshNotifBadge() {
   const btn = document.getElementById('navbar-notif');
   if (!btn) return;
@@ -623,7 +639,9 @@ export function refreshNotifBadge() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const unreadCount = Object.values(alerts).filter(it => it.airDate && it.airDate <= todayStr && !it.read).length;
 
-  if (unreadCount > 0) {
+  const totalNotifs = unreadCount + currentFriendRequests.length + currentActiveFriendParties.length;
+
+  if (totalNotifs > 0) {
     const badge = document.createElement('span');
     badge.className = 'notif-badge';
     btn.appendChild(badge);
@@ -664,7 +682,7 @@ function renderNotificationsDropdown() {
   const items = Object.values(alerts);
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  if (items.length === 0) {
+  if (items.length === 0 && currentFriendRequests.length === 0 && currentActiveFriendParties.length === 0) {
     listEl.innerHTML = `
       <div class="notif-empty-state">
         <i data-lucide="bell-off" style="width: 32px; height: 32px;"></i>
@@ -690,6 +708,50 @@ function renderNotificationsDropdown() {
   upcoming.sort((a, b) => a.airDate.localeCompare(b.airDate));
 
   let html = '';
+
+  // 1. Friend Requests (High Priority)
+  if (currentFriendRequests.length > 0) {
+    html += currentFriendRequests.map(req => {
+      const avatarUrl = req.senderAvatar;
+      return `
+        <div class="notif-item friend-request-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+          <img src="${avatarUrl}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid var(--accent, #a855f7);" />
+          <div class="notif-item-content" style="flex: 1; min-width: 0;">
+            <div class="notif-item-title" style="font-size: 12px; color: #fff; line-height: 1.4; margin-bottom: 6px;">
+              <strong>${req.senderName}</strong> sent you a friend request.
+            </div>
+            <div class="notif-actions" style="display: flex; gap: 6px;">
+              <button class="notif-btn-accept" data-uid="${req.senderUid}" style="background: var(--accent, #a855f7); border: none; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: filter 0.2s;">Accept</button>
+              <button class="notif-btn-decline" data-uid="${req.senderUid}" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted, #8e9297); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.2s;">Decline</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 2. Active Friend Watch Parties (High Priority)
+  if (currentActiveFriendParties.length > 0) {
+    html += currentActiveFriendParties.map(party => {
+      const avatarUrl = party.friendAvatar;
+      return `
+        <div class="notif-item active-party-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+          <img src="${avatarUrl}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid var(--success, #10b981);" />
+          <div class="notif-item-content" style="flex: 1; min-width: 0;">
+            <div class="notif-item-title" style="font-size: 12px; color: #fff; line-height: 1.4;">
+              <strong>${party.friendName}</strong> is hosting a Watch Party!
+            </div>
+            <div class="notif-item-meta" style="font-size: 11px; color: var(--text-secondary, #b9bbbe); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Watching: ${party.mediaTitle || 'Movie/Show'}
+            </div>
+            <div class="notif-actions" style="display: flex; gap: 6px;">
+              <button class="notif-btn-join" data-party-id="${party.partyId}" style="background: var(--success, #10b981); border: none; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: filter 0.2s;">Join Room</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   if (released.length > 0) {
     html += released.map(it => {
@@ -736,14 +798,65 @@ function renderNotificationsDropdown() {
   listEl.innerHTML = html;
   if (window.lucide) window.lucide.createIcons();
 
-  // Click listeners to navigate
-  listEl.querySelectorAll('.notif-item').forEach(item => {
+  // Click listeners to navigate for standard notifications
+  listEl.querySelectorAll('.notif-item:not(.friend-request-item):not(.active-party-item)').forEach(item => {
     item.addEventListener('click', () => {
       const route = item.dataset.route;
       if (route) {
         window.location.hash = route;
         toggleNotifDropdown(false);
       }
+    });
+  });
+
+  // Friend Request Action Listeners
+  listEl.querySelectorAll('.notif-btn-accept').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const senderUid = btn.dataset.uid;
+      const user = getUser();
+      if (user) {
+        try {
+          btn.disabled = true;
+          btn.textContent = 'Accepting...';
+          const { acceptFriendRequestInCloud } = await import('../services/firebase.js');
+          await acceptFriendRequestInCloud(user.uid, senderUid);
+        } catch (err) {
+          console.error(err);
+          btn.disabled = false;
+          btn.textContent = 'Accept';
+        }
+      }
+    });
+  });
+
+  listEl.querySelectorAll('.notif-btn-decline').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const senderUid = btn.dataset.uid;
+      const user = getUser();
+      if (user) {
+        try {
+          btn.disabled = true;
+          btn.textContent = 'Declining...';
+          const { declineFriendRequestInCloud } = await import('../services/firebase.js');
+          await declineFriendRequestInCloud(user.uid, senderUid);
+        } catch (err) {
+          console.error(err);
+          btn.disabled = false;
+          btn.textContent = 'Decline';
+        }
+      }
+    });
+  });
+
+  // Watch Party Action Listeners
+  listEl.querySelectorAll('.notif-btn-join').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const partyId = btn.dataset.partyId;
+      window.location.hash = `#/watch-party/join/${partyId}`;
+      toggleNotifDropdown(false);
     });
   });
 }
