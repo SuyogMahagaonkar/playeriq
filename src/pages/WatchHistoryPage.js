@@ -6,6 +6,7 @@ import { getUser, login, onUserChange, waitAuthReady } from '../services/auth.js
 import { getWatchHistory, removeFromHistory } from '../services/auth.js';
 import { navigate } from '../services/router.js';
 import { createFooter } from '../components/Footer.js';
+import { showCustomConfirm } from '../components/CustomDialog.js';
 
 export async function renderWatchHistoryPage({ container }) {
   container.innerHTML = renderShell('loading');
@@ -253,7 +254,8 @@ function renderPage(container, items, user) {
     // Remove entire collection button
     folder.querySelector('.user-media-remove')?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!confirm(`Remove all watched episodes of "${folder.dataset.title}" from history?`)) return;
+      const confirmed = await showCustomConfirm('Remove Collection', `Remove all watched episodes of "${folder.dataset.title}" from history?`);
+      if (!confirmed) return;
       folder.style.opacity = '0.4';
       folder.style.pointerEvents = 'none';
 
@@ -342,8 +344,9 @@ function renderPage(container, items, user) {
       }
     });
 
-    if (!confirm(`Delete all ${totalItems} selected items from watch history?`)) return;
-
+    const confirmed = await showCustomConfirm('Bulk Delete', `Delete all ${totalItems} selected items from watch history?`);
+    if (!confirmed) return;
+ 
     const btn = container.querySelector('#delete-selected-btn');
     btn.innerHTML = `<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor"/></svg>`;
     btn.disabled = true;
@@ -385,7 +388,8 @@ function renderPage(container, items, user) {
 
   // Clear all history
   container.querySelector('#clear-all-history-btn')?.addEventListener('click', async () => {
-    if (!confirm('Remove your entire watch history? This cannot be undone.')) return;
+    const confirmed = await showCustomConfirm('Clear History', 'Remove your entire watch history? This cannot be undone.');
+    if (!confirmed) return;
     const btn = container.querySelector('#clear-all-history-btn');
     btn.textContent = 'Clearing…';
     btn.disabled = true;
@@ -559,8 +563,9 @@ function openFolderModal(title, episodes) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const docId = btn.dataset.id;
-      if (!confirm('Remove this episode from your watch history?')) return;
-
+      const confirmed = await showCustomConfirm('Remove Episode', 'Remove this episode from your watch history?');
+      if (!confirmed) return;
+ 
       const row = btn.closest('.folder-episode-item');
       
       // Animate row collapse smoothly
@@ -611,8 +616,9 @@ function openFolderModal(title, episodes) {
 
   overlay.querySelector('#folder-clear-all-btn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to remove all ${episodes.length} episodes in this collection from your watch history?`)) return;
-
+    const confirmed = await showCustomConfirm('Remove Collection', `Are you sure you want to remove all ${episodes.length} episodes in this collection from your watch history?`);
+    if (!confirmed) return;
+ 
     overlay.querySelector('.folder-modal').style.opacity = '0.5';
     overlay.querySelector('.folder-modal').style.pointerEvents = 'none';
 

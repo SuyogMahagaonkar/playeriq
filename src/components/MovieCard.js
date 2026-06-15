@@ -5,6 +5,7 @@
 import { img, NODE_PROXY } from '../services/api.js';
 import { getUser } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist } from '../services/firebase.js';
+import { showCustomAlert } from './CustomDialog.js';
 import '../styles/movie-card.css';
 import '../styles/movie-grid.css';
 
@@ -532,7 +533,7 @@ export function attachCardClicks(container) {
           e.stopPropagation();
           e.preventDefault();
           if (!user) {
-            alert('Please sign in to manage your watchlist!');
+            await showCustomAlert('Sign In Required', 'Please sign in to manage your watchlist!');
             return;
           }
           const isAdded = wishlistBtn.classList.contains('in-list');

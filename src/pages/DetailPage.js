@@ -9,6 +9,7 @@ import { getUser, getWatchHistory } from '../services/auth.js';
 import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud, getInitialsAvatar, subscribeToFriendsList } from '../services/firebase.js';
 import { initFriendAutocomplete } from '../components/FriendAutocomplete.js';
 import { DownloadManager } from '../services/download.js';
+import { showCustomConfirm, showCustomAlert } from '../components/CustomDialog.js';
 import '../styles/detail.css';
 
 function trackTelemetryEvent(eventName, eventData = {}) {
@@ -131,7 +132,7 @@ async function setupDownloadButton(btn, downloadId, type, title, posterPath) {
       }
     } else if (curr.status === 'COMPLETED') {
       // Show confirmation dialog/action sheet to delete
-      const confirmDelete = confirm(`Remove "${title}" from downloads?`);
+      const confirmDelete = await showCustomConfirm('Remove Download', `Remove "${title}" from downloads?`);
       if (confirmDelete) {
         await DownloadManager.remove(downloadId);
         updateButtonUI('IDLE', 0);
@@ -661,12 +662,12 @@ export async function renderDetailPage({ params, container }) {
     }
 
     // Share button
-    document.getElementById('share-btn')?.addEventListener('click', () => {
+    document.getElementById('share-btn')?.addEventListener('click', async () => {
       if (navigator.share) {
         navigator.share({ title, url: window.location.href });
       } else {
-        navigator.clipboard.writeText(window.location.href);
-        alert('Link copied to clipboard!');
+        await navigator.clipboard.writeText(window.location.href);
+        await showCustomAlert('Link Copied', 'Link copied to clipboard!');
       }
     });
 

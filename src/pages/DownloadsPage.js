@@ -6,6 +6,7 @@ import { DownloadManager } from '../services/download.js';
 import { isOnline } from '../services/connectivity.js';
 import { Capacitor } from '@capacitor/core';
 import { updateSidebarActive } from '../components/Sidebar.js';
+import { showCustomConfirm } from '../components/CustomDialog.js';
 import '../styles/downloads.css';
 
 // ---- Circumference for a 23px-radius progress ring ----
@@ -298,7 +299,8 @@ export function renderDownloadsPage(ctx) {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const { id, title } = btn.dataset;
-        if (confirm(`Remove "${title}" from downloads?`)) {
+        const confirmed = await showCustomConfirm('Remove Download', `Remove "${title}" from downloads?`);
+        if (confirmed) {
           await DownloadManager.remove(id);
           renderList();
           renderStorageBar();

@@ -6,6 +6,7 @@ import { getUser, login, logout, waitAuthReady, exportLibrary, importLibrary, ap
 import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveGlobalConfig, getInitialsAvatar } from '../services/firebase.js';
 import { navigate, getCurrentPath } from '../services/router.js';
 import { refreshSidebarNav } from './Sidebar.js';
+import { showCustomConfirm, showCustomAlert } from './CustomDialog.js';
 
 let parentalPin = '';
 
@@ -420,7 +421,8 @@ export async function openSettingsDrawer() {
 
   // Watch history clear
   drawer.querySelector('#drawer-settings-clear-history')?.addEventListener('click', async () => {
-    if (!confirm('Delete your entire watch history? This cannot be undone.')) return;
+    const confirmed = await showCustomConfirm('Clear History', 'Delete your entire watch history? This cannot be undone.');
+    if (!confirmed) return;
     await clearAllWatchHistory(user.uid);
     showToast('✓ Watch history cleared');
   });
@@ -473,7 +475,7 @@ export async function openSettingsDrawer() {
       try {
         const parsed = JSON.parse(evt.target.result);
         if (!parsed || parsed.version !== '1.0') {
-          alert('Invalid backup file structure or version!');
+          await showCustomAlert('Invalid Backup', 'Invalid backup file structure or version!');
           return;
         }
         await importLibrary(parsed);
@@ -481,7 +483,7 @@ export async function openSettingsDrawer() {
         closeSettingsDrawer();
         window.location.reload();
       } catch (err) {
-        alert('Failed to parse backup JSON file!');
+        await showCustomAlert('Parse Error', 'Failed to parse backup JSON file!');
       }
     };
     reader.readAsText(file);

@@ -8,6 +8,7 @@ import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveG
 import { createFooter } from '../components/Footer.js';
 import { refreshSidebarNav } from '../components/Sidebar.js';
 import { DownloadManager } from '../services/download.js';
+import { showCustomConfirm, showCustomAlert } from '../components/CustomDialog.js';
 
 export async function renderSettingsPage({ container }) {
   const user = await waitAuthReady();
@@ -1204,14 +1205,14 @@ export async function renderSettingsPage({ container }) {
       try {
         const parsed = JSON.parse(evt.target.result);
         if (!parsed || parsed.version !== '1.0') {
-          alert('Invalid backup file structure or version!');
+          await showCustomAlert('Invalid Backup', 'Invalid backup file structure or version!');
           return;
         }
         await importLibrary(parsed);
         showToast('✓ Backup restored successfully!');
         setTimeout(() => navigate('/settings'), 1000);
       } catch (err) {
-        alert('Failed to parse backup JSON file!');
+        await showCustomAlert('Parse Error', 'Failed to parse backup JSON file!');
       }
     };
     reader.readAsText(file);
@@ -1260,7 +1261,8 @@ export async function renderSettingsPage({ container }) {
 
   // Clear history
   container.querySelector('#settings-clear-history')?.addEventListener('click', async () => {
-    if (!confirm('Delete your entire watch history? This cannot be undone.')) return;
+    const confirmed = await showCustomConfirm('Clear History', 'Delete your entire watch history? This cannot be undone.');
+    if (!confirmed) return;
     await clearAllWatchHistory(user.uid);
     showToast('✓ Watch history cleared');
   });
@@ -1572,7 +1574,8 @@ export async function renderSettingsPage({ container }) {
             e.stopPropagation();
             const id = btn.dataset.id;
             const title = list.find(x => x.id === id)?.title || 'Title';
-            if (confirm(`Remove "${title}" from offline downloads?`)) {
+            const confirmed = await showCustomConfirm('Remove Download', `Remove "${title}" from offline downloads?`);
+            if (confirmed) {
               await DownloadManager.remove(id);
               showToast('✓ Removed from downloads');
               await updateDownloadDashboard();
