@@ -957,12 +957,12 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
-      if (!isHevc || hevcSupport) {
-        console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p`);
+      if (!isHevc || hevcSupport || movieBoxResult.transcoded) {
+        console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p${movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
         setCache(cacheKey, movieBoxResult);
         return res.json(movieBoxResult);
       } else {
-        console.log(`[MovieBox] Skipped HEVC stream for movie ${tmdbId} (client requested H.264 only)`);
+        console.log(`[MovieBox] Skipped HEVC stream for movie ${tmdbId} (client requested H.264 only, transcoding unavailable)`);
       }
     }
   } catch (err) {
@@ -1060,12 +1060,12 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
-      if (!isHevc || hevcSupport) {
-        console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p`);
+      if (!isHevc || hevcSupport || movieBoxResult.transcoded) {
+        console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p${movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
         setCache(cacheKey, movieBoxResult);
         return res.json(movieBoxResult);
       } else {
-        console.log(`[MovieBox] Skipped HEVC stream for TV ${tmdbId} S${season}E${episode} (client requested H.264 only)`);
+        console.log(`[MovieBox] Skipped HEVC stream for TV ${tmdbId} S${season}E${episode} (client requested H.264 only, transcoding unavailable)`);
       }
     }
   } catch (err) {
