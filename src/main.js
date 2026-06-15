@@ -93,7 +93,7 @@ if (Capacitor && Capacitor.isNativePlatform()) {
 import { addRoute, initRouter } from './services/router.js';
 import { createSidebar, updateSidebarActive, toggleSidebar, initSidebarToggle, refreshSidebarNav } from './components/Sidebar.js';
 import { createNavbar, setupNavbarEvents, updateNavbarAvatar, refreshNotifBadge } from './components/Navbar.js';
-import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater, applyGlobalTheme } from './services/auth.js';
+import { initAuth, getUser, onUserChange, setNavbarAvatarUpdater, applyGlobalTheme, waitAuthReady } from './services/auth.js';
 import { initGlobalCastSDK } from './services/castGlobal.js';
 
 
@@ -352,7 +352,6 @@ function initApp() {
   let loginOverlayContainer = null;
   let verificationOverlayContainer = null;
   let partyInviteUnsub = null;
-  let initialAuthChecked = false;
   const shownInvites = new Set();
 
   // Friend System Notifications & Listeners States
@@ -581,230 +580,224 @@ function initApp() {
     }
   });
 
-  onUserChange((user) => {
-    // Skip initial null callback before Firebase auth has resolved the session
-    if (!user && !initialAuthChecked) {
-      waitAuthReady().then(() => {
-        initialAuthChecked = true;
-      });
-      return;
-    }
-    initialAuthChecked = true;
+  // Register onUserChange listener ONLY after auth state is ready
+  waitAuthReady().then(() => {
+    onUserChange((user) => {
+      refreshSidebarNav();
 
-    refreshSidebarNav();
+      // Clean up existing overlays
+      if (loginOverlayContainer) {
+        loginOverlayContainer.remove();
+        loginOverlayContainer = null;
+      }
+      if (verificationOverlayContainer) {
+        verificationOverlayContainer.remove();
+        verificationOverlayContainer = null;
+      }
 
-    // Clean up existing overlays
-    if (loginOverlayContainer) {
-      loginOverlayContainer.remove();
-      loginOverlayContainer = null;
-    }
-    if (verificationOverlayContainer) {
-      verificationOverlayContainer.remove();
-      verificationOverlayContainer = null;
-    }
-
-    if (!user) {
-      if (partyInviteUnsub) {
-        partyInviteUnsub();
-        partyInviteUnsub = null;
-      }
-      
-      // Clean up Friend listeners
-      if (friendRequestsUnsub) {
-        friendRequestsUnsub();
-        friendRequestsUnsub = null;
-      }
-      if (friendsListUnsub) {
-        friendsListUnsub();
-        friendsListUnsub = null;
-      }
-      Object.keys(friendStatusUnsubs).forEach(uid => {
-        if (typeof friendStatusUnsubs[uid] === 'function') {
-          friendStatusUnsubs[uid]();
+      if (!user) {
+        if (partyInviteUnsub) {
+          partyInviteUnsub();
+          partyInviteUnsub = null;
         }
-        delete friendStatusUnsubs[uid];
-      });
-      shownFriendRequests.clear();
-      shownActiveParties.clear();
-      Object.keys(friendActiveParties).forEach(uid => delete friendActiveParties[uid]);
-      Object.keys(friendPresences).forEach(uid => delete friendPresences[uid]);
-      
-      // Dismiss any active friend/party toasts
-      Object.keys(activeFriendRequestToasts).forEach(uid => activeFriendRequestToasts[uid]());
-      Object.keys(activeWatchPartyToasts).forEach(pid => activeWatchPartyToasts[pid]());
-      
-      // Clear navbar globals
-      import('./components/Navbar.js').then(({ setGlobalFriendRequests, setGlobalActiveFriendParties }) => {
-        setGlobalFriendRequests([]);
-        setGlobalActiveFriendParties([]);
-      });
-
-      // User is logged out: show login overlay
-      loginOverlayContainer = document.createElement('div');
-      loginOverlayContainer.id = 'login-overlay';
-      document.body.appendChild(loginOverlayContainer);
-      import('./pages/LoginPage.js').then(({ renderLoginPage }) => {
-        if (loginOverlayContainer) {
-          renderLoginPage(loginOverlayContainer);
-        }
-      });
-    } else {
-      // Set presence online and listen for invites
-      import('./services/firebase.js').then(({ 
-        subscribeToPartyNotifications, 
-        updateUserStatusInCloud,
-        subscribeToFriendRequests,
-        subscribeToFriendsList,
-        subscribeToFriendStatus
-      }) => {
-        updateUserStatusInCloud(user.uid, 'online');
         
-        if (partyInviteUnsub) partyInviteUnsub();
-        partyInviteUnsub = subscribeToPartyNotifications(user.uid, (invites) => {
-          if (Array.isArray(invites) && invites.length > 0) {
-            invites.forEach(inv => {
-              showPartyInviteBanner(inv, user.uid);
-            });
+        // Clean up Friend listeners
+        if (friendRequestsUnsub) {
+          friendRequestsUnsub();
+          friendRequestsUnsub = null;
+        }
+        if (friendsListUnsub) {
+          friendsListUnsub();
+          friendsListUnsub = null;
+        }
+        Object.keys(friendStatusUnsubs).forEach(uid => {
+          if (typeof friendStatusUnsubs[uid] === 'function') {
+            friendStatusUnsubs[uid]();
           }
+          delete friendStatusUnsubs[uid];
+        });
+        shownFriendRequests.clear();
+        shownActiveParties.clear();
+        Object.keys(friendActiveParties).forEach(uid => delete friendActiveParties[uid]);
+        Object.keys(friendPresences).forEach(uid => delete friendPresences[uid]);
+        
+        // Dismiss any active friend/party toasts
+        Object.keys(activeFriendRequestToasts).forEach(uid => activeFriendRequestToasts[uid]());
+        Object.keys(activeWatchPartyToasts).forEach(pid => activeWatchPartyToasts[pid]());
+        
+        // Clear navbar globals
+        import('./components/Navbar.js').then(({ setGlobalFriendRequests, setGlobalActiveFriendParties }) => {
+          setGlobalFriendRequests([]);
+          setGlobalActiveFriendParties([]);
         });
 
-        // 1. Friend Requests Subscription
-        if (friendRequestsUnsub) friendRequestsUnsub();
-        let isInitialRequestLoad = true;
-        friendRequestsUnsub = subscribeToFriendRequests(user.uid, (requests) => {
-          // Sync with Navbar notifications drawer
-          import('./components/Navbar.js').then(({ setGlobalFriendRequests }) => {
-            setGlobalFriendRequests(requests);
-          });
-
-          if (Array.isArray(requests)) {
-            // Dismiss active toasts for requests that are no longer pending
-            const activeRequestUids = new Set(requests.map(r => r.senderUid));
-            Object.keys(activeFriendRequestToasts).forEach(senderUid => {
-              if (!activeRequestUids.has(senderUid)) {
-                activeFriendRequestToasts[senderUid]();
-              }
-            });
-
-            if (isInitialRequestLoad) {
-              // Add all pre-existing request senders to shownFriendRequests to avoid toast storms on load
-              requests.forEach(req => shownFriendRequests.add(req.senderUid));
-              isInitialRequestLoad = false;
-            } else {
-              // Toast new requests
-              requests.forEach(req => {
-                if (!shownFriendRequests.has(req.senderUid)) {
-                  showFriendRequestBanner(req, user.uid);
-                }
+        // User is logged out: show login overlay
+        loginOverlayContainer = document.createElement('div');
+        loginOverlayContainer.id = 'login-overlay';
+        document.body.appendChild(loginOverlayContainer);
+        import('./pages/LoginPage.js').then(({ renderLoginPage }) => {
+          if (loginOverlayContainer) {
+            renderLoginPage(loginOverlayContainer);
+          }
+        });
+      } else {
+        // Set presence online and listen for invites
+        import('./services/firebase.js').then(({ 
+          subscribeToPartyNotifications, 
+          updateUserStatusInCloud,
+          subscribeToFriendRequests,
+          subscribeToFriendsList,
+          subscribeToFriendStatus
+        }) => {
+          updateUserStatusInCloud(user.uid, 'online');
+          
+          if (partyInviteUnsub) partyInviteUnsub();
+          partyInviteUnsub = subscribeToPartyNotifications(user.uid, (invites) => {
+            if (Array.isArray(invites) && invites.length > 0) {
+              invites.forEach(inv => {
+                showPartyInviteBanner(inv, user.uid);
               });
             }
-          }
-        });
+          });
 
-        // 2. Friends List & Statuses Subscription
-        if (friendsListUnsub) friendsListUnsub();
-        friendsListUnsub = subscribeToFriendsList(user.uid, (friends) => {
-          if (!Array.isArray(friends)) return;
+          // 1. Friend Requests Subscription
+          if (friendRequestsUnsub) friendRequestsUnsub();
+          let isInitialRequestLoad = true;
+          friendRequestsUnsub = subscribeToFriendRequests(user.uid, (requests) => {
+            // Sync with Navbar notifications drawer
+            import('./components/Navbar.js').then(({ setGlobalFriendRequests }) => {
+              setGlobalFriendRequests(requests);
+            });
 
-          const activeFriendUids = new Set(friends.filter(f => !f.isPending).map(f => f.uid));
+            if (Array.isArray(requests)) {
+              // Dismiss active toasts for requests that are no longer pending
+              const activeRequestUids = new Set(requests.map(r => r.senderUid));
+              Object.keys(activeFriendRequestToasts).forEach(senderUid => {
+                if (!activeRequestUids.has(senderUid)) {
+                  activeFriendRequestToasts[senderUid]();
+                }
+              });
 
-          // Clean up unsubscribed friends
-          Object.keys(friendStatusUnsubs).forEach(uid => {
-            if (!activeFriendUids.has(uid)) {
-              if (typeof friendStatusUnsubs[uid] === 'function') {
-                friendStatusUnsubs[uid]();
+              if (isInitialRequestLoad) {
+                // Add all pre-existing request senders to shownFriendRequests to avoid toast storms on load
+                requests.forEach(req => shownFriendRequests.add(req.senderUid));
+                isInitialRequestLoad = false;
+              } else {
+                // Toast new requests
+                requests.forEach(req => {
+                  if (!shownFriendRequests.has(req.senderUid)) {
+                    showFriendRequestBanner(req, user.uid);
+                  }
+                });
               }
-              delete friendStatusUnsubs[uid];
-
-              // Dismiss active toast for friend removed
-              const oldPartyId = friendActiveParties[uid];
-              if (oldPartyId && activeWatchPartyToasts[oldPartyId]) {
-                activeWatchPartyToasts[oldPartyId]();
-              }
-
-              delete friendActiveParties[uid];
-              delete friendPresences[uid];
             }
           });
 
-          // Helper to rebuild active friend parties list for Navbar Drawer
-          const updateNavbarActiveParties = () => {
-            const activePartiesList = [];
-            const partySeen = new Set();
-            friends.forEach(f => {
-              if (f.isPending) return;
-              const pres = friendPresences[f.uid];
-              if (pres && pres.activePartyId) {
-                if (!partySeen.has(pres.activePartyId)) {
-                  partySeen.add(pres.activePartyId);
-                  activePartiesList.push({
-                    friendUid: f.uid,
-                    friendName: f.name,
-                    friendAvatar: f.avatar,
-                    partyId: pres.activePartyId,
-                    mediaTitle: pres.activeWatchMedia
-                  });
+          // 2. Friends List & Statuses Subscription
+          if (friendsListUnsub) friendsListUnsub();
+          friendsListUnsub = subscribeToFriendsList(user.uid, (friends) => {
+            if (!Array.isArray(friends)) return;
+
+            const activeFriendUids = new Set(friends.filter(f => !f.isPending).map(f => f.uid));
+
+            // Clean up unsubscribed friends
+            Object.keys(friendStatusUnsubs).forEach(uid => {
+              if (!activeFriendUids.has(uid)) {
+                if (typeof friendStatusUnsubs[uid] === 'function') {
+                  friendStatusUnsubs[uid]();
                 }
+                delete friendStatusUnsubs[uid];
+
+                // Dismiss active toast for friend removed
+                const oldPartyId = friendActiveParties[uid];
+                if (oldPartyId && activeWatchPartyToasts[oldPartyId]) {
+                  activeWatchPartyToasts[oldPartyId]();
+                }
+
+                delete friendActiveParties[uid];
+                delete friendPresences[uid];
               }
             });
-            import('./components/Navbar.js').then(({ setGlobalActiveFriendParties }) => {
-              setGlobalActiveFriendParties(activePartiesList);
-            });
-          };
 
-          // Subscribe to status updates for new friends
-          friends.forEach(friend => {
-            if (friend.isPending) return;
-            if (!friendStatusUnsubs[friend.uid]) {
-              let isFirstStatusCall = true;
-              friendStatusUnsubs[friend.uid] = subscribeToFriendStatus(friend.uid, (status) => {
-                friendPresences[friend.uid] = status;
-
-                const newPartyId = status?.activePartyId || null;
-                const oldPartyId = friendActiveParties[friend.uid] || null;
-
-                if (isFirstStatusCall) {
-                  isFirstStatusCall = false;
-                  friendActiveParties[friend.uid] = newPartyId;
-                } else {
-                  if (newPartyId && newPartyId !== oldPartyId && !shownActiveParties.has(newPartyId)) {
-                    shownActiveParties.add(newPartyId);
-                    showActivePartyBanner(friend.name, friend.avatar, newPartyId, status.activeWatchMedia);
+            // Helper to rebuild active friend parties list for Navbar Drawer
+            const updateNavbarActiveParties = () => {
+              const activePartiesList = [];
+              const partySeen = new Set();
+              friends.forEach(f => {
+                if (f.isPending) return;
+                const pres = friendPresences[f.uid];
+                if (pres && pres.activePartyId) {
+                  if (!partySeen.has(pres.activePartyId)) {
+                    partySeen.add(pres.activePartyId);
+                    activePartiesList.push({
+                      friendUid: f.uid,
+                      friendName: f.name,
+                      friendAvatar: f.avatar,
+                      partyId: pres.activePartyId,
+                      mediaTitle: pres.activeWatchMedia
+                    });
                   }
+                }
+              });
+              import('./components/Navbar.js').then(({ setGlobalActiveFriendParties }) => {
+                setGlobalActiveFriendParties(activePartiesList);
+              });
+            };
 
-                  // Dismiss active toast if friend left the party
-                  if (oldPartyId && oldPartyId !== newPartyId) {
-                    if (activeWatchPartyToasts[oldPartyId]) {
-                      activeWatchPartyToasts[oldPartyId]();
+            // Subscribe to status updates for new friends
+            friends.forEach(friend => {
+              if (friend.isPending) return;
+              if (!friendStatusUnsubs[friend.uid]) {
+                let isFirstStatusCall = true;
+                friendStatusUnsubs[friend.uid] = subscribeToFriendStatus(friend.uid, (status) => {
+                  friendPresences[friend.uid] = status;
+
+                  const newPartyId = status?.activePartyId || null;
+                  const oldPartyId = friendActiveParties[friend.uid] || null;
+
+                  if (isFirstStatusCall) {
+                    isFirstStatusCall = false;
+                    friendActiveParties[friend.uid] = newPartyId;
+                  } else {
+                    if (newPartyId && newPartyId !== oldPartyId && !shownActiveParties.has(newPartyId)) {
+                      shownActiveParties.add(newPartyId);
+                      showActivePartyBanner(friend.name, friend.avatar, newPartyId, status.activeWatchMedia);
                     }
+
+                    // Dismiss active toast if friend left the party
+                    if (oldPartyId && oldPartyId !== newPartyId) {
+                      if (activeWatchPartyToasts[oldPartyId]) {
+                        activeWatchPartyToasts[oldPartyId]();
+                      }
+                    }
+
+                    friendActiveParties[friend.uid] = newPartyId;
                   }
 
-                  friendActiveParties[friend.uid] = newPartyId;
-                }
+                  updateNavbarActiveParties();
+                });
+              }
+            });
 
-                updateNavbarActiveParties();
-              });
+            // Rebuild immediately when friend list changes
+            updateNavbarActiveParties();
+          });
+        });
+
+        // User is logged in: check verification
+        const isPasswordProvider = user.providerData && user.providerData.some(p => p.providerId === 'password');
+        if (isPasswordProvider && !user.emailVerified) {
+          verificationOverlayContainer = document.createElement('div');
+          verificationOverlayContainer.id = 'verification-overlay';
+          document.body.appendChild(verificationOverlayContainer);
+          import('./pages/LoginPage.js').then(({ showVerificationOverlay }) => {
+            if (verificationOverlayContainer) {
+              showVerificationOverlay(verificationOverlayContainer, user);
             }
           });
-
-          // Rebuild immediately when friend list changes
-          updateNavbarActiveParties();
-        });
-      });
-
-      // User is logged in: check verification
-      const isPasswordProvider = user.providerData && user.providerData.some(p => p.providerId === 'password');
-      if (isPasswordProvider && !user.emailVerified) {
-        verificationOverlayContainer = document.createElement('div');
-        verificationOverlayContainer.id = 'verification-overlay';
-        document.body.appendChild(verificationOverlayContainer);
-        import('./pages/LoginPage.js').then(({ showVerificationOverlay }) => {
-          if (verificationOverlayContainer) {
-            showVerificationOverlay(verificationOverlayContainer, user);
-          }
-        });
+        }
       }
-    }
+    });
   });
 
   // Boot collapsible sidebar toggle
