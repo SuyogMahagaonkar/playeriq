@@ -352,6 +352,7 @@ function initApp() {
   let loginOverlayContainer = null;
   let verificationOverlayContainer = null;
   let partyInviteUnsub = null;
+  let initialAuthChecked = false;
   const shownInvites = new Set();
 
   // Friend System Notifications & Listeners States
@@ -581,6 +582,15 @@ function initApp() {
   });
 
   onUserChange((user) => {
+    // Skip initial null callback before Firebase auth has resolved the session
+    if (!user && !initialAuthChecked) {
+      waitAuthReady().then(() => {
+        initialAuthChecked = true;
+      });
+      return;
+    }
+    initialAuthChecked = true;
+
     refreshSidebarNav();
 
     // Clean up existing overlays
@@ -949,7 +959,8 @@ function initApp() {
   initRouter();
 
   // Hide splash screen, then show login if not signed in
-  setTimeout(() => {
+  const minDelay = new Promise(r => setTimeout(r, 600));
+  Promise.all([waitAuthReady(), minDelay]).then(() => {
     const splash = document.getElementById('splash-screen');
     if (splash) splash.classList.add('hidden');
     
@@ -960,7 +971,7 @@ function initApp() {
     setTimeout(() => {
       splash?.remove();
     }, 600);
-  }, 800);
+  });
 }
 
 // Wait for DOM
