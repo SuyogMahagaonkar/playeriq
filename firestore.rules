@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. User Documents & Subcollections (Watchlist, History, Notifications, Party History)
+    // Secure so that users can only view or modify their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /watch_history/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /watchlist/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /notifications/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /party_history/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // 2. Email to UID Lookup mapping
+    // Any authenticated user can read mapping; only the mapped user can write
+    match /users_by_email/{email} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.resource.data.uid == request.auth.uid;
+    }
+
+    // 3. Friend Requests
+    // Authenticated users can read/write requests where they are sender or target
+    match /friend_requests/{requestId} {
+      allow read: if request.auth != null && (resource == null || request.auth.uid == resource.data.senderUid || request.auth.uid == resource.data.targetUid);
+      allow create: if request.auth != null && request.resource.data.senderUid == request.auth.uid;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.senderUid || request.auth.uid == resource.data.targetUid);
+    }
+
+    // 4. User Presence / Status
+    // Any authenticated user can view presence; users can only update their own presence status
+    match /presence/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 5. Party Invite Notifications
+    // Authenticated users can create invites; hosts and targets can read/update them
+    match /party_invites/{inviteId} {
+      allow read: if request.auth != null && (resource == null || request.auth.uid == resource.data.targetUid || request.auth.uid == resource.data.hostUid);
+      allow create: if request.auth != null && request.resource.data.hostUid == request.auth.uid;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.targetUid || request.auth.uid == resource.data.hostUid);
+    }
+
+    // 6. Scheduled Watch Parties
+    // Authenticated users can create, read, and delete scheduled parties
+    match /scheduled_parties/{partyId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 7. Watch Together Rooms (watch_parties)
+    // Allows authenticated users to create, join, update, or read watch parties.
+    match /watch_parties/{partyId} {
+      // Must be logged in to view or interact with a party room
+      allow read: if request.auth != null;
+      
+      // Must be logged in and set as host to create
+      allow create: if request.auth != null && request.resource.data.hostId == request.auth.uid;
+      
+      // Host can modify anything; Members can join by appending themselves to the members array
+      allow update: if request.auth != null;
+      
+      // Only the host can delete the watch party
+      allow delete: if request.auth != null && resource.data.hostId == request.auth.uid;
+
+      // Live Chat Subcollection under Watch Parties
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
+
+      // Guest Join Requests subcollection
+      match /join_requests/{guestUid} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    // 8. Global System Config
+    // Anyone can read system configuration; only admins (or authenticated users, depending on logic) can write
+    match /system/config {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

@@ -310,6 +310,16 @@ export async function saveUserProfile(userId, data) {
   try {
     const ref = doc(db, 'users', userId);
     await setDoc(ref, data, { merge: true });
+
+    // Also write to users_by_email mapping
+    if (data.email) {
+      const emailRef = doc(db, 'users_by_email', data.email.toLowerCase().trim());
+      await setDoc(emailRef, {
+        uid: userId,
+        displayName: data.displayName || data.email.split('@')[0],
+        photoURL: data.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+      }, { merge: true });
+    }
   } catch (err) {
     console.error('[Firebase] Failed to save user profile:', err);
   }
@@ -882,28 +892,42 @@ export function subscribeToChatMessages(partyId, onUpdate) {
 
 export async function sendFriendRequestInCloud(senderUid, targetEmail) {
   await ensureFirebaseInitialized();
-  const { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } = firestoreExports;
+  const { doc, getDoc, setDoc, serverTimestamp } = firestoreExports;
   try {
-    const q = query(collection(db, 'users'), where('email', '==', targetEmail.toLowerCase().trim()));
-    const snap = await getDocs(q);
-    if (snap.empty) throw new Error('No user found with this email address.');
+    const emailKey = targetEmail.toLowerCase().trim();
+    const emailRef = doc(db, 'users_by_email', emailKey);
+    const emailSnap = await getDoc(emailRef);
+    if (!emailSnap.exists()) throw new Error('No user found with this email address.');
     
-    const targetUserDoc = snap.docs[0];
-    const targetUid = targetUserDoc.id;
+    const targetUid = emailSnap.data().uid;
     if (targetUid === senderUid) throw new Error('You cannot add yourself as a friend.');
     
-    // Check if already friends
-    const friendRef = doc(db, 'users', senderUid, 'friends', targetUid);
-    const friendSnap = await getDoc(friendRef);
-    if (friendSnap.exists()) throw new Error('You are already friends with this user.');
+    // Check if already friends or request pending
+    const reqId1 = `${senderUid}_${targetUid}`;
+    const reqId2 = `${targetUid}_${senderUid}`;
+    
+    const reqRef1 = doc(db, 'friend_requests', reqId1);
+    const reqRef2 = doc(db, 'friend_requests', reqId2);
+    const [snap1, snap2] = await Promise.all([getDoc(reqRef1), getDoc(reqRef2)]);
+    
+    if (snap1.exists() || snap2.exists()) {
+      const data = snap1.exists() ? snap1.data() : snap2.data();
+      if (data.status === 'accepted') throw new Error('You are already friends.');
+      throw new Error('Friend request is already pending.');
+    }
     
     const myProfile = await getUserProfile(senderUid);
-    const reqRef = doc(db, 'users', targetUid, 'friend_requests', senderUid);
-    await setDoc(reqRef, {
+    const targetProfile = emailSnap.data();
+    
+    await setDoc(reqRef1, {
       senderUid,
       senderName: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'User',
       senderEmail: myProfile?.email || '',
       senderAvatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      targetUid,
+      targetName: targetProfile?.displayName || emailKey.split('@')[0] || 'Friend',
+      targetEmail: emailKey,
+      targetAvatar: targetProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
       status: 'pending',
       timestamp: serverTimestamp()
     });
@@ -915,28 +939,19 @@ export async function sendFriendRequestInCloud(senderUid, targetEmail) {
 
 export async function acceptFriendRequestInCloud(userId, requestUid) {
   await ensureFirebaseInitialized();
-  const { doc, setDoc, deleteDoc, serverTimestamp } = firestoreExports;
+  const { doc, updateDoc } = firestoreExports;
   try {
-    const myProfile = await getUserProfile(userId);
-    const friendProfile = await getUserProfile(requestUid);
+    const reqId1 = `${requestUid}_${userId}`;
+    const reqId2 = `${userId}_${requestUid}`;
     
-    await setDoc(doc(db, 'users', userId, 'friends', requestUid), {
-      uid: requestUid,
-      name: friendProfile?.displayName || friendProfile?.email?.split('@')[0] || 'Friend',
-      email: friendProfile?.email || '',
-      avatar: friendProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-      addedAt: serverTimestamp()
-    });
+    const ref1 = doc(db, 'friend_requests', reqId1);
+    const ref2 = doc(db, 'friend_requests', reqId2);
     
-    await setDoc(doc(db, 'users', requestUid, 'friends', userId), {
-      uid: userId,
-      name: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'Friend',
-      email: myProfile?.email || '',
-      avatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-      addedAt: serverTimestamp()
-    });
-    
-    await deleteDoc(doc(db, 'users', userId, 'friend_requests', requestUid));
+    try {
+      await updateDoc(ref1, { status: 'accepted' });
+    } catch (e) {
+      await updateDoc(ref2, { status: 'accepted' });
+    }
   } catch (err) {
     console.error('[Firebase] Failed to accept friend request:', err);
     throw err;
@@ -947,7 +962,12 @@ export async function declineFriendRequestInCloud(userId, requestUid) {
   await ensureFirebaseInitialized();
   const { doc, deleteDoc } = firestoreExports;
   try {
-    await deleteDoc(doc(db, 'users', userId, 'friend_requests', requestUid));
+    const reqId1 = `${requestUid}_${userId}`;
+    const reqId2 = `${userId}_${requestUid}`;
+    await Promise.all([
+      deleteDoc(doc(db, 'friend_requests', reqId1)).catch(() => {}),
+      deleteDoc(doc(db, 'friend_requests', reqId2)).catch(() => {})
+    ]);
   } catch (err) {
     console.error('[Firebase] Failed to decline friend request:', err);
     throw err;
@@ -958,8 +978,12 @@ export async function removeFriendFromCloud(userId, friendUid) {
   await ensureFirebaseInitialized();
   const { doc, deleteDoc } = firestoreExports;
   try {
-    await deleteDoc(doc(db, 'users', userId, 'friends', friendUid));
-    await deleteDoc(doc(db, 'users', friendUid, 'friends', userId));
+    const reqId1 = `${friendUid}_${userId}`;
+    const reqId2 = `${userId}_${friendUid}`;
+    await Promise.all([
+      deleteDoc(doc(db, 'friend_requests', reqId1)).catch(() => {}),
+      deleteDoc(doc(db, 'friend_requests', reqId2)).catch(() => {})
+    ]);
   } catch (err) {
     console.error('[Firebase] Failed to remove friend:', err);
     throw err;
@@ -967,30 +991,76 @@ export async function removeFriendFromCloud(userId, friendUid) {
 }
 
 export function subscribeToFriendsList(userId, onUpdate) {
-  let unsub = null;
-  const promise = ensureFirebaseInitialized().then(() => {
-    const { collection, onSnapshot } = firestoreExports;
-    const ref = collection(db, 'users', userId, 'friends');
-    unsub = onSnapshot(ref, (snap) => {
-      const list = [];
-      snap.forEach(d => list.push(d.data()));
-      onUpdate(list);
-    }, (err) => {
-      console.error('[Firebase] Friends list sub error:', err);
+  let unsub1 = null;
+  let unsub2 = null;
+  
+  const promise = ensureFirebaseInitialized().then(async () => {
+    const { collection, query, where, onSnapshot } = firestoreExports;
+    const colRef = collection(db, 'friend_requests');
+    
+    const q1 = query(colRef, where('status', '==', 'accepted'), where('senderUid', '==', userId));
+    const q2 = query(colRef, where('status', '==', 'accepted'), where('targetUid', '==', userId));
+    
+    let list1 = [];
+    let list2 = [];
+    
+    const triggerUpdate = () => {
+      const combined = [];
+      const seen = new Set();
+      
+      list1.forEach(item => {
+        if (!seen.has(item.targetUid)) {
+          seen.add(item.targetUid);
+          combined.push({
+            uid: item.targetUid,
+            name: item.targetName || item.targetEmail?.split('@')[0] || 'Friend',
+            email: item.targetEmail || '',
+            avatar: item.targetAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+          });
+        }
+      });
+      
+      list2.forEach(item => {
+        if (!seen.has(item.senderUid)) {
+          seen.add(item.senderUid);
+          combined.push({
+            uid: item.senderUid,
+            name: item.senderName || item.senderEmail?.split('@')[0] || 'Friend',
+            email: item.senderEmail || '',
+            avatar: item.senderAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'
+          });
+        }
+      });
+      
+      onUpdate(combined);
+    };
+    
+    unsub1 = onSnapshot(q1, (snap) => {
+      list1 = [];
+      snap.forEach(d => list1.push(d.data()));
+      triggerUpdate();
+    });
+    
+    unsub2 = onSnapshot(q2, (snap) => {
+      list2 = [];
+      snap.forEach(d => list2.push(d.data()));
+      triggerUpdate();
     });
   });
+  
   return () => {
-    if (unsub) unsub();
-    else promise.then(() => { if (unsub) unsub(); });
+    if (unsub1) unsub1();
+    if (unsub2) unsub2();
+    else promise.then(() => { if (unsub1) unsub1(); if (unsub2) unsub2(); });
   };
 }
 
 export function subscribeToFriendRequests(userId, onUpdate) {
   let unsub = null;
   const promise = ensureFirebaseInitialized().then(() => {
-    const { collection, onSnapshot } = firestoreExports;
-    const ref = collection(db, 'users', userId, 'friend_requests');
-    unsub = onSnapshot(ref, (snap) => {
+    const { collection, query, where, onSnapshot } = firestoreExports;
+    const q = query(collection(db, 'friend_requests'), where('targetUid', '==', userId), where('status', '==', 'pending'));
+    unsub = onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach(d => list.push(d.data()));
       onUpdate(list);
@@ -1008,11 +1078,11 @@ export function subscribeToFriendStatus(friendUid, onUpdate) {
   let unsub = null;
   const promise = ensureFirebaseInitialized().then(() => {
     const { doc, onSnapshot } = firestoreExports;
-    const ref = doc(db, 'users', friendUid);
+    const ref = doc(db, 'presence', friendUid);
     unsub = onSnapshot(ref, (snap) => {
       onUpdate(snap.exists() ? snap.data() : null);
     }, (err) => {
-      console.error('[Firebase] Friend status sub error:', err);
+      console.error('[Firebase] Presence status sub error:', err);
     });
   });
   return () => {
@@ -1023,17 +1093,22 @@ export function subscribeToFriendStatus(friendUid, onUpdate) {
 
 export async function updateUserStatusInCloud(userId, status, activePartyId = null, activeWatchMedia = null) {
   await ensureFirebaseInitialized();
-  const { doc, updateDoc, serverTimestamp } = firestoreExports;
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
   try {
-    const ref = doc(db, 'users', userId);
-    await updateDoc(ref, {
+    const ref = doc(db, 'presence', userId);
+    const myProfile = await getUserProfile(userId);
+    await setDoc(ref, {
+      uid: userId,
+      name: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'User',
+      email: myProfile?.email || '',
+      avatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
       status,
       activePartyId,
       activeWatchMedia,
       lastStatusUpdate: serverTimestamp()
-    });
+    }, { merge: true });
   } catch (err) {
-    console.error('[Firebase] Failed to update user status:', err);
+    console.error('[Firebase] Failed to update user status in presence:', err);
   }
 }
 
@@ -1043,15 +1118,16 @@ export async function updateUserStatusInCloud(userId, status, activePartyId = nu
 
 export async function sendPartyInviteNotification(senderUid, senderName, senderAvatar, targetEmail, partyId, mediaTitle, posterPath, mediaType) {
   await ensureFirebaseInitialized();
-  const { collection, query, where, getDocs, doc, setDoc, serverTimestamp } = firestoreExports;
+  const { doc, getDoc, setDoc, serverTimestamp } = firestoreExports;
   try {
-    const q = query(collection(db, 'users'), where('email', '==', targetEmail.toLowerCase().trim()));
-    const snap = await getDocs(q);
-    if (snap.empty) throw new Error('No user found with this email.');
+    const emailKey = targetEmail.toLowerCase().trim();
+    const emailRef = doc(db, 'users_by_email', emailKey);
+    const emailSnap = await getDoc(emailRef);
+    if (!emailSnap.exists()) throw new Error('No user found with this email.');
     
-    const targetUid = snap.docs[0].id;
+    const targetUid = emailSnap.data().uid;
     const notifId = `invite_${partyId}_${Date.now()}`;
-    const notifRef = doc(db, 'users', targetUid, 'party_notifications', notifId);
+    const notifRef = doc(db, 'party_invites', notifId);
     
     await setDoc(notifRef, {
       id: notifId,
@@ -1062,6 +1138,7 @@ export async function sendPartyInviteNotification(senderUid, senderName, senderA
       hostName: senderName,
       hostAvatar: senderAvatar,
       hostUid: senderUid,
+      targetUid,
       status: 'pending',
       timestamp: serverTimestamp()
     });
@@ -1075,14 +1152,13 @@ export function subscribeToPartyNotifications(userId, onUpdate) {
   let unsub = null;
   const promise = ensureFirebaseInitialized().then(() => {
     const { collection, query, where, onSnapshot } = firestoreExports;
-    const ref = collection(db, 'users', userId, 'party_notifications');
-    const q = query(ref, where('status', '==', 'pending'));
+    const q = query(collection(db, 'party_invites'), where('targetUid', '==', userId), where('status', '==', 'pending'));
     unsub = onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach(d => list.push(d.data()));
       onUpdate(list);
     }, (err) => {
-      console.error('[Firebase] Party notifications sub error:', err);
+      console.error('[Firebase] Party invites sub error:', err);
     });
   });
   return () => {
@@ -1095,7 +1171,7 @@ export async function respondToPartyInvite(userId, notificationId, status) {
   await ensureFirebaseInitialized();
   const { doc, updateDoc } = firestoreExports;
   try {
-    const ref = doc(db, 'users', userId, 'party_notifications', notificationId);
+    const ref = doc(db, 'party_invites', notificationId);
     await updateDoc(ref, { status });
   } catch (err) {
     console.error('[Firebase] Failed to respond to party invite:', err);
