@@ -208,6 +208,8 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
     }
 
     // Helper: check if transcoding is explicitly enabled via environment configuration
+    const isChosenHevc = String(chosenStream?.codec || '').toLowerCase().includes('hevc') ||
+                         String(chosenStream?.codec || '').toLowerCase().includes('h265');
     const isTranscodingEnabled = isChosenHevc && !hevcSupport && process.env.ENABLE_TRANSCODING === 'true';
 
     // Helper: route through segment or transcode proxy.
