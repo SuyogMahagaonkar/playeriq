@@ -28,6 +28,18 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       ? `https://www.nontongo.win/embed/tv/${tmdbId}/${season}/${episode}`
       : `https://www.nontongo.win/embed/movie/${tmdbId}`;
 
+    const isLocal = process.platform === 'win32' || process.env.LOCAL_DEV === 'true';
+    if (!isLocal) {
+      console.log(`[Nontongo] Production detected: Returning landing page embed URL directly to bypass VPS proxy blocks`);
+      return {
+        url: embedPath,
+        type: 'embed',
+        provider: 'nontongo',
+        referer: 'https://www.nontongo.win/',
+        subtitles: []
+      };
+    }
+
     console.log(`[Nontongo] Step 1: Fetching landing page: ${embedPath}`);
     const { data: embedHtml } = await axios.get(embedPath, {
       headers: HEADERS,
@@ -141,19 +153,7 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       playerFrameUrl = new URL(playerFrameUrl, loadUrl).href;
     }
 
-    // Production VPS IP bypass: Nontongo blocks requests from VPS IPs.
-    // Return the embed directly on production to bypass the VPS proxy and Cloudflare locks.
-    const isLocal = process.platform === 'win32' || process.env.LOCAL_DEV === 'true';
-    if (!isLocal) {
-      console.log(`[Nontongo] Production detected: Returning playerFrame as embed URL directly to bypass VPS proxy blocks`);
-      return {
-        url: playerFrameUrl,
-        type: 'embed',
-        provider: 'nontongo',
-        referer: loadUrl,
-        subtitles: []
-      };
-    }
+    // Already verified not on production; continue with local extraction
 
     console.log(`[Nontongo] Step 5: Fetching player frame content to classify stream: ${playerFrameUrl}`);
     try {

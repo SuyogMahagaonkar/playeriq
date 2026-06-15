@@ -122,6 +122,7 @@ app.post('/api/client-log', (req, res) => {
 app.get('/api/cache/clear', (req, res) => {
   const size = cache.size;
   cache.clear();
+  saveCacheToDisk();
   console.log(`[Cache] Cleared ${size} entries`);
   res.json({ cleared: size, message: 'Cache cleared successfully' });
 });
