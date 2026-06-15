@@ -313,7 +313,11 @@ export function getInitials(name) {
 }
 
 export function getInitialsAvatar(displayName, email, photoURL) {
-  if (photoURL && photoURL.trim() !== '') return photoURL;
+  const isDefaultPlaceholder = photoURL && (
+    photoURL.includes('images.unsplash.com/photo-1535713875002-d1d0cf377fde') ||
+    photoURL.trim() === ''
+  );
+  if (photoURL && !isDefaultPlaceholder) return photoURL;
   
   const name = displayName || email?.split('@')[0] || 'User';
   const initials = getInitials(name);
@@ -1116,7 +1120,13 @@ export function subscribeToFriendRequests(userId, onUpdate) {
     const q = query(collection(db, 'friend_requests'), where('targetUid', '==', userId), where('status', '==', 'pending'));
     unsub = onSnapshot(q, (snap) => {
       const list = [];
-      snap.forEach(d => list.push(d.data()));
+      snap.forEach(d => {
+        const data = d.data();
+        list.push({
+          ...data,
+          senderAvatar: getInitialsAvatar(data.senderName, data.senderEmail, data.senderAvatar)
+        });
+      });
       onUpdate(list);
     }, (err) => {
       console.error('[Firebase] Friend requests sub error:', err);
