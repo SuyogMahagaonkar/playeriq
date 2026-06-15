@@ -30,6 +30,7 @@ export async function renderPartyWatchDashboard({ container }) {
   await waitAuthReady();
   const user = getUser();
   let currentFriendsList = [];
+  let currentFriendsFilter = 'all';
   let inviteesAutocomplete = null;
 
   if (!user) {
@@ -153,8 +154,13 @@ export async function renderPartyWatchDashboard({ container }) {
         <div class="dashboard-panel" id="tab-friends">
           <div class="friends-tab-grid">
             <div class="glass-card">
-              <div class="card-title-row">
+              <div class="card-title-row" style="flex-wrap: wrap; gap: 10px;">
                 <h3>My Friends List</h3>
+                <div class="friends-filter-buttons" style="display: flex; gap: 4px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                  <button class="filter-btn active" data-filter="all" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">All</button>
+                  <button class="filter-btn" data-filter="friends" style="background: none; border: none; color: var(--text-muted); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Friends</button>
+                  <button class="filter-btn" data-filter="pending" style="background: none; border: none; color: var(--text-muted); padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Pending</button>
+                </div>
               </div>
               <div id="friends-list-container" class="friends-list-container">
                 <!-- Mutual friends list -->
@@ -266,6 +272,24 @@ export async function renderPartyWatchDashboard({ container }) {
     }
   });
 
+  // Friends list filter buttons setup
+  const filterBtns = container.querySelectorAll('.friends-filter-buttons .filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => {
+        b.classList.remove('active');
+        b.style.color = 'var(--text-muted)';
+        b.style.background = 'none';
+      });
+      btn.classList.add('active');
+      btn.style.color = '#fff';
+      btn.style.background = 'rgba(255,255,255,0.1)';
+      
+      currentFriendsFilter = btn.dataset.filter;
+      renderFriendsList();
+    });
+  });
+
   // ---- Real-time listeners ----
 
   // 1. Friend Requests listener
@@ -324,59 +348,87 @@ export async function renderPartyWatchDashboard({ container }) {
 
   // 2. Mutual Friends and Presence Status listeners
   let statusUnsubscribes = {};
+
+  function renderFriendsList() {
+    const listEl = container.querySelector('#friends-list-container');
+    if (!listEl) return;
+
+    const filtered = currentFriendsList.filter(f => {
+      if (currentFriendsFilter === 'friends') return !f.isPending;
+      if (currentFriendsFilter === 'pending') return f.isPending;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      const emptyMsg = currentFriendsFilter === 'friends' 
+        ? 'No accepted friends yet.' 
+        : currentFriendsFilter === 'pending' 
+          ? 'No pending friend requests sent.' 
+          : 'No friends added yet.';
+      listEl.innerHTML = `<div style="color:var(--text-muted); font-size:12px; padding:12px 0;">${emptyMsg}</div>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(f => `
+      <div class="friend-card-detailed" id="friend-card-${f.uid}">
+        <img class="friend-card-detailed-avatar" src="${f.avatar}" alt="" style="${f.isPending ? 'opacity: 0.6;' : ''}" />
+        <div class="friend-card-detailed-info" style="${f.isPending ? 'opacity: 0.8;' : ''}">
+          <div class="friend-card-detailed-name" style="display: flex; align-items: center; gap: 6px;">
+            <span>${f.name}</span>
+            ${f.isPending ? `<span style="font-size: 10px; background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.3); padding: 2px 6px; border-radius: 4px; color: var(--accent, #a855f7); font-weight: 700; display: inline-block;">Pending</span>` : ''}
+          </div>
+          <div class="friend-card-detailed-email">${f.email}</div>
+        </div>
+        <button class="friend-card-detailed-remove-btn" data-uid="${f.uid}" data-pending="${f.isPending}" title="${f.isPending ? 'Cancel Friend Request' : 'Remove Friend'}">
+          <i data-lucide="${f.isPending ? 'x' : 'user-minus'}" style="width:16px; height:16px;"></i>
+        </button>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll('.friend-card-detailed-remove-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const isPending = btn.dataset.pending === 'true';
+        const confirmMsg = isPending 
+          ? 'Cancel friend request?' 
+          : 'Are you sure you want to remove this friend?';
+        if (confirm(confirmMsg)) {
+          const uid = btn.dataset.uid;
+          try {
+            await removeFriendFromCloud(user.uid, uid);
+            showToast(isPending ? 'Friend request canceled.' : 'Friend removed.');
+          } catch(e) {
+            showToast(isPending ? 'Error canceling request.' : 'Error removing friend.');
+          }
+        }
+      });
+    });
+    
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   const unsubFriends = subscribeToFriendsList(user.uid, (friends) => {
     currentFriendsList = friends;
-    const listEl = container.querySelector('#friends-list-container');
     const presenceListEl = container.querySelector('#friend-activity-presence-list');
     
     // Clean up old status listeners
     Object.values(statusUnsubscribes).forEach(un => un());
     statusUnsubscribes = {};
-
+ 
     if (friends.length === 0) {
-      if (listEl) listEl.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:12px 0;">No friends added yet.</div>';
       if (presenceListEl) presenceListEl.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:10px 0;">No active watch parties among friends.</div>';
-      return;
     }
-
-    if (listEl) {
-      listEl.innerHTML = friends.map(f => `
-        <div class="friend-card-detailed" id="friend-card-${f.uid}">
-          <img class="friend-card-detailed-avatar" src="${f.avatar}" alt="" />
-          <div class="friend-card-detailed-info">
-            <div class="friend-card-detailed-name">${f.name}</div>
-            <div class="friend-card-detailed-email">${f.email}</div>
-          </div>
-          <button class="friend-card-detailed-remove-btn" data-uid="${f.uid}" title="Remove Friend">
-            <i data-lucide="user-minus" style="width:16px; height:16px;"></i>
-          </button>
-        </div>
-      `).join('');
-
-      listEl.querySelectorAll('.friend-card-detailed-remove-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (confirm('Are you sure you want to remove this friend?')) {
-            const uid = btn.dataset.uid;
-            try {
-              await removeFriendFromCloud(user.uid, uid);
-              showToast('Friend removed.');
-            } catch(e) {
-              showToast('Error removing friend.');
-            }
-          }
-        });
-      });
-      
-      if (window.lucide) window.lucide.createIcons();
-    }
-
+ 
+    renderFriendsList();
+ 
     // Subscribe to statuses of each friend to populate presence lists in real-time
     const currentStatusStates = {};
     friends.forEach(f => {
-      statusUnsubscribes[f.uid] = subscribeToFriendStatus(f.uid, (profile) => {
-        currentStatusStates[f.uid] = { ...f, ...profile };
-        recomputePresenceList(currentStatusStates);
-      });
+      if (!f.isPending) {
+        statusUnsubscribes[f.uid] = subscribeToFriendStatus(f.uid, (profile) => {
+          currentStatusStates[f.uid] = { ...f, ...profile };
+          recomputePresenceList(currentStatusStates);
+        });
+      }
     });
   });
 
@@ -899,7 +951,7 @@ END:VCALENDAR`;
 
     if (inviteesAutocomplete) inviteesAutocomplete.destroy();
     if (inviteesInput) {
-      inviteesAutocomplete = initFriendAutocomplete(inviteesInput, () => currentFriendsList, true);
+      inviteesAutocomplete = initFriendAutocomplete(inviteesInput, () => currentFriendsList.filter(f => !f.isPending), true);
     }
 
     closeBtn.addEventListener('click', () => {

@@ -1532,7 +1532,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
   const sendInviteBtn = modal.querySelector('#send-invite-email-btn');
   const inviteEmailInput = modal.querySelector('#invite-email-input');
   const inviteStatus = modal.querySelector('#invite-email-status');
-  const inviteesAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends, false);
+  const inviteesAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends.filter(f => !f.isPending), false);
   const cancelBtn = modal.querySelector('#cancel-party-btn');
   const startPartyBtn = modal.querySelector('#start-party-btn');
 

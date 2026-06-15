@@ -820,7 +820,7 @@ export async function renderWatchPartyPage({ params, container }) {
     const sendInviteBtn = container.querySelector('#sidebar-send-invite-btn');
 
     if (inviteEmailInput) {
-      inviteAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends, false);
+      inviteAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends.filter(f => !f.isPending), false);
     }
 
     if (inviteToggleBtn) {

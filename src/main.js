@@ -696,7 +696,7 @@ function initApp() {
         friendsListUnsub = subscribeToFriendsList(user.uid, (friends) => {
           if (!Array.isArray(friends)) return;
 
-          const activeFriendUids = new Set(friends.map(f => f.uid));
+          const activeFriendUids = new Set(friends.filter(f => !f.isPending).map(f => f.uid));
 
           // Clean up unsubscribed friends
           Object.keys(friendStatusUnsubs).forEach(uid => {
@@ -722,6 +722,7 @@ function initApp() {
             const activePartiesList = [];
             const partySeen = new Set();
             friends.forEach(f => {
+              if (f.isPending) return;
               const pres = friendPresences[f.uid];
               if (pres && pres.activePartyId) {
                 if (!partySeen.has(pres.activePartyId)) {
@@ -743,6 +744,7 @@ function initApp() {
 
           // Subscribe to status updates for new friends
           friends.forEach(friend => {
+            if (friend.isPending) return;
             if (!friendStatusUnsubs[friend.uid]) {
               let isFirstStatusCall = true;
               friendStatusUnsubs[friend.uid] = subscribeToFriendStatus(friend.uid, (status) => {

@@ -1049,6 +1049,7 @@ export async function removeFriendFromCloud(userId, friendUid) {
 export function subscribeToFriendsList(userId, onUpdate) {
   let unsub1 = null;
   let unsub2 = null;
+  let unsub3 = null;
   
   const promise = ensureFirebaseInitialized().then(async () => {
     const { collection, query, where, onSnapshot } = firestoreExports;
@@ -1056,9 +1057,11 @@ export function subscribeToFriendsList(userId, onUpdate) {
     
     const q1 = query(colRef, where('status', '==', 'accepted'), where('senderUid', '==', userId));
     const q2 = query(colRef, where('status', '==', 'accepted'), where('targetUid', '==', userId));
+    const q3 = query(colRef, where('status', '==', 'pending'), where('senderUid', '==', userId));
     
     let list1 = [];
     let list2 = [];
+    let list3 = [];
     
     const triggerUpdate = () => {
       const combined = [];
@@ -1072,7 +1075,8 @@ export function subscribeToFriendsList(userId, onUpdate) {
             uid: item.targetUid,
             name: name,
             email: item.targetEmail || '',
-            avatar: getInitialsAvatar(name, item.targetEmail, item.targetAvatar)
+            avatar: getInitialsAvatar(name, item.targetEmail, item.targetAvatar),
+            isPending: false
           });
         }
       });
@@ -1085,7 +1089,22 @@ export function subscribeToFriendsList(userId, onUpdate) {
             uid: item.senderUid,
             name: name,
             email: item.senderEmail || '',
-            avatar: getInitialsAvatar(name, item.senderEmail, item.senderAvatar)
+            avatar: getInitialsAvatar(name, item.senderEmail, item.senderAvatar),
+            isPending: false
+          });
+        }
+      });
+
+      list3.forEach(item => {
+        if (!seen.has(item.targetUid)) {
+          seen.add(item.targetUid);
+          const name = item.targetName || item.targetEmail?.split('@')[0] || 'Friend';
+          combined.push({
+            uid: item.targetUid,
+            name: name,
+            email: item.targetEmail || '',
+            avatar: getInitialsAvatar(name, item.targetEmail, item.targetAvatar),
+            isPending: true
           });
         }
       });
@@ -1104,12 +1123,19 @@ export function subscribeToFriendsList(userId, onUpdate) {
       snap.forEach(d => list2.push(d.data()));
       triggerUpdate();
     });
+
+    unsub3 = onSnapshot(q3, (snap) => {
+      list3 = [];
+      snap.forEach(d => list3.push(d.data()));
+      triggerUpdate();
+    });
   });
   
   return () => {
     if (unsub1) unsub1();
     if (unsub2) unsub2();
-    else promise.then(() => { if (unsub1) unsub1(); if (unsub2) unsub2(); });
+    if (unsub3) unsub3();
+    else promise.then(() => { if (unsub1) unsub1(); if (unsub2) unsub2(); if (unsub3) unsub3(); });
   };
 }
 
