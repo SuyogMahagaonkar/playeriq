@@ -34,6 +34,7 @@ export function createVideoPlayer(container, streamData, {
   let isDragging = false;
   let playInterval = null;
   let isEpisodesVisible = false; // Tracks if Episodes Overlay is open
+  const isTvShow = streamData.isTV === true || streamData.isTV === 'true';
 
 
   const customSeekInterval = Number(localStorage.getItem('piq_seek_interval') || 10);
@@ -626,7 +627,6 @@ export function createVideoPlayer(container, streamData, {
     `;
     controls.appendChild(brightSlider);
 
-    const isTvShow = streamData.isTV === true || streamData.isTV === 'true';
     const optionsRow = document.createElement('div');
     optionsRow.className = 'vp-mobile-options-row';
     optionsRow.id = 'vp-mobile-options-row';

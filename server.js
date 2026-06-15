@@ -22,7 +22,7 @@ try {
       if (parts.length >= 2) {
         const key = parts[0].trim();
         const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
-        if (key && !key.startsWith('#')) {
+        if (key && !key.startsWith('#') && process.env[key] === undefined) {
           process.env[key] = value;
         }
       }
@@ -164,10 +164,8 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
       };
     }
 
-    // Helper: check if we should transcode locally
-    const isChosenHevc = String(chosenStream.codec || '').toLowerCase().includes('hevc') || 
-                         String(chosenStream.codec || '').toLowerCase().includes('h265');
-    const isTranscodingEnabled = isChosenHevc && !hevcSupport && (process.platform === 'win32');
+    // Helper: check if we should transcode (always enabled for HEVC streams when client lacks support)
+    const isTranscodingEnabled = isChosenHevc && !hevcSupport;
 
     // Helper: route through segment or transcode proxy.
     function makeStreamUrl(rawUrl, codec) {
@@ -175,11 +173,8 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
       const isHevc = String(codec || '').toLowerCase().includes('hevc') || 
                      String(codec || '').toLowerCase().includes('h265');
       if (isHevc && !hevcSupport) {
-        const isLocal = process.platform === 'win32' || process.env.LOCAL_DEV === 'true';
-        if (isLocal) {
-          console.log('[Stream] Routing HEVC stream through transcode proxy for compatibility');
-          return `/api/proxy/transcode?url=${encodeURIComponent(rawUrl)}&referer=`;
-        }
+        console.log('[Stream] Routing HEVC stream through transcode proxy for compatibility');
+        return `/api/proxy/transcode?url=${encodeURIComponent(rawUrl)}&referer=`;
       }
       return `/api/proxy/segment?url=${encodeURIComponent(rawUrl)}&referer=`;
     }
