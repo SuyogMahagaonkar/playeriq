@@ -391,7 +391,7 @@ export function createVideoPlayer(container, streamData, {
   // hide all video-specific controls, and keep back + fullscreen.
   // ============================================================
   if (streamData.type === 'embed') {
-    const player = document.getElementById('vp-player');
+    const player = container.querySelector('#vp-player') || container;
 
     // Replace <video> with the embed <iframe>
     const videoPlaceholder = container.querySelector('#vp-video');
@@ -452,13 +452,13 @@ export function createVideoPlayer(container, streamData, {
       player.appendChild(titleOverlay);
       titleOverlay.classList.add('visible');
 
-      document.getElementById('vp-top-back-btn')?.addEventListener('click', e => {
+      container.querySelector('#vp-top-back-btn')?.addEventListener('click', e => {
         e.stopPropagation();
         if (window.history.length > 1) window.history.back();
         else window.location.hash = '#/';
       });
 
-      const topFsBtn = document.getElementById('vp-top-fs-btn');
+      const topFsBtn = container.querySelector('#vp-top-fs-btn');
       if (topFsBtn) {
         topFsBtn.addEventListener('click', e => {
           e.stopPropagation();
@@ -503,8 +503,8 @@ export function createVideoPlayer(container, streamData, {
   // ============================================================
 
   // ---- Elements ----
-  const player = document.getElementById('vp-player');
-  const video = existingVideo || document.getElementById('vp-video');
+  const player = container.querySelector('#vp-player');
+  const video = existingVideo || container.querySelector('#vp-video');
 
   // ---- 15s Playback Watchdog ----
   // Safari on iOS will stay stuck loading in a loop without firing a hard video.error event.
@@ -532,8 +532,8 @@ export function createVideoPlayer(container, streamData, {
     }
   });
 
-  const controls = document.getElementById('vp-controls');
-  if (controls && !document.getElementById('vp-top-title')) {
+  const controls = container.querySelector('#vp-controls');
+  if (controls && !container.querySelector('#vp-top-title')) {
     // Floating title overlay — flex row: [Left Controls: Back, Cast, Sub Settings] [Title] [Fullscreen]
     // No strip background, just text+buttons floating over a top gradient
     const titleOverlay = document.createElement('div');
@@ -578,7 +578,7 @@ export function createVideoPlayer(container, streamData, {
     player.appendChild(titleOverlay);
 
     // Wire overlay buttons
-    const _topBack = document.getElementById('vp-top-back-btn');
+    const _topBack = container.querySelector('#vp-top-back-btn');
     if (_topBack) {
       _topBack.addEventListener('click', e => {
         e.stopPropagation();
@@ -586,25 +586,25 @@ export function createVideoPlayer(container, streamData, {
         else window.location.hash = '#/';
       });
     }
-    const _topCast = document.getElementById('vp-top-cast-btn');
+    const _topCast = container.querySelector('#vp-top-cast-btn');
     if (_topCast) {
       _topCast.addEventListener('click', e => {
         e.stopPropagation();
-        document.getElementById('vp-cast-btn')?.click();
+        container.querySelector('#vp-cast-btn')?.click();
       });
     }
-    const _topSubSettings = document.getElementById('vp-top-sub-settings-btn');
+    const _topSubSettings = container.querySelector('#vp-top-sub-settings-btn');
     if (_topSubSettings) {
       _topSubSettings.addEventListener('click', e => {
         e.stopPropagation();
-        document.getElementById('vp-sub-settings-btn')?.click();
+        container.querySelector('#vp-sub-settings-btn')?.click();
       });
     }
-    const _topFs   = document.getElementById('vp-top-fs-btn');
+    const _topFs   = container.querySelector('#vp-top-fs-btn');
     if (_topFs) {
       _topFs.addEventListener('click', e => {
         e.stopPropagation();
-        document.getElementById('vp-fs-btn')?.click();
+        container.querySelector('#vp-fs-btn')?.click();
       });
     }
 
@@ -703,20 +703,20 @@ export function createVideoPlayer(container, streamData, {
     controls.appendChild(optionsRow);
 
     // Wire up listeners
-    const bSlider = document.getElementById('vp-brightness-slider');
-    const bSliderFill = document.getElementById('vp-brightness-slider-fill');
-
-    const optSpeed = document.getElementById('vp-opt-speed');
-    const optSpeedLabel = document.getElementById('vp-opt-speed-label');
-    const optLock = document.getElementById('vp-opt-lock');
-    const optEpisodes = document.getElementById('vp-opt-episodes');
-    const optEpisodesLabel = document.getElementById('vp-opt-episodes-label');
-    const optQuality = document.getElementById('vp-opt-quality');
-    const optSubtitles = document.getElementById('vp-opt-subtitles');
-    const optSubtitlesLabel = document.getElementById('vp-opt-subtitles-label');
-    const optNext = document.getElementById('vp-opt-next');
-    const optNextLabel = document.getElementById('vp-opt-next-label');
-
+    const bSlider = container.querySelector('#vp-brightness-slider');
+    const bSliderFill = container.querySelector('#vp-brightness-slider-fill');
+ 
+    const optSpeed = container.querySelector('#vp-opt-speed');
+    const optSpeedLabel = container.querySelector('#vp-opt-speed-label');
+    const optLock = container.querySelector('#vp-opt-lock');
+    const optEpisodes = container.querySelector('#vp-opt-episodes');
+    const optEpisodesLabel = container.querySelector('#vp-opt-episodes-label');
+    const optQuality = container.querySelector('#vp-opt-quality');
+    const optSubtitles = container.querySelector('#vp-opt-subtitles');
+    const optSubtitlesLabel = container.querySelector('#vp-opt-subtitles-label');
+    const optNext = container.querySelector('#vp-opt-next');
+    const optNextLabel = container.querySelector('#vp-opt-next-label');
+ 
     if (optNext) {
       optNext.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -725,20 +725,20 @@ export function createVideoPlayer(container, streamData, {
         }
       });
     }
-
+ 
     // Desktop-only Cast & Subtitle settings button delegation click wiring
-    const optCastDesktop = document.getElementById('vp-opt-cast-desktop');
+    const optCastDesktop = container.querySelector('#vp-opt-cast-desktop');
     if (optCastDesktop) {
       optCastDesktop.addEventListener('click', (e) => {
         e.stopPropagation();
-        document.getElementById('vp-cast-btn')?.click();
+        container.querySelector('#vp-cast-btn')?.click();
       });
     }
-    const optSubSettingsDesktop = document.getElementById('vp-opt-sub-settings-desktop');
+    const optSubSettingsDesktop = container.querySelector('#vp-opt-sub-settings-desktop');
     if (optSubSettingsDesktop) {
       optSubSettingsDesktop.addEventListener('click', (e) => {
         e.stopPropagation();
-        document.getElementById('vp-sub-settings-btn')?.click();
+        container.querySelector('#vp-sub-settings-btn')?.click();
       });
     }
 
@@ -761,16 +761,16 @@ export function createVideoPlayer(container, streamData, {
     if (optLock) {
       optLock.addEventListener('click', (e) => {
         e.stopPropagation();
-        const realLockBtn = document.getElementById('vp-lock-btn');
+        const realLockBtn = container.querySelector('#vp-lock-btn');
         if (realLockBtn) realLockBtn.click();
       });
     }
 
     // Custom Netflix-Style Picker
-    const customDialog = document.getElementById('vp-custom-dialog');
-    const dialogBackdrop = document.getElementById('vp-dialog-backdrop');
-    const dialogOptionsList = document.getElementById('vp-dialog-options-list');
-    const dialogCancelBtn = document.getElementById('vp-dialog-cancel-btn');
+    const customDialog = container.querySelector('#vp-custom-dialog');
+    const dialogBackdrop = container.querySelector('#vp-dialog-backdrop');
+    const dialogOptionsList = container.querySelector('#vp-dialog-options-list');
+    const dialogCancelBtn = container.querySelector('#vp-dialog-cancel-btn');
 
     function openCustomPicker(title, nativeSelect) {
       if (!customDialog || !dialogOptionsList) return;
