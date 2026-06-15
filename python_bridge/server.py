@@ -67,13 +67,30 @@ async def _get_streams(client, subject_id: str, release_date: str = None):
     return raw, files
 
 
-async def _get_episode_streams(client, subject_id: str, season: int, episode: int):
-    """Fetch streams for a specific TV episode by paginating until the right S/E is found."""
-    # MovieBox ignores se/ep filter params — it returns all episodes paginated sequentially.
-    # We must paginate through pages until we find the episode with the matching se+ep.
-    MAX_PAGES = 20  # Hard cap to avoid infinite loops
+# In-memory cache for TV episode listings: subject_id -> {"metadata": dict, "episodes": dict, "fetched_pages": set}
+tv_listings_cache = {}
 
+async def _get_episode_streams(client, subject_id: str, season: int, episode: int):
+    """Fetch streams for a specific TV episode, utilizing cache to avoid redundant API queries."""
+    cache_entry = tv_listings_cache.setdefault(subject_id, {"metadata": {}, "episodes": {}, "fetched_pages": set()})
+    
+    # Check if we already cached this episode
+    episode_key = (season, episode)
+    if episode_key in cache_entry["episodes"]:
+        log.warning("[Cache Hit] Serving TV stream for subject %s S%dE%d from memory", subject_id, season, episode)
+        return cache_entry["metadata"], [cache_entry["episodes"][episode_key]]
+
+    # If we overshot earlier (i.e. we fetched past this season), we know it doesn't exist
+    if cache_entry["fetched_pages"]:
+        max_cached_season = max((se for se, ep in cache_entry["episodes"].keys()), default=0)
+        if season < max_cached_season:
+            return {}, []
+
+    MAX_PAGES = 20
     for page in range(1, MAX_PAGES + 1):
+        if page in cache_entry["fetched_pages"]:
+            continue  # Already fetched this page
+
         try:
             params = {
                 "subjectId": subject_id,
@@ -87,13 +104,27 @@ async def _get_episode_streams(client, subject_id: str, season: int, episode: in
             if not items:
                 break  # No more pages
 
-            # Find the specific episode
-            match = next((f for f in items if f.get("se") == season and f.get("ep") == episode), None)
-            if match:
-                return raw, [match]
+            # Mark this page as fetched
+            cache_entry["fetched_pages"].add(page)
+            
+            # Store metadata
+            metadata_keys = ["pager", "subjectId", "subjectType", "cover", "subjectTitle", "totalSize", "totalEpisode", "position", "resolution", "collectionResolutions", "description", "genre", "tags", "favInfo", "releaseDate", "countryName", "durationSeconds", "title"]
+            for k in metadata_keys:
+                if k in raw:
+                    cache_entry["metadata"][k] = raw[k]
 
-            # Optimization: if all episodes on this page are past our target season,
-            # we've overshot — stop searching.
+            # Cache all episodes on this page
+            for f in items:
+                se = f.get("se")
+                ep = f.get("ep")
+                if se is not None and ep is not None:
+                    cache_entry["episodes"][(se, ep)] = f
+
+            # Check if our target episode is now in the cache
+            if episode_key in cache_entry["episodes"]:
+                return cache_entry["metadata"], [cache_entry["episodes"][episode_key]]
+
+            # Optimization: if all episodes on this page are past our target season, stop
             max_season_on_page = max((f.get("se") or 0) for f in items)
             if max_season_on_page > season:
                 break

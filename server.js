@@ -11,6 +11,12 @@ import { getStreams } from './scrapers/index.js';
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
+import https from 'https';
+
+// Global HTTP/HTTPS Keep-Alive agents for connection pooling and fast proxying
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 64 });
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 64 });
 
 // Parse .env manually if it exists (avoids extra dependencies)
 try {
@@ -41,26 +47,62 @@ const PORT = 8788;
 app.use(cors());
 app.use(express.json());
 
-// ---- In-memory cache ----
+// ---- Persistent JSON Cache ----
+const CACHE_FILE = path.resolve(process.cwd(), 'stream_cache.json');
+const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Load cache from disk
+try {
+  if (fs.existsSync(CACHE_FILE)) {
+    const rawData = fs.readFileSync(CACHE_FILE, 'utf8');
+    const parsed = JSON.parse(rawData);
+    const now = Date.now();
+    Object.keys(parsed).forEach(key => {
+      const entry = parsed[key];
+      if (now - entry.ts < CACHE_TTL) {
+        cache.set(key, entry);
+      }
+    });
+    console.log(`[Cache] Loaded ${cache.size} valid entries from ${CACHE_FILE}`);
+  }
+} catch (err) {
+  console.warn('[Cache] Failed to load persistent cache:', err.message);
+}
+
+function saveCacheToDisk() {
+  try {
+    const obj = {};
+    for (const [k, v] of cache) {
+      obj[k] = v;
+    }
+    fs.writeFile(CACHE_FILE, JSON.stringify(obj, null, 2), 'utf8', (err) => {
+      if (err) console.error('[Cache] Failed to write cache to disk:', err.message);
+    });
+  } catch (err) {
+    console.error('[Cache] Failed to save cache:', err.message);
+  }
+}
 
 function getCached(key) {
   const entry = cache.get(key);
   if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
-  cache.delete(key);
+  if (entry) {
+    cache.delete(key);
+    saveCacheToDisk();
+  }
   return null;
 }
 
 function setCache(key, data) {
   cache.set(key, { data, ts: Date.now() });
-  // Clean old entries
   if (cache.size > 200) {
     const now = Date.now();
     for (const [k, v] of cache) {
       if (now - v.ts > CACHE_TTL) cache.delete(k);
     }
   }
+  saveCacheToDisk();
 }
 
 // ---- Health check ----
@@ -1162,6 +1204,8 @@ app.get('/api/proxy/m3u8', async (req, res) => {
       },
       responseType: 'text',
       timeout: 15000,
+      httpAgent,
+      httpsAgent,
     });
 
     // Determine base URL for relative paths
@@ -1219,6 +1263,8 @@ app.get('/api/proxy/segment', async (req, res) => {
       headers: requestHeaders,
       responseType: 'stream',   // Stream — never buffer entire file
       timeout: 30000,
+      httpAgent,
+      httpsAgent,
     });
 
     // Forward status (200 OK or 206 Partial Content for range requests)
@@ -1269,6 +1315,8 @@ app.get('/api/proxy/subtitle', async (req, res) => {
       },
       responseType: 'text',
       timeout: 10000,
+      httpAgent,
+      httpsAgent,
     });
 
     let subtitleText = data;
