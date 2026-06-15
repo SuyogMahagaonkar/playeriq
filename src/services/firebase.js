@@ -1308,6 +1308,41 @@ export async function fetchPartyHistoryFromCloud(userId) {
   }
 }
 
+export async function removePartyHistoryItemFromCloud(userId, logId) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'users', userId, 'party_history', logId);
+    await deleteDoc(ref);
+  } catch (err) {
+    console.error('[Firebase] Failed to remove party history item:', err);
+    throw err;
+  }
+}
+
+export async function clearAllPartyHistoryFromCloud(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs, doc, writeBatch } = firestoreExports;
+  try {
+    const ref = collection(db, 'users', userId, 'party_history');
+    const snap = await getDocs(ref);
+    
+    const batch = writeBatch(db);
+    let count = 0;
+    snap.forEach(d => {
+      batch.delete(doc(db, 'users', userId, 'party_history', d.id));
+      count++;
+    });
+    
+    if (count > 0) {
+      await batch.commit();
+    }
+  } catch (err) {
+    console.error('[Firebase] Failed to clear all party history:', err);
+    throw err;
+  }
+}
+
 // ========================================
 // Firestore: Scheduled Parties
 // ========================================

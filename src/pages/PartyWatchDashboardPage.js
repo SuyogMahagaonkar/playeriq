@@ -17,6 +17,8 @@ import {
   updateUserStatusInCloud,
   sendPartyInviteNotification,
   fetchPartyHistoryFromCloud,
+  removePartyHistoryItemFromCloud,
+  clearAllPartyHistoryFromCloud,
   addPartyHistoryToCloud,
   createScheduledPartyInCloud,
   subscribeToScheduledParties,
@@ -197,8 +199,11 @@ export async function renderPartyWatchDashboard({ container }) {
         <!-- TAB 3: PARTY HISTORY LOGS -->
         <div class="dashboard-panel" id="tab-history">
           <div class="glass-card">
-            <div class="card-title-row">
+            <div class="card-title-row" style="flex-wrap: wrap; gap: 10px;">
               <h3>Past Watched Parties History</h3>
+              <button id="clear-all-history-btn" class="user-empty-btn" style="height:32px; padding:0 12px; font-size:12px; border-color:rgba(239, 68, 68, 0.4); color:#ef4444; background:rgba(239, 68, 68, 0.05); display:none; align-items:center; justify-content:center; gap:4px;">
+                <i data-lucide="trash-2" style="width:13px; height:13px;"></i> Clear All History
+              </button>
             </div>
             <div id="history-logs-container" class="history-list-container">
               <!-- Party History cards -->
@@ -617,10 +622,14 @@ END:VCALENDAR`;
     
     try {
       const logs = await fetchPartyHistoryFromCloud(user.uid);
+      const clearAllBtn = container.querySelector('#clear-all-history-btn');
       if (logs.length === 0) {
+        if (clearAllBtn) clearAllBtn.style.display = 'none';
         containerEl.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:20px 0; text-align:center; grid-column:1/-1;">No watch party logs recorded.</div>';
         return;
       }
+
+      if (clearAllBtn) clearAllBtn.style.display = 'inline-flex';
 
       containerEl.innerHTML = logs.map(log => {
         const dateStr = log.date ? new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown Date';
@@ -633,6 +642,9 @@ END:VCALENDAR`;
 
         return `
           <div class="history-card" data-log-id="${log.id}">
+            <button class="history-delete-btn" data-log-id="${log.id}" title="Delete watch party from history">
+              <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+            </button>
             <img class="history-poster" src="${posterUrl}" alt="" />
             <div class="history-info">
               <div>
@@ -660,6 +672,23 @@ END:VCALENDAR`;
         });
       });
 
+      // Wire individual delete triggers
+      containerEl.querySelectorAll('.history-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const logId = btn.dataset.logId;
+          if (confirm('Delete this watch party from history?')) {
+            try {
+              await removePartyHistoryItemFromCloud(user.uid, logId);
+              showToast('History entry deleted.');
+              renderHistoryTab();
+            } catch (err) {
+              showToast('Failed to delete history entry.');
+            }
+          }
+        });
+      });
+
       if (window.lucide) window.lucide.createIcons();
     } catch(err) {
       containerEl.innerHTML = '<div style="color:#ef4444; font-size:12px; padding:20px 0;">Failed to load history logs.</div>';
@@ -668,6 +697,20 @@ END:VCALENDAR`;
 
   // Wire history tab clicks to fetch dynamically
   container.querySelector('.dashboard-tab-btn[data-tab="tab-history"]').addEventListener('click', renderHistoryTab);
+
+  // Wire clear all history button
+  const clearAllBtn = container.querySelector('#clear-all-history-btn');
+  clearAllBtn?.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to clear your entire watch party history? This cannot be undone.')) {
+      try {
+        await clearAllPartyHistoryFromCloud(user.uid);
+        showToast('Watch party history cleared.');
+        renderHistoryTab();
+      } catch (e) {
+        showToast('Failed to clear history.');
+      }
+    }
+  });
 
   // ---- Modals Implementation ----
 
