@@ -141,6 +141,20 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       playerFrameUrl = new URL(playerFrameUrl, loadUrl).href;
     }
 
+    // Production VPS IP bypass: Nontongo blocks requests from VPS IPs.
+    // Return the embed directly on production to bypass the VPS proxy and Cloudflare locks.
+    const isLocal = process.platform === 'win32' || process.env.LOCAL_DEV === 'true';
+    if (!isLocal) {
+      console.log(`[Nontongo] Production detected: Returning playerFrame as embed URL directly to bypass VPS proxy blocks`);
+      return {
+        url: playerFrameUrl,
+        type: 'embed',
+        provider: 'nontongo',
+        referer: loadUrl,
+        subtitles: []
+      };
+    }
+
     console.log(`[Nontongo] Step 5: Fetching player frame content to classify stream: ${playerFrameUrl}`);
     try {
       const { data: frameContent, headers: frameHeaders } = await axios.get(playerFrameUrl, {
