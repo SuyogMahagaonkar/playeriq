@@ -237,14 +237,10 @@ export async function renderWatchPartyPage({ params, container }) {
       console.warn('[WatchParty] Failed to auto-rejoin party:', joinErr);
     }
 
-    // Detect HEVC support on client (Safari/iOS supports it, Chrome/Firefox on Windows/macOS/Linux does not support/play it reliably)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafariMac = /Macintosh/.test(navigator.userAgent) && 
-                        /Safari/.test(navigator.userAgent) && 
-                        !/Chrome|Chromium|CriOS|Edg|Firefox/.test(navigator.userAgent);
-    const supportsHEVC = (isIOS || isSafariMac) && 
-                         document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '';
+    // Detect HEVC support — query the browser directly via canPlayType().
+    // Chrome 108+ on Windows/macOS with Media Foundation hardware support CAN play H.265.
+    const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '' ||
+                         document.createElement('video').canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '';
 
     // 2. Fetch Direct Stream URL from proxy
     const streamEndpoint = partyData.type === 'tv'
