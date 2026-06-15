@@ -362,6 +362,8 @@ function initApp() {
   const shownActiveParties = new Set();
   const friendActiveParties = {}; // uid -> last activePartyId
   const friendPresences = {}; // uid -> latest presence status
+  const activeFriendRequestToasts = {}; // senderUid -> cleanUp function
+  const activeWatchPartyToasts = {}; // partyId -> cleanUp function
 
   function showPartyInviteBanner(inv, userId) {
     if (shownInvites.has(inv.id)) return;
@@ -437,6 +439,11 @@ function initApp() {
     if (shownFriendRequests.has(req.senderUid)) return;
     shownFriendRequests.add(req.senderUid);
 
+    // Clean up existing toast for this senderUid first
+    if (activeFriendRequestToasts[req.senderUid]) {
+      activeFriendRequestToasts[req.senderUid]();
+    }
+
     let container = document.getElementById('piq-top-toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -466,9 +473,14 @@ function initApp() {
     const declineBtn = toast.querySelector('.banner-decline-btn');
 
     const cleanUp = () => {
+      if (activeFriendRequestToasts[req.senderUid] === cleanUp) {
+        delete activeFriendRequestToasts[req.senderUid];
+      }
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 550);
     };
+
+    activeFriendRequestToasts[req.senderUid] = cleanUp;
 
     acceptBtn.addEventListener('click', async () => {
       cleanUp();
@@ -499,6 +511,11 @@ function initApp() {
   }
 
   function showActivePartyBanner(friendName, friendAvatar, partyId, mediaTitle) {
+    // Clean up existing toast for this partyId first
+    if (activeWatchPartyToasts[partyId]) {
+      activeWatchPartyToasts[partyId]();
+    }
+
     let container = document.getElementById('piq-top-toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -528,9 +545,14 @@ function initApp() {
     const dismissBtn = toast.querySelector('.banner-dismiss-btn');
 
     const cleanUp = () => {
+      if (activeWatchPartyToasts[partyId] === cleanUp) {
+        delete activeWatchPartyToasts[partyId];
+      }
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 550);
     };
+
+    activeWatchPartyToasts[partyId] = cleanUp;
 
     joinBtn.addEventListener('click', () => {
       cleanUp();
@@ -597,6 +619,10 @@ function initApp() {
       Object.keys(friendActiveParties).forEach(uid => delete friendActiveParties[uid]);
       Object.keys(friendPresences).forEach(uid => delete friendPresences[uid]);
       
+      // Dismiss any active friend/party toasts
+      Object.keys(activeFriendRequestToasts).forEach(uid => activeFriendRequestToasts[uid]());
+      Object.keys(activeWatchPartyToasts).forEach(pid => activeWatchPartyToasts[pid]());
+      
       // Clear navbar globals
       import('./components/Navbar.js').then(({ setGlobalFriendRequests, setGlobalActiveFriendParties }) => {
         setGlobalFriendRequests([]);
@@ -642,6 +668,14 @@ function initApp() {
           });
 
           if (Array.isArray(requests)) {
+            // Dismiss active toasts for requests that are no longer pending
+            const activeRequestUids = new Set(requests.map(r => r.senderUid));
+            Object.keys(activeFriendRequestToasts).forEach(senderUid => {
+              if (!activeRequestUids.has(senderUid)) {
+                activeFriendRequestToasts[senderUid]();
+              }
+            });
+
             if (isInitialRequestLoad) {
               // Add all pre-existing request senders to shownFriendRequests to avoid toast storms on load
               requests.forEach(req => shownFriendRequests.add(req.senderUid));
@@ -671,6 +705,13 @@ function initApp() {
                 friendStatusUnsubs[uid]();
               }
               delete friendStatusUnsubs[uid];
+
+              // Dismiss active toast for friend removed
+              const oldPartyId = friendActiveParties[uid];
+              if (oldPartyId && activeWatchPartyToasts[oldPartyId]) {
+                activeWatchPartyToasts[oldPartyId]();
+              }
+
               delete friendActiveParties[uid];
               delete friendPresences[uid];
             }
@@ -718,6 +759,14 @@ function initApp() {
                     shownActiveParties.add(newPartyId);
                     showActivePartyBanner(friend.name, friend.avatar, newPartyId, status.activeWatchMedia);
                   }
+
+                  // Dismiss active toast if friend left the party
+                  if (oldPartyId && oldPartyId !== newPartyId) {
+                    if (activeWatchPartyToasts[oldPartyId]) {
+                      activeWatchPartyToasts[oldPartyId]();
+                    }
+                  }
+
                   friendActiveParties[friend.uid] = newPartyId;
                 }
 
