@@ -721,8 +721,14 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     };
 
 
-    // Detect HEVC support on client using native feature detection (Chrome 107+ and Safari/iOS support HEVC when hardware accelerated)
-    const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '';
+    // Detect HEVC support on client (Safari/iOS supports it, Chrome/Firefox on Windows/macOS/Linux does not support/play it reliably)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isSafariMac = /Macintosh/.test(navigator.userAgent) && 
+                        /Safari/.test(navigator.userAgent) && 
+                        !/Chrome|Chromium|CriOS|Edg|Firefox/.test(navigator.userAgent);
+    const supportsHEVC = (isIOS || isSafariMac) && 
+                         document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '';
 
     try {
       const endpoint = isTV
