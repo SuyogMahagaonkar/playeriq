@@ -614,15 +614,17 @@ function renderSuggestions(results, container) {
 // Shared state for friend requests and active friend watch parties
 let currentFriendRequests = [];
 let currentActiveFriendParties = [];
+const dismissedRequests = new Set();
+const dismissedParties = new Set();
 
 export function setGlobalFriendRequests(requests) {
-  currentFriendRequests = requests || [];
+  currentFriendRequests = (requests || []).filter(r => !dismissedRequests.has(r.senderUid));
   refreshNotifBadge();
   renderNotificationsDropdown();
 }
 
 export function setGlobalActiveFriendParties(parties) {
-  currentActiveFriendParties = parties || [];
+  currentActiveFriendParties = (parties || []).filter(p => !dismissedParties.has(p.partyId));
   refreshNotifBadge();
   renderNotificationsDropdown();
 }
@@ -714,7 +716,7 @@ function renderNotificationsDropdown() {
     html += currentFriendRequests.map(req => {
       const avatarUrl = req.senderAvatar;
       return `
-        <div class="notif-item friend-request-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+        <div class="notif-item friend-request-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: relative; padding-right: 40px;">
           <img src="${avatarUrl}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid var(--accent, #a855f7);" />
           <div class="notif-item-content" style="flex: 1; min-width: 0;">
             <div class="notif-item-title" style="font-size: 12px; color: #fff; line-height: 1.4; margin-bottom: 6px;">
@@ -725,6 +727,9 @@ function renderNotificationsDropdown() {
               <button class="notif-btn-decline" data-uid="${req.senderUid}" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted, #8e9297); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.2s;">Decline</button>
             </div>
           </div>
+          <button class="notif-request-dismiss-btn" data-uid="${req.senderUid}" style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--text-muted, #8e9297); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='var(--text-muted)';" title="Dismiss Notification">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
         </div>
       `;
     }).join('');
@@ -735,7 +740,7 @@ function renderNotificationsDropdown() {
     html += currentActiveFriendParties.map(party => {
       const avatarUrl = party.friendAvatar;
       return `
-        <div class="notif-item active-party-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+        <div class="notif-item active-party-item" style="cursor: default; display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: relative; padding-right: 40px;">
           <img src="${avatarUrl}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid var(--success, #10b981);" />
           <div class="notif-item-content" style="flex: 1; min-width: 0;">
             <div class="notif-item-title" style="font-size: 12px; color: #fff; line-height: 1.4;">
@@ -748,6 +753,9 @@ function renderNotificationsDropdown() {
               <button class="notif-btn-join" data-party-id="${party.partyId}" style="background: var(--success, #10b981); border: none; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: filter 0.2s;">Join Room</button>
             </div>
           </div>
+          <button class="notif-party-dismiss-btn" data-party-id="${party.partyId}" style="position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--text-muted, #8e9297); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='var(--text-muted)';" title="Dismiss Notification">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
         </div>
       `;
     }).join('');
@@ -758,7 +766,7 @@ function renderNotificationsDropdown() {
       const formattedDate = new Date(it.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const watchRoute = `#/watch/tv/${it.tvId}?s=${it.seasonNumber}&e=${it.episodeNumber}`;
       return `
-        <div class="notif-item" data-route="${watchRoute}">
+        <div class="notif-item" data-route="${watchRoute}" style="position: relative; display: flex; align-items: center; padding-right: 40px;">
           <div class="notif-item-icon-wrapper">
             <i data-lucide="play" style="width: 14px; height: 14px; fill: currentColor;"></i>
           </div>
@@ -769,6 +777,9 @@ function renderNotificationsDropdown() {
               <span style="color: #00a8e1; font-weight:700;">• Stream Now</span>
             </div>
           </div>
+          <button class="notif-item-remove-btn" data-epkey="${it.epKey || it.id || ''}" style="position: absolute; right: 12px; background: none; border: none; color: var(--text-muted, #8e9297); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='var(--text-muted)';" title="Remove Notification">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
         </div>
       `;
     }).join('');
@@ -779,7 +790,7 @@ function renderNotificationsDropdown() {
       const formattedDate = it.airDate && it.airDate !== 'Soon' ? new Date(it.airDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
       const detailRoute = `#/tv/${it.tvId}`;
       return `
-        <div class="notif-item upcoming" data-route="${detailRoute}">
+        <div class="notif-item upcoming" data-route="${detailRoute}" style="position: relative; display: flex; align-items: center; padding-right: 40px;">
           <div class="notif-item-icon-wrapper upcoming">
             <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
           </div>
@@ -790,6 +801,9 @@ function renderNotificationsDropdown() {
               <span>• Alert Set</span>
             </div>
           </div>
+          <button class="notif-item-remove-btn" data-epkey="${it.epKey || it.id || ''}" style="position: absolute; right: 12px; background: none; border: none; color: var(--text-muted, #8e9297); cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='var(--text-muted)';" title="Remove Notification">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
         </div>
       `;
     }).join('');
@@ -806,6 +820,53 @@ function renderNotificationsDropdown() {
         window.location.hash = route;
         toggleNotifDropdown(false);
       }
+    });
+  });
+
+  // Episode Notification individual remove listener
+  listEl.querySelectorAll('.notif-item-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const epKey = btn.dataset.epkey;
+      if (epKey) {
+        const alerts = JSON.parse(localStorage.getItem('playeriq_notify_episodes') || '{}');
+        delete alerts[epKey];
+        localStorage.setItem('playeriq_notify_episodes', JSON.stringify(alerts));
+        
+        // Also remove from Firestore cloud notifications if logged in
+        const user = getUser();
+        if (user) {
+          try {
+            const { removeNotificationFromCloud } = await import('../services/firebase.js');
+            await removeNotificationFromCloud(user.uid, epKey);
+          } catch (err) {
+            console.warn('Failed to remove notification from cloud:', err);
+          }
+        }
+        
+        refreshNotifBadge();
+        renderNotificationsDropdown();
+      }
+    });
+  });
+
+  // Friend Request dismiss listener
+  listEl.querySelectorAll('.notif-request-dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const senderUid = btn.dataset.uid;
+      dismissedRequests.add(senderUid);
+      setGlobalFriendRequests(currentFriendRequests);
+    });
+  });
+
+  // Active Watch Party dismiss listener
+  listEl.querySelectorAll('.notif-party-dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const partyId = btn.dataset.partyId;
+      dismissedParties.add(partyId);
+      setGlobalActiveFriendParties(currentActiveFriendParties);
     });
   });
 
