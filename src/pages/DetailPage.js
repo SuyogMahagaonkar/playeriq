@@ -6,7 +6,8 @@ import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
-import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud, getInitialsAvatar } from '../services/firebase.js';
+import { isInWatchlist, addToWatchlist, removeFromWatchlist, addNotificationToCloud, removeNotificationFromCloud, isNotificationInCloud, createWatchPartyInCloud, getInitialsAvatar, subscribeToFriendsList } from '../services/firebase.js';
+import { initFriendAutocomplete } from '../components/FriendAutocomplete.js';
 import { DownloadManager } from '../services/download.js';
 import '../styles/detail.css';
 
@@ -1457,6 +1458,10 @@ function showTvSelectionModal(mediaId, title, year, seasons, callback) {
 
 function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epNum, posterPath) {
   const partyId = Math.random().toString(36).substring(2, 11);
+  let currentFriends = [];
+  const unsubFriends = subscribeToFriendsList(hostUser.uid, (friends) => {
+    currentFriends = friends;
+  });
   const hostName = hostUser.displayName || hostUser.email.split('@')[0] || 'Host';
   const joinLink = `https://playeriq.suyogmahagaonkar.me/#/watch-party/join/${partyId}`;
 
@@ -1527,6 +1532,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
   const sendInviteBtn = modal.querySelector('#send-invite-email-btn');
   const inviteEmailInput = modal.querySelector('#invite-email-input');
   const inviteStatus = modal.querySelector('#invite-email-status');
+  const inviteesAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends, false);
   const cancelBtn = modal.querySelector('#cancel-party-btn');
   const startPartyBtn = modal.querySelector('#start-party-btn');
 
@@ -1542,7 +1548,11 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
     showToast('Party link copied to clipboard!', 'check');
   });
 
-  const removeModal = () => modal.remove();
+  const removeModal = () => {
+    unsubFriends();
+    if (inviteesAutocomplete) inviteesAutocomplete.destroy();
+    modal.remove();
+  };
   closeBtn.addEventListener('click', removeModal);
   cancelBtn.addEventListener('click', removeModal);
 
@@ -1625,7 +1635,7 @@ function showWatchPartySetupModal(hostUser, mediaId, title, type, seasonNum, epN
 
     try {
       await createWatchPartyInCloud(partyId, partyData);
-      modal.remove();
+      removeModal();
       navigate(`/watch-party/${partyId}`);
     } catch (err) {
       console.error(err);

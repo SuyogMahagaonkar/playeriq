@@ -24,10 +24,13 @@ import {
   getInitialsAvatar
 } from '../services/firebase.js';
 import { navigate } from '../services/router.js';
+import { initFriendAutocomplete } from '../components/FriendAutocomplete.js';
 
 export async function renderPartyWatchDashboard({ container }) {
   await waitAuthReady();
   const user = getUser();
+  let currentFriendsList = [];
+  let inviteesAutocomplete = null;
 
   if (!user) {
     container.innerHTML = `
@@ -322,6 +325,7 @@ export async function renderPartyWatchDashboard({ container }) {
   // 2. Mutual Friends and Presence Status listeners
   let statusUnsubscribes = {};
   const unsubFriends = subscribeToFriendsList(user.uid, (friends) => {
+    currentFriendsList = friends;
     const listEl = container.querySelector('#friends-list-container');
     const presenceListEl = container.querySelector('#friend-activity-presence-list');
     
@@ -891,7 +895,20 @@ END:VCALENDAR`;
     if (window.lucide) window.lucide.createIcons();
 
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
-    closeBtn.addEventListener('click', () => modalOverlay.classList.add('hidden'));
+    const inviteesInput = modalOverlay.querySelector('#sch-invitees');
+
+    if (inviteesAutocomplete) inviteesAutocomplete.destroy();
+    if (inviteesInput) {
+      inviteesAutocomplete = initFriendAutocomplete(inviteesInput, () => currentFriendsList, true);
+    }
+
+    closeBtn.addEventListener('click', () => {
+      modalOverlay.classList.add('hidden');
+      if (inviteesAutocomplete) {
+        inviteesAutocomplete.destroy();
+        inviteesAutocomplete = null;
+      }
+    });
 
     const searchInput = modalOverlay.querySelector('#sch-media-search');
     const dropdown = modalOverlay.querySelector('#sch-search-dropdown');
@@ -1055,6 +1072,10 @@ END:VCALENDAR`;
         downloadCalendarFile(name, dateTime, partyId);
 
         modalOverlay.classList.add('hidden');
+        if (inviteesAutocomplete) {
+          inviteesAutocomplete.destroy();
+          inviteesAutocomplete = null;
+        }
       } catch(e) {
         showToast('Failed to schedule party.');
       }
@@ -1310,5 +1331,9 @@ END:VCALENDAR`;
     if (unsubFriends) unsubFriends();
     if (unsubScheduled) unsubScheduled();
     Object.values(statusUnsubscribes).forEach(un => un());
+    if (inviteesAutocomplete) {
+      inviteesAutocomplete.destroy();
+      inviteesAutocomplete = null;
+    }
   };
 }

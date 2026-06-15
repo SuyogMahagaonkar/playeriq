@@ -19,8 +19,10 @@ import {
   createScheduledPartyInCloud,
   subscribeToScheduledParties,
   deleteScheduledPartyInCloud,
-  getInitialsAvatar
+  getInitialsAvatar,
+  subscribeToFriendsList
 } from '../services/firebase.js';
+import { initFriendAutocomplete } from '../components/FriendAutocomplete.js';
 import { createVideoPlayer } from '../components/VideoPlayer.js';
 import { navigate } from '../services/router.js';
 import '../styles/player.css';
@@ -290,6 +292,12 @@ export async function renderWatchPartyPage({ params, container }) {
   let lastSpawnedMsgId = null;
   let latestChatMessages = [];
   let partyDataObj = null;
+
+  let currentFriends = [];
+  let inviteAutocomplete = null;
+  const unsubFriends = subscribeToFriendsList(user.uid, (friends) => {
+    currentFriends = friends;
+  });
 
   let currentSessionToken = sessionStorage.getItem('piq_party_session');
   if (!currentSessionToken) {
@@ -811,6 +819,10 @@ export async function renderWatchPartyPage({ params, container }) {
     const inviteEmailInput = container.querySelector('#sidebar-invite-email');
     const sendInviteBtn = container.querySelector('#sidebar-send-invite-btn');
 
+    if (inviteEmailInput) {
+      inviteAutocomplete = initFriendAutocomplete(inviteEmailInput, () => currentFriends, false);
+    }
+
     if (inviteToggleBtn) {
       inviteToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1064,6 +1076,11 @@ export async function renderWatchPartyPage({ params, container }) {
       if (countdownInterval) clearInterval(countdownInterval);
       if (unsubRoom) unsubRoom();
       if (unsubChat) unsubChat();
+      if (unsubFriends) unsubFriends();
+      if (inviteAutocomplete) {
+        inviteAutocomplete.destroy();
+        inviteAutocomplete = null;
+      }
       if (activePlayer) activePlayer.destroy();
       
       // Leave room and reset status
