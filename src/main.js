@@ -13,6 +13,7 @@ import './styles/profile-dropdown.css';
 import './styles/user-pages.css';
 import './styles/connectivity.css';
 import './styles/watch-party.css';
+import './styles/party-dashboard.css';
 // Core component styles — imported here so they are always in the initial bundle
 // regardless of which route the user lands on first (fixes hero CSS not loading until /ranking visited)
 import './styles/hero.css';
@@ -350,6 +351,87 @@ function initApp() {
 
   let loginOverlayContainer = null;
   let verificationOverlayContainer = null;
+  let partyInviteUnsub = null;
+  const shownInvites = new Set();
+
+  function showPartyInviteBanner(inv, userId) {
+    if (shownInvites.has(inv.id)) return;
+    shownInvites.add(inv.id);
+
+    let container = document.getElementById('piq-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'piq-toast-container';
+      container.className = 'piq-toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'piq-toast invite-banner show';
+    
+    const posterUrl = inv.posterPath 
+      ? (inv.posterPath.startsWith('/') ? `https://image.tmdb.org/t/p/w92${inv.posterPath}` : inv.posterPath)
+      : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="%23222"><rect width="100" height="150"/></svg>';
+
+    toast.innerHTML = `
+      <img src="${posterUrl}" alt="" style="width:36px; height:54px; border-radius:6px; object-fit:cover; flex-shrink:0;" />
+      <div style="flex:1; min-width:0; text-align:left;">
+        <div style="font-weight:700; font-size:13px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${inv.hostName} invited you!</div>
+        <div style="font-size:11px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Watch: ${inv.mediaTitle}</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="banner-accept-btn" style="background:var(--success); border:none; color:#fff; font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Accept</button>
+        <button class="banner-decline-btn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">Decline</button>
+      </div>
+    `;
+
+    container.appendChild(toast);
+
+    const acceptBtn = toast.querySelector('.banner-accept-btn');
+    const declineBtn = toast.querySelector('.banner-decline-btn');
+
+    const cleanUp = () => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 450);
+    };
+
+    acceptBtn.addEventListener('click', async () => {
+      cleanUp();
+      try {
+        const { respondToPartyInvite } = await import('./services/firebase.js');
+        await respondToPartyInvite(userId, inv.id, 'accepted');
+        window.location.hash = `#/watch-party/join/${inv.partyId}`;
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    declineBtn.addEventListener('click', async () => {
+      cleanUp();
+      try {
+        const { respondToPartyInvite } = await import('./services/firebase.js');
+        await respondToPartyInvite(userId, inv.id, 'declined');
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    // Auto dismiss after 10 seconds if not acted upon
+    setTimeout(() => {
+      if (toast.parentNode) {
+        cleanUp();
+      }
+    }, 10000);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    const user = getUser();
+    if (user) {
+      import('./services/firebase.js').then(({ updateUserStatusInCloud }) => {
+        updateUserStatusInCloud(user.uid, 'offline');
+      });
+    }
+  });
 
   onUserChange((user) => {
     refreshSidebarNav();
@@ -365,6 +447,10 @@ function initApp() {
     }
 
     if (!user) {
+      if (partyInviteUnsub) {
+        partyInviteUnsub();
+        partyInviteUnsub = null;
+      }
       // User is logged out: show login overlay
       loginOverlayContainer = document.createElement('div');
       loginOverlayContainer.id = 'login-overlay';
@@ -375,6 +461,20 @@ function initApp() {
         }
       });
     } else {
+      // Set presence online and listen for invites
+      import('./services/firebase.js').then(({ subscribeToPartyNotifications, updateUserStatusInCloud }) => {
+        updateUserStatusInCloud(user.uid, 'online');
+        
+        if (partyInviteUnsub) partyInviteUnsub();
+        partyInviteUnsub = subscribeToPartyNotifications(user.uid, (invites) => {
+          if (Array.isArray(invites) && invites.length > 0) {
+            invites.forEach(inv => {
+              showPartyInviteBanner(inv, user.uid);
+            });
+          }
+        });
+      });
+
       // User is logged in: check verification
       const isPasswordProvider = user.providerData && user.providerData.some(p => p.providerId === 'password');
       if (isPasswordProvider && !user.emailVerified) {
@@ -530,6 +630,12 @@ function initApp() {
     updateSidebarActive();
     const { renderWatchPartyPage } = await import('./pages/WatchPartyPage.js');
     return await renderWatchPartyPage(ctx);
+  });
+
+  addRoute('/party-watch', async (ctx) => {
+    updateSidebarActive();
+    const { renderPartyWatchDashboard } = await import('./pages/PartyWatchDashboardPage.js');
+    return await renderPartyWatchDashboard(ctx);
   });
 
   // Start routing

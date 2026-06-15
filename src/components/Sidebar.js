@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: 'Home',        icon: 'home',      path: '/' },
   { label: 'Movies',      icon: 'film',      path: '/movies' },
   { label: 'TV Shows',    icon: 'tv',        path: '/tv' },
+  { label: 'Party Watch', icon: 'users',     path: '/party-watch' },
   { label: 'Animation',   icon: 'sparkles',  path: '/movies?genre=16' },
   { label: 'Most Watched',icon: 'trophy',    path: '/ranking' },
   { label: 'Calendar',    icon: 'calendar',  path: '/calendar' },

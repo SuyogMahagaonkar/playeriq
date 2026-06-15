@@ -875,3 +875,382 @@ export function subscribeToChatMessages(partyId, onUpdate) {
     else promise.then(() => { if (unsub) unsub(); });
   };
 }
+
+// ========================================
+// Firestore: Friend System & Status
+// ========================================
+
+export async function sendFriendRequestInCloud(senderUid, targetEmail) {
+  await ensureFirebaseInitialized();
+  const { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } = firestoreExports;
+  try {
+    const q = query(collection(db, 'users'), where('email', '==', targetEmail.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error('No user found with this email address.');
+    
+    const targetUserDoc = snap.docs[0];
+    const targetUid = targetUserDoc.id;
+    if (targetUid === senderUid) throw new Error('You cannot add yourself as a friend.');
+    
+    // Check if already friends
+    const friendRef = doc(db, 'users', senderUid, 'friends', targetUid);
+    const friendSnap = await getDoc(friendRef);
+    if (friendSnap.exists()) throw new Error('You are already friends with this user.');
+    
+    const myProfile = await getUserProfile(senderUid);
+    const reqRef = doc(db, 'users', targetUid, 'friend_requests', senderUid);
+    await setDoc(reqRef, {
+      senderUid,
+      senderName: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'User',
+      senderEmail: myProfile?.email || '',
+      senderAvatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      status: 'pending',
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to send friend request:', err);
+    throw err;
+  }
+}
+
+export async function acceptFriendRequestInCloud(userId, requestUid) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, deleteDoc, serverTimestamp } = firestoreExports;
+  try {
+    const myProfile = await getUserProfile(userId);
+    const friendProfile = await getUserProfile(requestUid);
+    
+    await setDoc(doc(db, 'users', userId, 'friends', requestUid), {
+      uid: requestUid,
+      name: friendProfile?.displayName || friendProfile?.email?.split('@')[0] || 'Friend',
+      email: friendProfile?.email || '',
+      avatar: friendProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      addedAt: serverTimestamp()
+    });
+    
+    await setDoc(doc(db, 'users', requestUid, 'friends', userId), {
+      uid: userId,
+      name: myProfile?.displayName || myProfile?.email?.split('@')[0] || 'Friend',
+      email: myProfile?.email || '',
+      avatar: myProfile?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      addedAt: serverTimestamp()
+    });
+    
+    await deleteDoc(doc(db, 'users', userId, 'friend_requests', requestUid));
+  } catch (err) {
+    console.error('[Firebase] Failed to accept friend request:', err);
+    throw err;
+  }
+}
+
+export async function declineFriendRequestInCloud(userId, requestUid) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'friend_requests', requestUid));
+  } catch (err) {
+    console.error('[Firebase] Failed to decline friend request:', err);
+    throw err;
+  }
+}
+
+export async function removeFriendFromCloud(userId, friendUid) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'friends', friendUid));
+    await deleteDoc(doc(db, 'users', friendUid, 'friends', userId));
+  } catch (err) {
+    console.error('[Firebase] Failed to remove friend:', err);
+    throw err;
+  }
+}
+
+export function subscribeToFriendsList(userId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, onSnapshot } = firestoreExports;
+    const ref = collection(db, 'users', userId, 'friends');
+    unsub = onSnapshot(ref, (snap) => {
+      const list = [];
+      snap.forEach(d => list.push(d.data()));
+      onUpdate(list);
+    }, (err) => {
+      console.error('[Firebase] Friends list sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export function subscribeToFriendRequests(userId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, onSnapshot } = firestoreExports;
+    const ref = collection(db, 'users', userId, 'friend_requests');
+    unsub = onSnapshot(ref, (snap) => {
+      const list = [];
+      snap.forEach(d => list.push(d.data()));
+      onUpdate(list);
+    }, (err) => {
+      console.error('[Firebase] Friend requests sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export function subscribeToFriendStatus(friendUid, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { doc, onSnapshot } = firestoreExports;
+    const ref = doc(db, 'users', friendUid);
+    unsub = onSnapshot(ref, (snap) => {
+      onUpdate(snap.exists() ? snap.data() : null);
+    }, (err) => {
+      console.error('[Firebase] Friend status sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export async function updateUserStatusInCloud(userId, status, activePartyId = null, activeWatchMedia = null) {
+  await ensureFirebaseInitialized();
+  const { doc, updateDoc, serverTimestamp } = firestoreExports;
+  try {
+    const ref = doc(db, 'users', userId);
+    await updateDoc(ref, {
+      status,
+      activePartyId,
+      activeWatchMedia,
+      lastStatusUpdate: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to update user status:', err);
+  }
+}
+
+// ========================================
+// Firestore: Party Invite Notifications
+// ========================================
+
+export async function sendPartyInviteNotification(senderUid, senderName, senderAvatar, targetEmail, partyId, mediaTitle, posterPath, mediaType) {
+  await ensureFirebaseInitialized();
+  const { collection, query, where, getDocs, doc, setDoc, serverTimestamp } = firestoreExports;
+  try {
+    const q = query(collection(db, 'users'), where('email', '==', targetEmail.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error('No user found with this email.');
+    
+    const targetUid = snap.docs[0].id;
+    const notifId = `invite_${partyId}_${Date.now()}`;
+    const notifRef = doc(db, 'users', targetUid, 'party_notifications', notifId);
+    
+    await setDoc(notifRef, {
+      id: notifId,
+      partyId,
+      mediaTitle,
+      posterPath,
+      mediaType,
+      hostName: senderName,
+      hostAvatar: senderAvatar,
+      hostUid: senderUid,
+      status: 'pending',
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to send invite notification:', err);
+    throw err;
+  }
+}
+
+export function subscribeToPartyNotifications(userId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, query, where, onSnapshot } = firestoreExports;
+    const ref = collection(db, 'users', userId, 'party_notifications');
+    const q = query(ref, where('status', '==', 'pending'));
+    unsub = onSnapshot(q, (snap) => {
+      const list = [];
+      snap.forEach(d => list.push(d.data()));
+      onUpdate(list);
+    }, (err) => {
+      console.error('[Firebase] Party notifications sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export async function respondToPartyInvite(userId, notificationId, status) {
+  await ensureFirebaseInitialized();
+  const { doc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'users', userId, 'party_notifications', notificationId);
+    await updateDoc(ref, { status });
+  } catch (err) {
+    console.error('[Firebase] Failed to respond to party invite:', err);
+    throw err;
+  }
+}
+
+// ========================================
+// Firestore: Party History logs
+// ========================================
+
+export async function addPartyHistoryToCloud(userId, historyData) {
+  await ensureFirebaseInitialized();
+  const { collection, addDoc, serverTimestamp } = firestoreExports;
+  try {
+    const ref = collection(db, 'users', userId, 'party_history');
+    await addDoc(ref, {
+      ...historyData,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to add party history:', err);
+  }
+}
+
+export async function fetchPartyHistoryFromCloud(userId) {
+  await ensureFirebaseInitialized();
+  const { collection, getDocs } = firestoreExports;
+  try {
+    const ref = collection(db, 'users', userId, 'party_history');
+    const snap = await getDocs(ref);
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    // Sort by timestamp descending
+    list.sort((a, b) => {
+      const ta = a.timestamp?.toMillis?.() ?? 0;
+      const tb = b.timestamp?.toMillis?.() ?? 0;
+      return tb - ta;
+    });
+    return list;
+  } catch (err) {
+    console.error('[Firebase] Failed to fetch party history:', err);
+    return [];
+  }
+}
+
+// ========================================
+// Firestore: Scheduled Parties
+// ========================================
+
+export async function createScheduledPartyInCloud(partyId, partyData) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
+  try {
+    const ref = doc(db, 'scheduled_parties', partyId);
+    await setDoc(ref, {
+      ...partyData,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to create scheduled party:', err);
+    throw err;
+  }
+}
+
+export function subscribeToScheduledParties(userId, userEmail, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, onSnapshot } = firestoreExports;
+    const ref = collection(db, 'scheduled_parties');
+    unsub = onSnapshot(ref, (snap) => {
+      const list = [];
+      snap.forEach(d => {
+        const data = d.data();
+        const isHost = data.hostId === userId;
+        const isInvited = Array.isArray(data.invitees) && data.invitees.map(i => i.toLowerCase().trim()).includes(userEmail.toLowerCase().trim());
+        if (isHost || isInvited) {
+          list.push({ id: d.id, ...data });
+        }
+      });
+      onUpdate(list);
+    }, (err) => {
+      console.error('[Firebase] Scheduled parties sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export async function deleteScheduledPartyInCloud(partyId) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'scheduled_parties', partyId);
+    await deleteDoc(ref);
+  } catch (err) {
+    console.error('[Firebase] Failed to delete scheduled party:', err);
+    throw err;
+  }
+}
+
+// ========================================
+// Firestore: Closed Room Join Requests
+// ========================================
+
+export async function sendJoinRequestInCloud(partyId, user) {
+  await ensureFirebaseInitialized();
+  const { doc, setDoc, serverTimestamp } = firestoreExports;
+  try {
+    const ref = doc(db, 'watch_parties', partyId, 'join_requests', user.uid);
+    await setDoc(ref, {
+      uid: user.uid,
+      name: user.displayName || user.email.split('@')[0] || 'Guest',
+      avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      status: 'pending',
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error('[Firebase] Failed to send join request:', err);
+    throw err;
+  }
+}
+
+export function subscribeToJoinRequests(partyId, onUpdate) {
+  let unsub = null;
+  const promise = ensureFirebaseInitialized().then(() => {
+    const { collection, onSnapshot } = firestoreExports;
+    const ref = collection(db, 'watch_parties', partyId, 'join_requests');
+    unsub = onSnapshot(ref, (snap) => {
+      const list = [];
+      snap.forEach(d => list.push(d.data()));
+      onUpdate(list);
+    }, (err) => {
+      console.error('[Firebase] Join requests sub error:', err);
+    });
+  });
+  return () => {
+    if (unsub) unsub();
+    else promise.then(() => { if (unsub) unsub(); });
+  };
+}
+
+export async function respondToJoinRequestInCloud(partyId, guestMember, accept) {
+  await ensureFirebaseInitialized();
+  const { doc, deleteDoc } = firestoreExports;
+  try {
+    if (accept) {
+      await joinWatchPartyInCloud(partyId, { ...guestMember, role: 'guest' });
+    }
+    await deleteDoc(doc(db, 'watch_parties', partyId, 'join_requests', guestMember.uid));
+  } catch (err) {
+    console.error('[Firebase] Failed to respond to join request:', err);
+    throw err;
+  }
+}
+

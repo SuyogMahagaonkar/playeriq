@@ -79,12 +79,57 @@ export async function renderWatchPartyJoinPage({ params, container }) {
       }
     }
 
+    let currentSessionToken = sessionStorage.getItem('piq_party_session');
+    if (!currentSessionToken) {
+      currentSessionToken = Math.random().toString(36).substring(2);
+      sessionStorage.setItem('piq_party_session', currentSessionToken);
+    }
+
     const member = {
       uid: user.uid,
       name: user.displayName || user.email.split('@')[0] || 'Guest',
       avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-      role: 'guest'
+      role: 'guest',
+      sessionToken: currentSessionToken
     };
+
+    const isAlreadyMember = (party.members || []).some(m => m.uid === user.uid);
+    if (isAlreadyMember) {
+      container.innerHTML = `
+        <div class="user-page" style="display:flex; justify-content:center; align-items:center; min-height:80vh; padding:20px;">
+          <div class="glass-card" style="max-width:400px; width:100%; text-align:center; padding:32px;">
+            <div class="dashboard-icon" style="margin:0 auto 20px auto; width:52px; height:52px; display:flex; align-items:center; justify-content:center; background:var(--accent-soft); border:1px solid var(--accent); border-radius:12px;">
+              <i data-lucide="monitor" style="color:var(--accent); width:24px; height:24px;"></i>
+            </div>
+            <h2 style="font-family:var(--font-display); font-size:20px; font-weight:800; color:#fff; margin-bottom:12px;">Active Session Detected</h2>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.5; margin-bottom:24px;">You are already in this room on another device or tab. How would you like to proceed?</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button id="session-switch-btn" class="user-empty-btn" style="width:100%; justify-content:center; height:38px;">Switch Session to this Device</button>
+              <button id="session-both-btn" class="login-input" style="width:100%; height:38px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); cursor:pointer; color:#fff; border-radius:8px;">Continue Both Sessions</button>
+              <button id="session-cancel-btn" class="login-input" style="width:100%; height:38px; background:transparent; border:none; cursor:pointer; color:var(--text-muted);">Cancel & Go Home</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (window.lucide) window.lucide.createIcons();
+
+      container.querySelector('#session-cancel-btn').addEventListener('click', () => navigate('/'));
+
+      container.querySelector('#session-both-btn').addEventListener('click', async () => {
+        await joinWatchPartyInCloud(partyId, member);
+        navigate(`/watch-party/${partyId}`);
+      });
+
+      container.querySelector('#session-switch-btn').addEventListener('click', async () => {
+        const sessionToken = Math.random().toString(36).substring(2);
+        sessionStorage.setItem('piq_party_session', sessionToken);
+        await joinWatchPartyInCloud(partyId, { ...member, sessionToken });
+        navigate(`/watch-party/${partyId}`);
+      });
+
+      return;
+    }
 
     await joinWatchPartyInCloud(partyId, member);
     navigate(`/watch-party/${partyId}`);
@@ -239,6 +284,42 @@ export async function renderWatchPartyPage({ params, container }) {
   let syncInterval = null;
   let isApplyingSync = false;
   let lastSpawnedMsgId = null;
+  let latestChatMessages = [];
+  let partyDataObj = null;
+
+  let currentSessionToken = sessionStorage.getItem('piq_party_session');
+  if (!currentSessionToken) {
+    currentSessionToken = Math.random().toString(36).substring(2);
+    sessionStorage.setItem('piq_party_session', currentSessionToken);
+  }
+
+  const saveCurrentPartyToHistory = async () => {
+    if (!partyDataObj) return;
+    try {
+      const { addPartyHistoryToCloud } = await import('../services/firebase.js');
+      const historyData = {
+        partyId,
+        title: mediaTitleEl.textContent || 'Watch Together Session',
+        posterPath: partyDataObj.posterPath || '',
+        date: new Date().toISOString(),
+        participants: (membersListEl._latestMembers || []).map(m => m.name),
+        messages: latestChatMessages.map(m => ({
+          id: m.id || Math.random().toString(),
+          senderId: m.senderId,
+          senderName: m.senderName,
+          senderAvatar: m.senderAvatar,
+          text: m.text || '',
+          type: m.type || 'chat',
+          reactionEmoji: m.reactionEmoji || null,
+          gifUrl: m.gifUrl || null,
+          timestamp: m.timestamp ? { seconds: m.timestamp.seconds || (typeof m.timestamp.toMillis === 'function' ? Math.floor(m.timestamp.toMillis() / 1000) : Math.floor(Date.now() / 1000)) } : { seconds: Math.floor(Date.now() / 1000) }
+        }))
+      };
+      await addPartyHistoryToCloud(user.uid, historyData);
+    } catch(err) {
+      console.warn('[History] Failed to log party history:', err);
+    }
+  };
 
   // Sidebar collapse toggle logic
   sidebarToggle.addEventListener('click', () => {
@@ -284,15 +365,20 @@ export async function renderWatchPartyPage({ params, container }) {
     const displayNameStr = partyData.title + (partyData.type === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
     mediaTitleEl.textContent = displayNameStr;
 
+    partyDataObj = partyData;
+
     // Auto-rejoin the user to the active members list if they refreshed or loaded directly
     const currentMember = {
       uid: user.uid,
       name: user.displayName || user.email.split('@')[0] || 'Guest',
       avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-      role: isHost ? 'host' : 'guest'
+      role: isHost ? 'host' : 'guest',
+      sessionToken: currentSessionToken
     };
     try {
       await joinWatchPartyInCloud(partyId, currentMember);
+      const { updateUserStatusInCloud } = await import('../services/firebase.js');
+      await updateUserStatusInCloud(user.uid, 'online', partyId, displayNameStr);
     } catch (joinErr) {
       console.warn('[WatchParty] Failed to auto-rejoin party:', joinErr);
     }
@@ -425,12 +511,21 @@ export async function renderWatchPartyPage({ params, container }) {
       if (!partyDoc || partyDoc.status === 'ended') {
         // Party closed
         showToastAlert('Watch party has been closed by the host.');
+        saveCurrentPartyToHistory().then(() => {
+          navigate('/');
+        });
+        return;
+      }
+
+      // Check duplicate join session override
+      const myMember = (partyDoc.members || []).find(m => m.uid === user.uid);
+      if (myMember && myMember.sessionToken && currentSessionToken && myMember.sessionToken !== currentSessionToken) {
+        showToastAlert('Disconnected: Joined this room on another device.');
         navigate('/');
         return;
       }
 
       // Check if current user is still in the room members (not kicked)
-      const myMember = (partyDoc.members || []).find(m => m.uid === user.uid);
       if (!myMember) {
         showToastAlert('You have been removed from the watch party by the host.');
         navigate('/');
@@ -611,10 +706,11 @@ export async function renderWatchPartyPage({ params, container }) {
       });
     }
 
-    function handleExitFlow() {
+    async function handleExitFlow() {
       if (currentUserRole === 'host') {
         showHostExitModal();
       } else {
+        await saveCurrentPartyToHistory();
         try { leaveWatchPartyInCloud(partyId, user.uid); } catch(e){}
         navigate('/');
       }
@@ -675,6 +771,7 @@ export async function renderWatchPartyPage({ params, container }) {
       
       modal.querySelector('#exit-end-btn').addEventListener('click', async () => {
         modal.remove();
+        await saveCurrentPartyToHistory();
         try {
           await updateWatchPartyInCloud(partyId, { status: 'ended' });
           await leaveWatchPartyInCloud(partyId, user.uid);
@@ -687,6 +784,7 @@ export async function renderWatchPartyPage({ params, container }) {
         transferBtn.addEventListener('click', async () => {
           const targetUid = modal.querySelector('#transfer-host-select').value;
           modal.remove();
+          await saveCurrentPartyToHistory();
           try {
             await promoteMemberRoleInCloud(partyId, targetUid, 'host');
             await updateWatchPartyInCloud(partyId, { hostId: targetUid });
@@ -875,6 +973,7 @@ export async function renderWatchPartyPage({ params, container }) {
 
     // Subscribe to chat subcollection
     const unsubChat = subscribeToChatMessages(partyId, (messages) => {
+      latestChatMessages = messages;
       chatMessagesEl.innerHTML = messages.map(m => {
         if (m.type === 'reaction') {
           return `
@@ -958,8 +1057,11 @@ export async function renderWatchPartyPage({ params, container }) {
       if (unsubChat) unsubChat();
       if (activePlayer) activePlayer.destroy();
       
-      // Leave room
+      // Leave room and reset status
       leaveWatchPartyInCloud(partyId, user.uid);
+      import('../services/firebase.js').then(({ updateUserStatusInCloud }) => {
+        updateUserStatusInCloud(user.uid, 'online', null, null);
+      });
     };
 
   } catch (err) {
