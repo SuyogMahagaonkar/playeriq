@@ -27,6 +27,7 @@ import {
 } from '../services/firebase.js';
 import { navigate } from '../services/router.js';
 import { initFriendAutocomplete } from '../components/FriendAutocomplete.js';
+import { showCustomConfirm } from '../components/CustomDialog.js';
 
 export async function renderPartyWatchDashboard({ container }) {
   await waitAuthReady();
@@ -396,7 +397,8 @@ export async function renderPartyWatchDashboard({ container }) {
         const confirmMsg = isPending 
           ? 'Cancel friend request?' 
           : 'Are you sure you want to remove this friend?';
-        if (confirm(confirmMsg)) {
+        const confirmed = await showCustomConfirm(isPending ? 'Cancel Request' : 'Remove Friend', confirmMsg);
+        if (confirmed) {
           const uid = btn.dataset.uid;
           try {
             await removeFriendFromCloud(user.uid, uid);
@@ -575,7 +577,8 @@ export async function renderPartyWatchDashboard({ container }) {
     listEl.querySelectorAll('.delete-sch-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm('Cancel this scheduled watch party?')) {
+        const confirmed = await showCustomConfirm('Cancel Party', 'Cancel this scheduled watch party?');
+        if (confirmed) {
           try {
             await deleteScheduledPartyInCloud(btn.dataset.partyId);
             showToast('Scheduled party canceled.');
@@ -677,7 +680,8 @@ END:VCALENDAR`;
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const logId = btn.dataset.logId;
-          if (confirm('Delete this watch party from history?')) {
+          const confirmed = await showCustomConfirm('Delete History', 'Delete this watch party from history?');
+          if (confirmed) {
             try {
               await removePartyHistoryItemFromCloud(user.uid, logId);
               showToast('History entry deleted.');
@@ -701,7 +705,8 @@ END:VCALENDAR`;
   // Wire clear all history button
   const clearAllBtn = container.querySelector('#clear-all-history-btn');
   clearAllBtn?.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to clear your entire watch party history? This cannot be undone.')) {
+    const confirmed = await showCustomConfirm('Clear History', 'Are you sure you want to clear your entire watch party history? This cannot be undone.');
+    if (confirmed) {
       try {
         await clearAllPartyHistoryFromCloud(user.uid);
         showToast('Watch party history cleared.');
