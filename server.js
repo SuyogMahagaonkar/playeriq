@@ -87,17 +87,20 @@ app.get('/api/cache/clear', (req, res) => {
 // ---- MovieBox Python Bridge ----
 const PYTHON_BRIDGE_URL = 'http://127.0.0.1:8789';
 
-async function getTMDBTitle(type, tmdbId) {
+async function getTMDBMetadata(type, tmdbId) {
   try {
     const url = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=8e4ad9e56e31ab079517b5be6965b477`;
     const { data } = await axios.get(url, { timeout: 5000 });
-    return data.title || data.name || null;
+    const title = data.title || data.name || null;
+    const releaseDate = data.release_date || data.first_air_date || '';
+    const year = releaseDate ? releaseDate.slice(0, 4) : null;
+    return { title, year };
   } catch {
     return null;
   }
 }
 
-async function getMovieBoxStream(type, tmdbId, season, episode) {
+async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = true) {
   try {
     let bridgeUrl;
 
@@ -108,13 +111,18 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
         ? `${PYTHON_BRIDGE_URL}/api/moviebox/stream/movie/${subjectId}`
         : `${PYTHON_BRIDGE_URL}/api/moviebox/stream/tv/${subjectId}/${season}/${episode}`;
     } else {
-      // Normal TMDB ID -> resolve title first
-      const title = await getTMDBTitle(type === 'movie' ? 'movie' : 'tv', tmdbId);
-      if (!title) throw new Error('Could not resolve title from TMDB');
-      const encodedTitle = encodeURIComponent(title);
+      // Normal TMDB ID -> resolve title and year first
+      const meta = await getTMDBMetadata(type === 'movie' ? 'movie' : 'tv', tmdbId);
+      if (!meta || !meta.title) throw new Error('Could not resolve title from TMDB');
+      
+      // Use the smart matching function to find the correct subject_id
+      const match = await findMovieBoxMatch(meta.title, meta.year, type);
+      if (!match) throw new Error(`No MovieBox match found for ${meta.title} (${meta.year})`);
+
+      const subjectId = match.subject_id || match.id || match.subjectId;
       bridgeUrl = type === 'movie'
-        ? `${PYTHON_BRIDGE_URL}/api/moviebox/movie/${encodedTitle}`
-        : `${PYTHON_BRIDGE_URL}/api/moviebox/tv/${encodedTitle}/${season}/${episode}`;
+        ? `${PYTHON_BRIDGE_URL}/api/moviebox/stream/movie/${subjectId}`
+        : `${PYTHON_BRIDGE_URL}/api/moviebox/stream/tv/${subjectId}/${season}/${episode}`;
     }
 
     const { data } = await axios.get(bridgeUrl, { timeout: 25000 });
@@ -156,17 +164,29 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
       };
     }
 
-    // Helper: always route through the range-supporting segment proxy.
-    // Do NOT use on-the-fly transcoding on the VPS because H.265 -> H.264 encoding 
-    // requires massive CPU which will freeze a shared single-core VPS.
-    function makeStreamUrl(rawUrl) {
+    // Helper: check if we should transcode locally
+    const isChosenHevc = String(chosenStream.codec || '').toLowerCase().includes('hevc') || 
+                         String(chosenStream.codec || '').toLowerCase().includes('h265');
+    const isTranscodingEnabled = isChosenHevc && !hevcSupport && (process.platform === 'win32');
+
+    // Helper: route through segment or transcode proxy.
+    function makeStreamUrl(rawUrl, codec) {
       if (!rawUrl) return null;
+      const isHevc = String(codec || '').toLowerCase().includes('hevc') || 
+                     String(codec || '').toLowerCase().includes('h265');
+      if (isHevc && !hevcSupport) {
+        const isLocal = process.platform === 'win32' || process.env.LOCAL_DEV === 'true';
+        if (isLocal) {
+          console.log('[Stream] Routing HEVC stream through transcode proxy for compatibility');
+          return `/api/proxy/transcode?url=${encodeURIComponent(rawUrl)}&referer=`;
+        }
+      }
       return `/api/proxy/segment?url=${encodeURIComponent(rawUrl)}&referer=`;
     }
 
     const totalDuration = data.duration || null;
     return {
-      url: makeStreamUrl(chosenStream.url),
+      url: makeStreamUrl(chosenStream.url, chosenStream.codec),
       originalUrl: chosenStream.url,
       type: 'mp4',
       provider: 'MovieBox',
@@ -174,14 +194,14 @@ async function getMovieBoxStream(type, tmdbId, season, episode) {
       title: data.title || chosenStream.title,
       codec: chosenStream.codec || 'hevc',
       duration: totalDuration,
-      transcoded: false,
+      transcoded: isTranscodingEnabled,
       subtitles: (data.subtitles || []).map(sub => ({
         label: sub.label || sub.lan || 'Unknown',
         url: `/api/proxy/subtitle?url=${encodeURIComponent(sub.url)}`
       })),
       all_streams: allStreams.map(s => ({
         ...s,
-        url: makeStreamUrl(s.url),
+        url: makeStreamUrl(s.url, s.codec),
       })),
     };
   } catch (err) {
@@ -539,16 +559,55 @@ async function findMovieBoxMatch(title, year, type) {
       const results = data.results || [];
       const cleanedTarget = cleanTitleForMatch(cleanTitle);
       
+      // Pass 1: Look for exact title match + close year match (diff <= 2)
       for (const item of results) {
         const cleanedItem = cleanTitleForMatch(item.title);
         const itemYear = (item.release_date || item.year || '').slice(0, 4);
-        const yearMatches = !year || !itemYear || year === itemYear;
         
-        if (yearMatches && (cleanedTarget === cleanedItem || cleanedTarget.includes(cleanedItem) || cleanedItem.includes(cleanedTarget))) {
+        let yearMatches = false;
+        if (!year || !itemYear) {
+          yearMatches = true;
+        } else {
+          const y1 = parseInt(year);
+          const y2 = parseInt(itemYear);
+          yearMatches = !isNaN(y1) && !isNaN(y2) && Math.abs(y1 - y2) <= 2;
+        }
+        
+        if (yearMatches && cleanedTarget === cleanedItem) {
           setCache(cacheKey, item);
           return item;
         }
       }
+
+      // Pass 2: Look for partial title match + close year match (diff <= 2)
+      for (const item of results) {
+        const cleanedItem = cleanTitleForMatch(item.title);
+        const itemYear = (item.release_date || item.year || '').slice(0, 4);
+        
+        let yearMatches = false;
+        if (!year || !itemYear) {
+          yearMatches = true;
+        } else {
+          const y1 = parseInt(year);
+          const y2 = parseInt(itemYear);
+          yearMatches = !isNaN(y1) && !isNaN(y2) && Math.abs(y1 - y2) <= 2;
+        }
+        
+        if (yearMatches && (cleanedTarget.includes(cleanedItem) || cleanedItem.includes(cleanedTarget))) {
+          setCache(cacheKey, item);
+          return item;
+        }
+      }
+
+      // Pass 3: Look for exact title match (even if year differs)
+      for (const item of results) {
+        const cleanedItem = cleanTitleForMatch(item.title);
+        if (cleanedTarget === cleanedItem) {
+          setCache(cacheKey, item);
+          return item;
+        }
+      }
+
     } catch (err) {
       console.warn(`[findMovieBoxMatch server] Failed for query "${q}":`, err.message);
     }
@@ -894,7 +953,7 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
 
   try {
     // 1. Try MovieBox Python bridge first (direct .mp4 — best quality)
-    movieBoxResult = await getMovieBoxStream('movie', tmdbId);
+    movieBoxResult = await getMovieBoxStream('movie', tmdbId, null, null, hevcSupport);
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
@@ -997,7 +1056,7 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
 
   try {
     // 1. Try MovieBox Python bridge first
-    movieBoxResult = await getMovieBoxStream('tv', tmdbId, parseInt(season), parseInt(episode));
+    movieBoxResult = await getMovieBoxStream('tv', tmdbId, parseInt(season), parseInt(episode), hevcSupport);
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
@@ -1286,6 +1345,7 @@ app.get('/api/proxy/transcode', async (req, res) => {
 
   const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs, {
     stdio: ['ignore', 'pipe', 'pipe'],
+    shell: process.platform === 'win32',
   });
 
   // Pipe FFmpeg stdout → browser
