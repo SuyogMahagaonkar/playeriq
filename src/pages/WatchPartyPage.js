@@ -431,7 +431,8 @@ export async function renderWatchPartyPage({ params, container }) {
     });
 
     videoEl = document.getElementById('vp-video');
-    if (!videoEl) {
+    const isEmbed = streamData.type === 'embed';
+    if (!videoEl && !isEmbed) {
       throw new Error('Video player media tag not found.');
     }
 
@@ -447,21 +448,25 @@ export async function renderWatchPartyPage({ params, container }) {
       }
     };
 
-    videoEl.addEventListener('play', () => updateRoomStateInCloud('play'));
-    videoEl.addEventListener('pause', () => updateRoomStateInCloud('pause'));
-    videoEl.addEventListener('seeked', () => updateRoomStateInCloud('seeked'));
+    if (videoEl) {
+      videoEl.addEventListener('play', () => updateRoomStateInCloud('play'));
+      videoEl.addEventListener('pause', () => updateRoomStateInCloud('pause'));
+      videoEl.addEventListener('seeked', () => updateRoomStateInCloud('seeked'));
 
-    // Periodic timer to sync current playtime in Firestore while playing
-    syncInterval = setInterval(() => {
-      if (videoEl && !videoEl.paused && !isApplyingSync) {
-        if (currentUserRole === 'host' || currentUserRole === 'co-host') {
-          updateWatchPartyInCloud(partyId, {
-            currentTime: videoEl.currentTime,
-            lastUpdatedBy: user.uid
-          });
+      // Periodic timer to sync current playtime in Firestore while playing
+      syncInterval = setInterval(() => {
+        if (videoEl && !videoEl.paused && !isApplyingSync) {
+          if (currentUserRole === 'host' || currentUserRole === 'co-host') {
+            updateWatchPartyInCloud(partyId, {
+              currentTime: videoEl.currentTime,
+              lastUpdatedBy: user.uid
+            });
+          }
         }
-      }
-    }, 2000);
+      }, 2000);
+    } else {
+      console.log('[WatchParty] Embed player loaded. Direct media sync controls bypassed.');
+    }
 
     function showHostDisconnectOverlay() {
       const parent = document.getElementById('vp-player') || videoWrapper;
