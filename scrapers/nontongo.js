@@ -141,7 +141,53 @@ export async function extractNontongo(type, tmdbId, season = 1, episode = 1) {
       playerFrameUrl = new URL(playerFrameUrl, loadUrl).href;
     }
 
-    console.log(`[Nontongo] Success: Extracted embed frame URL: ${playerFrameUrl}`);
+    console.log(`[Nontongo] Step 5: Fetching player frame content to classify stream: ${playerFrameUrl}`);
+    try {
+      const { data: frameContent, headers: frameHeaders } = await axios.get(playerFrameUrl, {
+        headers: { ...HEADERS, Referer: loadUrl },
+        timeout: 10000,
+      });
+
+      if (typeof frameContent === 'string' && frameContent.trim().startsWith('#EXTM3U')) {
+        console.log(`[Nontongo] Success: Extracted HLS playlist (M3U8) directly: ${playerFrameUrl}`);
+        return {
+          url: playerFrameUrl,
+          type: 'hls',
+          provider: 'nontongo',
+          referer: loadUrl,
+          subtitles: []
+        };
+      }
+
+      // If it is HTML, check if we can parse the sources array inside JS
+      if (typeof frameContent === 'string') {
+        const sourcesMatch = frameContent.match(/sources\s*[:=]\s*(\[[\s\S]*?\])/);
+        if (sourcesMatch) {
+          try {
+            const sourcesStr = sourcesMatch[1];
+            const urlMatch = sourcesStr.match(/['"](https?:[\\\/]+[^'"]+)['"]/);
+            if (urlMatch) {
+              const streamUrl = urlMatch[1].replace(/\\/g, '');
+              console.log(`[Nontongo] Success: Extracted stream URL from sources array: ${streamUrl}`);
+              const isHls = streamUrl.includes('.m3u8') || streamUrl.includes('coffee_brew');
+              return {
+                url: streamUrl,
+                type: isHls ? 'hls' : 'mp4',
+                provider: 'nontongo',
+                referer: playerFrameUrl,
+                subtitles: []
+              };
+            }
+          } catch (e) {
+            console.warn('[Nontongo] Failed to parse sources array in HTML:', e.message);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Nontongo] Failed to fetch playerFrame content directly:', err.message);
+    }
+
+    console.log(`[Nontongo] Fallback: Returning playerFrame as embed URL: ${playerFrameUrl}`);
     return {
       url: playerFrameUrl,
       type: 'embed',
