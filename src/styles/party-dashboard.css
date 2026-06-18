@@ -1226,41 +1226,51 @@
   top: -32px;
   left: 32px;
   height: 33px;
-  box-sizing: border-box;
-  background: #15151f;
-  border: 1.5px solid rgba(255,255,255,0.07);
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
-  padding: 0 14px;
+  width: 210px;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 -8px 16px rgba(0,0,0,0.4);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
-.piq-modal-tab::after {
+.piq-modal-tab::before {
   content: '';
   position: absolute;
-  bottom: -2.5px;
-  left: 1.5px;
-  right: 1.5px;
-  height: 4px;
-  background: #15151f;
-  z-index: 12;
+  top: 0; left: 0; right: 0; bottom: -2px;
+  background: linear-gradient(to bottom, #1b1b28 0%, #15151f 100%);
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  transform: perspective(20px) rotateX(10deg);
+  transform-origin: bottom center;
+  z-index: -1;
+  box-shadow: 0 -8px 16px rgba(0,0,0,0.45);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
 }
 
-.piq-modal-tab:hover {
-  border-color: rgba(168, 85, 247, 0.35);
+.piq-modal-tab:hover::before {
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
-.piq-modal-tab:has(.piq-tab-input:focus) {
+.piq-modal-tab:has(.piq-tab-input:focus)::before {
   border-color: var(--accent);
-  box-shadow: 0 -8px 20px rgba(168, 85, 247, 0.2);
+  box-shadow: 0 -8px 20px rgba(168, 85, 247, 0.25);
+  background: linear-gradient(to bottom, #201b30 0%, #15151f 100%);
+}
+
+.piq-modal-tab svg {
+  transition: transform 0.25s, color 0.25s;
+}
+
+.piq-modal-tab:hover svg {
+  transform: rotate(15deg);
+  color: #d8b4fe !important;
 }
 
 .piq-modal-tab:has(.piq-tab-input:focus) svg {
+  transform: rotate(15deg) scale(1.1);
   color: var(--accent) !important;
 }
 
@@ -1273,11 +1283,28 @@
   font-weight: 800;
   outline: none;
   padding: 0;
-  width: 160px;
+  width: 145px;
 }
 
 .piq-tab-input::placeholder {
   color: rgba(255,255,255,0.35);
+}
+
+/* Step Pane Layout & Transition */
+.piq-modal-step-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: stepFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.piq-modal-step-pane.hidden {
+  display: none !important;
+}
+
+@keyframes stepFadeIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* Redesigned two-column modal body */

@@ -1355,88 +1355,107 @@ END:VCALENDAR`;
 
               <!-- Right Column: Settings -->
               <div class="piq-modal-right-col">
-                <!-- Date Strip -->
-                <div class="piq-section-label" style="margin-top:0;">
-                  <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Pick a Date
-                </div>
-                <div id="sch-day-strip" class="piq-day-strip">
-                  ${dayChips.map((chip, i) => `
-                    <div class="piq-day-chip ${i === initialIndex ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
-                      <span class="piq-day-chip-name">${chip.label}</span>
-                      <span class="piq-day-chip-num">${chip.date}</span>
-                      <span class="piq-day-chip-month">${chip.month}</span>
-                    </div>
-                  `).join('')}
-                </div>
-
-                <!-- Suggested Times -->
-                <div class="piq-section-label" style="margin-top:14px;">
-                  <i data-lucide="zap" style="width:13px;height:13px;color:#f59e0b;"></i> Suggested Times
-                </div>
-                <div id="sch-suggested-pills" class="piq-suggested-pills"></div>
-
-                <!-- Time Grid -->
-                <div class="piq-section-label" style="margin-top:14px;">
-                  <i data-lucide="clock" style="width:13px;height:13px;"></i> Select Time
-                </div>
-                <div id="sch-time-grid" class="piq-time-grid"></div>
-                <input type="hidden" id="sch-time" value="" />
-                <input type="hidden" id="sch-date" value="${todayStr}" />
-
-                <!-- Invite Friends -->
-                <div class="piq-section-label" style="margin-top:14px;">
-                  <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Invite Friends
-                </div>
-                <div class="piq-invite-input-wrap">
-                  <div class="piq-floating-label">
-                    <input type="email" id="sch-invitee-input" class="piq-input" placeholder=" " autocomplete="off" />
-                    <label for="sch-invitee-input">Email address</label>
-                    <i data-lucide="at-sign" class="piq-input-icon"></i>
+                <!-- Step 1: Date & Time selection -->
+                <div id="sch-step-1" class="piq-modal-step-pane">
+                  <!-- Date Strip -->
+                  <div class="piq-section-label" style="margin-top:0;">
+                    <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Pick a Date
                   </div>
-                  <button type="button" id="sch-add-invitee-btn" class="piq-add-btn">Add</button>
-                </div>
-                <div id="sch-invitee-pills" class="piq-invitee-pills"></div>
-
-                <!-- Privacy & Stepper side-by-side row -->
-                <div class="piq-bottom-controls-row">
-                  <div style="flex:1.4;">
-                    <!-- Privacy -->
-                    <div class="piq-section-label" style="margin-top:0;">
-                      <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
-                    </div>
-                    <div class="piq-privacy-group">
-                      <label class="piq-privacy-card active">
-                        <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
-                        <i data-lucide="globe"></i>
-                        <span class="piq-privacy-title">Open</span>
-                      </label>
-                      <label class="piq-privacy-card">
-                        <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
-                        <i data-lucide="users"></i>
-                        <span class="piq-privacy-title">Friends</span>
-                      </label>
-                      <label class="piq-privacy-card">
-                        <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
-                        <i data-lucide="lock"></i>
-                        <span class="piq-privacy-title">Private</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div style="flex:1;">
-                    <!-- Guest Stepper -->
-                    <div class="piq-section-label" style="margin-top:0;">
-                      <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
-                    </div>
-                    <div class="piq-guest-stepper">
-                      <button type="button" id="sch-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
-                      <div class="piq-stepper-count">
-                        <span class="piq-stepper-num" id="sch-guest-count">4</span>
-                        <span class="piq-stepper-label">max</span>
+                  <div id="sch-day-strip" class="piq-day-strip">
+                    ${dayChips.map((chip, i) => `
+                      <div class="piq-day-chip ${i === initialIndex ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
+                        <span class="piq-day-chip-name">${chip.label}</span>
+                        <span class="piq-day-chip-num">${chip.date}</span>
+                        <span class="piq-day-chip-month">${chip.month}</span>
                       </div>
-                      <button type="button" id="sch-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+                    `).join('')}
+                  </div>
+
+                  <!-- Suggested Times -->
+                  <div class="piq-section-label" style="margin-top:14px;">
+                    <i data-lucide="zap" style="width:13px;height:13px;color:#f59e0b;"></i> Suggested Times
+                  </div>
+                  <div id="sch-suggested-pills" class="piq-suggested-pills"></div>
+
+                  <!-- Time Grid -->
+                  <div class="piq-section-label" style="margin-top:14px;">
+                    <i data-lucide="clock" style="width:13px;height:13px;"></i> Select Time
+                  </div>
+                  <div id="sch-time-grid" class="piq-time-grid"></div>
+                  <input type="hidden" id="sch-time" value="" />
+                  <input type="hidden" id="sch-date" value="${todayStr}" />
+
+                  <button type="button" class="piq-hero-btn" id="sch-next-btn" style="margin-top:20px;">
+                    Next Step <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                  </button>
+                </div>
+
+                <!-- Step 2: Friends, Privacy & Guests -->
+                <div id="sch-step-2" class="piq-modal-step-pane hidden">
+                  <!-- Invite Friends -->
+                  <div class="piq-section-label" style="margin-top:0;">
+                    <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Invite Friends
+                  </div>
+                  <div class="piq-invite-input-wrap">
+                    <div class="piq-floating-label">
+                      <input type="email" id="sch-invitee-input" class="piq-input" placeholder=" " autocomplete="off" />
+                      <label for="sch-invitee-input">Email address</label>
+                      <i data-lucide="at-sign" class="piq-input-icon"></i>
                     </div>
-                    <input type="hidden" id="sch-max" value="4" />
+                    <button type="button" id="sch-add-invitee-btn" class="piq-add-btn">Add</button>
+                  </div>
+                  <div id="sch-invitee-pills" class="piq-invitee-pills"></div>
+
+                  <!-- Privacy & Stepper side-by-side row -->
+                  <div class="piq-bottom-controls-row" style="margin-top:12px;">
+                    <div style="flex:1.4;">
+                      <!-- Privacy -->
+                      <div class="piq-section-label" style="margin-top:0;">
+                        <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
+                      </div>
+                      <div class="piq-privacy-group">
+                        <label class="piq-privacy-card active">
+                          <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
+                          <i data-lucide="globe"></i>
+                          <span class="piq-privacy-title">Open</span>
+                        </label>
+                        <label class="piq-privacy-card">
+                          <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
+                          <i data-lucide="users"></i>
+                          <span class="piq-privacy-title">Friends</span>
+                        </label>
+                        <label class="piq-privacy-card">
+                          <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
+                          <i data-lucide="lock"></i>
+                          <span class="piq-privacy-title">Private</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div style="flex:1;">
+                      <!-- Guest Stepper -->
+                      <div class="piq-section-label" style="margin-top:0;">
+                        <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
+                      </div>
+                      <div class="piq-guest-stepper">
+                        <button type="button" id="sch-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
+                        <div class="piq-stepper-count">
+                          <span class="piq-stepper-num" id="sch-guest-count">4</span>
+                          <span class="piq-stepper-label">max</span>
+                        </div>
+                        <button type="button" id="sch-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+                      </div>
+                      <input type="hidden" id="sch-max" value="4" />
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap:12px; margin-top:28px; width:100%;">
+                    <button type="button" class="piq-add-btn" id="sch-back-btn" style="flex:1; height:48px; margin:0; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                      <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back
+                    </button>
+                    <button type="submit" class="piq-hero-btn" id="sch-submit-btn" style="flex:2.2; margin:0;">
+                      <i data-lucide="calendar-plus"></i> Schedule Watch Party
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1444,12 +1463,6 @@ END:VCALENDAR`;
 
             <!-- Validation Error -->
             <div id="sch-validation-error" class="piq-validation-error"></div>
-
-            <!-- CTA -->
-            <button type="submit" class="piq-hero-btn" id="sch-submit-btn">
-              <i data-lucide="calendar-plus"></i>
-              Schedule Watch Party
-            </button>
           </form>
         </div>
       </div>
@@ -1483,6 +1496,48 @@ END:VCALENDAR`;
     const drawer = modalOverlay.querySelector('#sch-preview-card');
     const drawerPoster = drawer.querySelector('#drawer-poster');
     const drawerPh = drawer.querySelector('#drawer-poster-ph');
+
+    const step1Pane = modalOverlay.querySelector('#sch-step-1');
+    const step2Pane = modalOverlay.querySelector('#sch-step-2');
+    const nextBtn = modalOverlay.querySelector('#sch-next-btn');
+    const backBtn = modalOverlay.querySelector('#sch-back-btn');
+
+    // ---- Step Navigation ----
+    nextBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      validationError.style.display = 'none';
+
+      if (!selectedMedia) {
+        validationError.textContent = 'Please search and select a movie or show first.';
+        validationError.style.display = 'block';
+        return;
+      }
+
+      const timeVal = hiddenTime.value;
+      if (!timeVal) {
+        validationError.textContent = 'Please select a time for the party.';
+        validationError.style.display = 'block';
+        return;
+      }
+
+      const dateVal = hiddenDate.value;
+      const selectedDate = new Date(`${dateVal}T${timeVal}`);
+      if (selectedDate <= new Date()) {
+        validationError.textContent = 'Selected time must be in the future.';
+        validationError.style.display = 'block';
+        return;
+      }
+
+      step1Pane.classList.add('hidden');
+      step2Pane.classList.remove('hidden');
+    });
+
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      validationError.style.display = 'none';
+      step2Pane.classList.add('hidden');
+      step1Pane.classList.remove('hidden');
+    });
 
     // ---- Invitees ----
     const inviteesList = [];
@@ -1747,13 +1802,14 @@ END:VCALENDAR`;
       e.preventDefault();
       validationError.style.display = 'none';
 
+      const tabContainer = modalOverlay.querySelector('.piq-modal-tab');
       const nameInput = modalOverlay.querySelector('#sch-party-name');
       const name = nameInput.value.trim();
       if (!name) {
         validationError.textContent = 'Please enter a Room Name.';
         validationError.style.display = 'block';
-        nameInput.classList.add('piq-shake-error');
-        setTimeout(() => nameInput.classList.remove('piq-shake-error'), 450);
+        tabContainer.classList.add('piq-shake-error');
+        setTimeout(() => tabContainer.classList.remove('piq-shake-error'), 450);
         nameInput.focus();
         return;
       }
@@ -2154,13 +2210,14 @@ END:VCALENDAR`;
       e.preventDefault();
       validationError.style.display = 'none';
 
+      const tabContainer = modalOverlay.querySelector('.piq-modal-tab');
       const nameInput = modalOverlay.querySelector('#start-party-name');
       const name = nameInput.value.trim();
       if (!name) {
         validationError.textContent = 'Please enter a Room Name.';
         validationError.style.display = 'block';
-        nameInput.classList.add('piq-shake-error');
-        setTimeout(() => nameInput.classList.remove('piq-shake-error'), 450);
+        tabContainer.classList.add('piq-shake-error');
+        setTimeout(() => tabContainer.classList.remove('piq-shake-error'), 450);
         nameInput.focus();
         return;
       }
