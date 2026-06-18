@@ -23,6 +23,7 @@ import {
   createScheduledPartyInCloud,
   subscribeToScheduledParties,
   deleteScheduledPartyInCloud,
+  updateScheduledPartyInviteesInCloud,
   getInitialsAvatar
 } from '../services/firebase.js';
 import { navigate } from '../services/router.js';
@@ -518,6 +519,9 @@ export async function renderPartyWatchDashboard({ container }) {
               <button class="calendar-invite-btn add-cal-btn" data-title="${sch.title}" data-time="${sch.scheduledTime}" data-id="${sch.partyId}" title="Add to Calendar">
                 <i data-lucide="calendar" style="width:12px;height:12px;"></i>
               </button>
+              <button class="calendar-invite-btn participants-sch-btn" data-party-id="${sch.partyId}" title="View Participants" style="padding:2px; width:22px; height:22px;">
+                <i data-lucide="users" style="width:12px;height:12px;"></i>
+              </button>
               ${isHost ? `
               <button class="friend-card-detailed-remove-btn delete-sch-btn" data-party-id="${sch.partyId}" title="Delete Schedule" style="padding:2px; width:22px; height:22px;">
                 <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
@@ -574,6 +578,17 @@ export async function renderPartyWatchDashboard({ container }) {
       });
     });
 
+    listEl.querySelectorAll('.participants-sch-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const partyId = btn.dataset.partyId;
+        const schItem = scheduled.find(s => s.partyId === partyId);
+        if (schItem) {
+          showParticipantsModal(schItem);
+        }
+      });
+    });
+
     listEl.querySelectorAll('.delete-sch-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -615,6 +630,229 @@ END:VCALENDAR`;
     a.download = `party-${partyId}.ics`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function showParticipantsModal(sch) {
+    const isHost = sch.hostId === user.uid;
+    const modal = document.createElement('div');
+    modal.className = 'piq-confirm-overlay'; 
+    modal.style.zIndex = '2000';
+    
+    const maxGuests = sch.maxParticipants || 10;
+    let autocompleteInst = null;
+    
+    function renderModalContent() {
+      const currentGuestsCount = sch.invitees ? sch.invitees.length : 0;
+      const totalCount = currentGuestsCount + 1; 
+      const limitReached = totalCount >= maxGuests;
+
+      modal.innerHTML = `
+        <div class="piq-confirm-card" style="max-width: 480px; width: 90%; background: #10121e; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #fff;">Invited Participants</h3>
+            <span id="sch-part-count" style="font-size: 12px; color: ${limitReached ? '#ef4444' : 'var(--text-muted)'}; font-weight: 700;">
+              ${totalCount} / ${maxGuests} Members ${limitReached ? '(Room Full)' : ''}
+            </span>
+          </div>
+
+          <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;" id="sch-part-list">
+            <!-- Host -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">H</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 200px;">${sch.hostName} (Host)</div>
+              </div>
+              <span style="font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase;">Host</span>
+            </div>
+            
+            <!-- Invitees -->
+            ${sch.invitees && sch.invitees.length > 0 ? sch.invitees.map(email => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px;">
+                <div style="font-size: 13px; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 240px;" title="${email}">${email}</div>
+                ${isHost ? `
+                  <button class="remind-participant-btn" data-email="${email}" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); color: var(--accent); font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                    Remind again
+                  </button>
+                ` : ''}
+              </div>
+            `).join('') : `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 12px;">No invited participants yet.</div>`}
+          </div>
+
+          ${isHost ? `
+            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Invite New Member</label>
+              <div style="display: flex; gap: 8px; position: relative;">
+                <input type="email" id="new-part-email" class="party-chat-input" style="flex: 1; height: 36px; min-width: 0;" 
+                  ${limitReached ? `disabled placeholder="Selected limit of ${maxGuests} reached"` : 'placeholder="friend@email.com"'} />
+                <button id="add-part-btn" class="user-empty-btn" style="height: 36px; padding: 0 16px;" ${limitReached ? 'disabled' : ''}>Add</button>
+              </div>
+              <div id="add-part-error" style="color: #ef4444; font-size: 11px; margin-top: 4px; display: none;"></div>
+            </div>
+          ` : ''}
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+            <button id="close-part-modal-btn" class="user-empty-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">Close</button>
+          </div>
+        </div>
+      `;
+
+      const closeBtn = modal.querySelector('#close-part-modal-btn');
+      closeBtn.addEventListener('click', () => {
+        if (autocompleteInst) autocompleteInst.destroy();
+        modal.remove();
+      });
+
+      modal.querySelectorAll('.remind-participant-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const email = btn.dataset.email;
+          btn.disabled = true;
+          btn.textContent = 'Sending...';
+          try {
+            await sendPartyInviteNotification(
+              user.uid,
+              sch.hostName,
+              getInitialsAvatar(user.displayName, user.email, user.photoURL),
+              email,
+              sch.partyId,
+              `${sch.title} (Reminder: Watch party starts soon!)`,
+              sch.posterPath,
+              sch.mediaType
+            );
+
+            const emailResponse = await fetch(`${NODE_PROXY}/api/email/send-invite`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                hostName: sch.hostName,
+                inviteeEmail: email,
+                title: `${sch.title} (Reminder: Watch party scheduled soon!)`,
+                partyId: sch.partyId,
+                mediaType: sch.mediaType,
+                posterPath: sch.posterPath
+              })
+            });
+
+            if (emailResponse.ok) {
+              btn.textContent = 'Sent!';
+              btn.style.color = '#10b981';
+              btn.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+              btn.style.background = 'rgba(16, 185, 129, 0.1)';
+            } else {
+              throw new Error('Failed to send email');
+            }
+          } catch (err) {
+            console.error(err);
+            btn.textContent = 'Failed';
+            btn.disabled = false;
+          }
+        });
+      });
+
+      if (isHost) {
+        const addBtn = modal.querySelector('#add-part-btn');
+        const emailInput = modal.querySelector('#new-part-email');
+        const errorDiv = modal.querySelector('#add-part-error');
+
+        const runAdd = async () => {
+          const email = emailInput.value.trim().toLowerCase();
+          if (!email) return;
+
+          errorDiv.style.display = 'none';
+
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            errorDiv.textContent = 'Please enter a valid email address.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+
+          if (email === user.email.toLowerCase()) {
+            errorDiv.textContent = 'You cannot add yourself as a guest.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+
+          if (sch.invitees && sch.invitees.includes(email)) {
+            errorDiv.textContent = 'This participant is already invited.';
+            errorDiv.style.display = 'block';
+            return;
+          }
+
+          const currentCount = sch.invitees ? sch.invitees.length : 0;
+          if (currentCount + 1 >= maxGuests) {
+            errorDiv.textContent = `Selected limit of ${maxGuests} reached. Cannot add more participants.`;
+            errorDiv.style.display = 'block';
+            return;
+          }
+
+          addBtn.disabled = true;
+          addBtn.textContent = 'Adding...';
+
+          try {
+            const updatedInvitees = [...(sch.invitees || []), email];
+            await updateScheduledPartyInviteesInCloud(sch.partyId, updatedInvitees);
+            sch.invitees = updatedInvitees; 
+
+            try {
+              await sendPartyInviteNotification(
+                user.uid,
+                sch.hostName,
+                getInitialsAvatar(user.displayName, user.email, user.photoURL),
+                email,
+                sch.partyId,
+                `${sch.title} (Scheduled Watch Party)`,
+                sch.posterPath,
+                sch.mediaType
+              );
+            } catch (notifErr) {
+              console.warn('Failed to send real-time notification to', email, notifErr);
+            }
+
+            try {
+              await fetch(`${NODE_PROXY}/api/email/send-invite`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  hostName: sch.hostName,
+                  inviteeEmail: email,
+                  title: `${sch.title} (Scheduled Watch Party)`,
+                  partyId: sch.partyId,
+                  mediaType: sch.mediaType,
+                  posterPath: sch.posterPath
+                })
+              });
+            } catch (emailErr) {
+              console.warn('Failed to send email invite to', email, emailErr);
+            }
+
+            if (autocompleteInst) {
+              autocompleteInst.destroy();
+              autocompleteInst = null;
+            }
+            renderModalContent();
+          } catch (err) {
+            console.error(err);
+            errorDiv.textContent = 'Failed to add participant.';
+            errorDiv.style.display = 'block';
+            addBtn.disabled = false;
+            addBtn.textContent = 'Add';
+          }
+        };
+
+        addBtn.addEventListener('click', runAdd);
+        emailInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            runAdd();
+          }
+        });
+
+        autocompleteInst = initFriendAutocomplete(emailInput, () => currentFriendsList.filter(f => !f.isPending), false);
+      }
+    }
+
+    renderModalContent();
+    document.body.appendChild(modal);
   }
 
   // 4. Fetch History Logs
@@ -1163,6 +1401,23 @@ END:VCALENDAR`;
               selectedMedia.posterPath,
               selectedMedia.type
             );
+
+            // Trigger actual invitation email via proxy endpoint
+            fetch(`${NODE_PROXY}/api/email/send-invite`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                hostName: scheduledData.hostName,
+                inviteeEmail: email,
+                title: `${name} (Scheduled: ${selectedMedia.title})`,
+                partyId,
+                mediaType: selectedMedia.type,
+                posterPath: selectedMedia.posterPath
+              })
+            }).catch(emailErr => {
+              console.warn('Failed to send email invite to', email, emailErr);
+            });
+
           } catch(notifErr) {
             console.warn('Failed to send real-time notification to', email, notifErr);
           }

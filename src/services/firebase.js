@@ -1400,6 +1400,18 @@ export async function deleteScheduledPartyInCloud(partyId) {
   }
 }
 
+export async function updateScheduledPartyInviteesInCloud(partyId, invitees) {
+  await ensureFirebaseInitialized();
+  const { doc, updateDoc } = firestoreExports;
+  try {
+    const ref = doc(db, 'scheduled_parties', partyId);
+    await updateDoc(ref, { invitees });
+  } catch (err) {
+    console.error('[Firebase] Failed to update scheduled party invitees:', err);
+    throw err;
+  }
+}
+
 // ========================================
 // Firestore: Closed Room Join Requests
 // ========================================
