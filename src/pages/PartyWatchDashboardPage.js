@@ -1208,124 +1208,175 @@ END:VCALENDAR`;
 
   function showScheduleModal() {
     modalOverlay.classList.remove('hidden');
-    
+
+    // Build next 8 days for the date strip
+    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dayChips = [];
+    const today = new Date();
+    for (let i = 0; i < 8; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      dayChips.push({
+        label: i === 0 ? 'Today' : DAY_NAMES[d.getDay()],
+        date: d.getDate(),
+        month: MONTH_NAMES[d.getMonth()],
+        fullDate: d.toISOString().split('T')[0]
+      });
+    }
+    const todayStr = today.toISOString().split('T')[0];
+
     modalOverlay.innerHTML = `
-      <div class="modal-wrapper">
-        <!-- Left Metadata Drawer -->
-        <div id="sch-metadata-drawer" class="metadata-drawer">
-          <div class="drawer-header" style="position:relative; margin-top:-24px; margin-left:-24px; margin-right:-24px; border-top-left-radius:16px; border-top-right-radius:16px; height:120px; overflow:hidden; background:#10111a;">
-            <img id="drawer-backdrop" src="" style="width:100%; height:100%; object-fit:cover; opacity:0.4; display:none;" />
-            <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="drawer-media-title"></div>
-          </div>
-          <div style="display:flex; gap:12px; margin-top:8px;">
-            <div class="drawer-poster-container">
-              <img id="drawer-poster" class="drawer-poster-3d" src="" style="display:none;" />
-            </div>
-            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
-              <div><strong>Type:</strong> <span id="drawer-media-type">—</span></div>
-              <div><strong>Release:</strong> <span id="drawer-media-release">—</span></div>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <strong>Rating:</strong>
-                <svg viewBox="0 0 24 24" fill="var(--accent)" style="width:12px; height:12px; color:var(--accent);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span id="drawer-media-rating">—</span>
-              </div>
+      <div class="modal-wrapper piq-modal-bg">
+        <!-- Left: Metadata Drawer -->
+        <div id="sch-metadata-drawer" class="piq-content-drawer">
+          <div class="piq-drawer-poster-wrap">
+            <img id="drawer-poster" class="piq-drawer-poster" src="" alt="" style="display:none;" />
+            <div id="drawer-poster-ph" style="width:130px;height:195px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="film" style="width:34px;height:34px;color:rgba(168,85,247,0.3);"></i>
             </div>
           </div>
-          <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:8px; overflow-y:auto; flex-grow:1; max-height:160px;" id="drawer-media-overview"></div>
+          <div class="piq-drawer-meta">
+            <div class="piq-drawer-title" id="drawer-media-title">Select a title to preview</div>
+            <div class="piq-drawer-badges">
+              <span class="piq-drawer-badge" id="drawer-media-type">—</span>
+              <span class="piq-drawer-badge" id="drawer-media-release">—</span>
+            </div>
+            <div class="piq-drawer-rating">
+              <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
+              <span id="drawer-media-rating">—</span>
+            </div>
+            <div class="piq-drawer-overview" id="drawer-media-overview"></div>
+          </div>
         </div>
 
-        <!-- Main Modal Card -->
-        <div class="modal-content-card" style="max-width:440px; width: 100%; position: relative; z-index: 10;">
-          <button class="modal-close-btn" id="modal-close-btn">
-            <i data-lucide="x"></i>
-          </button>
-          <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Schedule Future Watch Party</h3>
-          <form id="schedule-party-form" style="display:flex; flex-direction:column; gap:12px;">
-            
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Code Name</label>
-            <input type="text" id="sch-party-name" class="party-chat-input" placeholder="e.g. Anime Night with Crew" required />
+        <!-- Right: Form Panel -->
+        <div class="piq-form-panel">
+          <button class="piq-close-btn" id="modal-close-btn"><i data-lucide="x"></i></button>
 
-            <!-- TMDB Search input -->
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
-            <div style="position:relative;">
-              <input type="text" id="sch-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
-              <div id="sch-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+          <div class="piq-modal-header">
+            <div class="piq-modal-header-icon"><i data-lucide="calendar"></i></div>
+            <div>
+              <h2 class="piq-modal-title">Plan Your Screening</h2>
+              <p class="piq-modal-subtitle">Schedule a future watch party with friends</p>
             </div>
-            
-            <!-- TV show season/ep selects (hidden initially) -->
-            <div id="sch-tv-selectors" style="display:none; gap:10px;">
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
-                <select id="sch-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
-              </div>
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
-                <select id="sch-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+          </div>
+
+          <form id="schedule-party-form" novalidate>
+
+            <!-- Room Name -->
+            <div class="piq-field">
+              <div class="piq-floating-label">
+                <input type="text" id="sch-party-name" class="piq-input" placeholder=" " required autocomplete="off" />
+                <label for="sch-party-name">Room Name</label>
+                <i data-lucide="edit-3" class="piq-input-icon"></i>
               </div>
             </div>
 
-            <div style="display:flex; gap:10px;">
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Date</label>
-                <input type="date" id="sch-date" class="party-chat-input" required style="width:100%; height:34px; box-sizing:border-box; color:#fff;" />
+            <!-- Content Search -->
+            <div class="piq-field" style="position:relative;">
+              <div class="piq-floating-label">
+                <input type="text" id="sch-media-search" class="piq-input" placeholder=" " autocomplete="off" />
+                <label for="sch-media-search">Search Movie or TV Show</label>
+                <i data-lucide="search" class="piq-input-icon" id="sch-search-icon"></i>
               </div>
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Time</label>
-                <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required></select>
+              <div id="sch-search-dropdown" class="piq-search-dropdown hidden"></div>
+            </div>
+
+            <!-- TV Selectors -->
+            <div id="sch-tv-selectors" class="piq-tv-selectors">
+              <div style="flex:1;"><select id="sch-tv-season" class="piq-select"></select></div>
+              <div style="flex:1;"><select id="sch-tv-episode" class="piq-select"></select></div>
+            </div>
+
+            <!-- Date Strip -->
+            <div class="piq-section-label">
+              <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Pick a Date
+            </div>
+            <div id="sch-day-strip" class="piq-day-strip">
+              ${dayChips.map((chip, i) => `
+                <div class="piq-day-chip ${i === 0 ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
+                  <span class="piq-day-chip-name">${chip.label}</span>
+                  <span class="piq-day-chip-num">${chip.date}</span>
+                  <span class="piq-day-chip-month">${chip.month}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Suggested Times -->
+            <div class="piq-section-label">
+              <i data-lucide="zap" style="width:13px;height:13px;color:#f59e0b;"></i> Suggested Times
+            </div>
+            <div id="sch-suggested-pills" class="piq-suggested-pills"></div>
+
+            <!-- Time Grid -->
+            <div class="piq-section-label">
+              <i data-lucide="clock" style="width:13px;height:13px;"></i> Select Time
+            </div>
+            <div id="sch-time-grid" class="piq-time-grid"></div>
+            <input type="hidden" id="sch-time" value="" />
+            <input type="hidden" id="sch-date" value="${todayStr}" />
+
+            <!-- Validation Error -->
+            <div id="sch-validation-error" class="piq-validation-error"></div>
+
+            <!-- Invite Friends -->
+            <div class="piq-section-label" style="margin-top:22px;">
+              <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Invite Friends
+            </div>
+            <div class="piq-invite-input-wrap">
+              <div class="piq-floating-label">
+                <input type="email" id="sch-invitee-input" class="piq-input" placeholder=" " autocomplete="off" />
+                <label for="sch-invitee-input">Email address</label>
+                <i data-lucide="at-sign" class="piq-input-icon"></i>
               </div>
+              <button type="button" id="sch-add-invitee-btn" class="piq-add-btn">Add</button>
             </div>
+            <div id="sch-invitee-pills" class="piq-invitee-pills"></div>
 
-            <div id="sch-suggested-pills-wrap" style="display:none; flex-direction:column; gap:6px;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom: 2px;">Suggested Times</label>
-              <div id="sch-suggested-pills" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            <!-- Privacy -->
+            <div class="piq-section-label" style="margin-top:22px;">
+              <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
             </div>
-
-            <div id="sch-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
-
-            <!-- Invite Friends Section with Pills & Add Button -->
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Invite Friends</label>
-            <div style="display:flex; gap:8px; position:relative;">
-              <input type="email" id="sch-invitee-input" class="party-chat-input" placeholder="friend@email.com" autocomplete="off" style="flex:1;" />
-              <button type="button" id="sch-add-invitee-btn" class="user-empty-btn" style="height:36px; padding:0 16px; font-size:12px; margin:0;">Add</button>
-            </div>
-            <div id="sch-invitee-pills" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;"></div>
-
-            <!-- Privacy Card Radio Group -->
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-top:4px;">Privacy Option</label>
-            <div class="privacy-radio-group" style="display:flex; gap:10px;">
-              <label class="privacy-radio-card">
+            <div class="piq-privacy-group">
+              <label class="piq-privacy-card active">
                 <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
-                <i data-lucide="globe" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Open</span>
-                <span style="font-size:9px; color:var(--text-muted);">Friends can join</span>
+                <i data-lucide="globe"></i>
+                <span class="piq-privacy-title">Open</span>
+                <span class="piq-privacy-sub">Anyone with link</span>
               </label>
-              <label class="privacy-radio-card">
+              <label class="piq-privacy-card">
                 <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
-                <i data-lucide="users" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Friends-only</span>
-                <span style="font-size:9px; color:var(--text-muted);">Only friends</span>
+                <i data-lucide="users"></i>
+                <span class="piq-privacy-title">Friends</span>
+                <span class="piq-privacy-sub">Only your friends</span>
               </label>
-              <label class="privacy-radio-card">
+              <label class="piq-privacy-card">
                 <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
-                <i data-lucide="lock" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Closed</span>
-                <span style="font-size:9px; color:var(--text-muted);">Invite only</span>
+                <i data-lucide="lock"></i>
+                <span class="piq-privacy-title">Private</span>
+                <span class="piq-privacy-sub">Invite only</span>
               </label>
             </div>
 
-            <div style="display:flex; gap:10px; margin-top:8px;">
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
-                <select id="sch-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                  <option value="5">5 People</option>
-                  <option value="10" selected>10 People</option>
-                  <option value="20">20 People</option>
-                </select>
-              </div>
+            <!-- Guest Stepper -->
+            <div class="piq-section-label">
+              <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
             </div>
+            <div class="piq-guest-stepper">
+              <button type="button" id="sch-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
+              <div class="piq-stepper-count">
+                <span class="piq-stepper-num" id="sch-guest-count">10</span>
+                <span class="piq-stepper-label">guests max</span>
+              </div>
+              <button type="button" id="sch-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+            </div>
+            <input type="hidden" id="sch-max" value="10" />
 
-            <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
-              Create Event Calendar
+            <!-- CTA -->
+            <button type="submit" class="piq-hero-btn" id="sch-submit-btn">
+              <i data-lucide="calendar-plus"></i>
+              Schedule Watch Party
             </button>
           </form>
         </div>
@@ -1334,65 +1385,57 @@ END:VCALENDAR`;
 
     if (window.lucide) window.lucide.createIcons();
 
+    // ---- Element refs ----
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
     const inviteeInput = modalOverlay.querySelector('#sch-invitee-input');
     const addInviteeBtn = modalOverlay.querySelector('#sch-add-invitee-btn');
     const inviteePillsContainer = modalOverlay.querySelector('#sch-invitee-pills');
-    const dateInput = modalOverlay.querySelector('#sch-date');
-    const timeSelect = modalOverlay.querySelector('#sch-time');
-    const pillsWrap = modalOverlay.querySelector('#sch-suggested-pills-wrap');
-    const pillsContainer = modalOverlay.querySelector('#sch-suggested-pills');
-    const privacyCards = modalOverlay.querySelectorAll('.privacy-radio-card');
+    const timeGrid = modalOverlay.querySelector('#sch-time-grid');
+    const suggestedPillsContainer = modalOverlay.querySelector('#sch-suggested-pills');
+    const hiddenTime = modalOverlay.querySelector('#sch-time');
+    const hiddenDate = modalOverlay.querySelector('#sch-date');
+    const dayStrip = modalOverlay.querySelector('#sch-day-strip');
+    const privacyCards = modalOverlay.querySelectorAll('.piq-privacy-card');
+    const guestCountEl = modalOverlay.querySelector('#sch-guest-count');
+    const guestMinusBtn = modalOverlay.querySelector('#sch-guest-minus');
+    const guestPlusBtn = modalOverlay.querySelector('#sch-guest-plus');
+    const guestMaxInput = modalOverlay.querySelector('#sch-max');
+    const validationError = modalOverlay.querySelector('#sch-validation-error');
+    const submitBtn = modalOverlay.querySelector('#sch-submit-btn');
+    const searchInput = modalOverlay.querySelector('#sch-media-search');
+    const dropdown = modalOverlay.querySelector('#sch-search-dropdown');
+    const tvSelectors = modalOverlay.querySelector('#sch-tv-selectors');
+    const seasonSelect = modalOverlay.querySelector('#sch-tv-season');
+    const episodeSelect = modalOverlay.querySelector('#sch-tv-episode');
+    const searchIcon = modalOverlay.querySelector('#sch-search-icon');
+    const drawer = modalOverlay.querySelector('#sch-metadata-drawer');
+    const drawerPoster = drawer.querySelector('#drawer-poster');
+    const drawerPh = drawer.querySelector('#drawer-poster-ph');
 
-    // Manage invitees list locally
+    // ---- Invitees ----
     const inviteesList = [];
 
     function renderInviteePills() {
-      inviteePillsContainer.innerHTML = inviteesList.map((email, idx) => `
-        <div class="invite-pill" style="
-          background: rgba(168, 85, 247, 0.1);
-          border: 1.5px solid rgba(168, 85, 247, 0.3);
-          color: #e9d5ff;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          animation: pillScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        ">
-          <span>${email}</span>
-          <button type="button" class="remove-pill-btn" data-index="${idx}" style="
-            background: none;
-            border: none;
-            color: #d8b4fe;
-            cursor: pointer;
-            padding: 2px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s;
-          }">
-            <i data-lucide="x" style="width:10px; height:10px;"></i>
-          </button>
-        </div>
-      `).join('');
-
+      inviteePillsContainer.innerHTML = inviteesList.map((email, idx) => {
+        const initials = email.substring(0, 2).toUpperCase();
+        return `
+          <div class="piq-invite-pill">
+            <span class="piq-invite-pill-avatar">${initials}</span>
+            <span class="piq-invite-pill-text">${email}</span>
+            <button type="button" class="piq-invite-pill-remove" data-index="${idx}" aria-label="Remove">
+              <i data-lucide="x"></i>
+            </button>
+          </div>`;
+      }).join('');
       if (window.lucide) window.lucide.createIcons();
-
-      inviteePillsContainer.querySelectorAll('.remove-pill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
+      inviteePillsContainer.querySelectorAll('.piq-invite-pill-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
           const idx = parseInt(btn.dataset.index);
-          const pill = btn.parentElement;
-          pill.style.transform = 'scale(0.8)';
+          const pill = btn.closest('.piq-invite-pill');
+          pill.style.transition = 'all 0.15s';
+          pill.style.transform = 'scale(0)';
           pill.style.opacity = '0';
-          setTimeout(() => {
-            inviteesList.splice(idx, 1);
-            renderInviteePills();
-          }, 150);
+          setTimeout(() => { inviteesList.splice(idx, 1); renderInviteePills(); }, 150);
         });
       });
     }
@@ -1400,274 +1443,190 @@ END:VCALENDAR`;
     const addInvitee = () => {
       const email = inviteeInput.value.trim().toLowerCase();
       if (!email) return;
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        showToast('Please enter a valid email address.');
-        return;
-      }
-
-      if (inviteesList.includes(email)) {
-        showToast('This email has already been added.');
-        return;
-      }
-
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email address.'); return; }
+      if (inviteesList.includes(email)) { showToast('This email has already been added.'); return; }
       inviteesList.push(email);
       inviteeInput.value = '';
       renderInviteePills();
     };
+    addInviteeBtn.addEventListener('click', (e) => { e.preventDefault(); addInvitee(); });
+    inviteeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addInvitee(); } });
 
-    addInviteeBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      addInvitee();
-    });
-
-    inviteeInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addInvitee();
-      }
-    });
-
-    // Privacy Radio Custom Management
-    function updatePrivacySelection() {
-      privacyCards.forEach(card => {
-        const input = card.querySelector('input');
-        const icon = card.querySelector('i');
-        if (input.checked) {
-          card.style.background = 'rgba(168, 85, 247, 0.12)';
-          card.style.borderColor = 'var(--accent, #a855f7)';
-          card.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.3)';
-          card.style.transform = 'scale(1.02)';
-          if (icon) icon.style.color = 'var(--accent, #a855f7)';
-        } else {
-          card.style.background = 'rgba(255, 255, 255, 0.02)';
-          card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-          card.style.boxShadow = 'none';
-          card.style.transform = 'scale(1)';
-          if (icon) icon.style.color = 'var(--text-secondary)';
-        }
-      });
+    // ---- Privacy ----
+    function updatePrivacyCards() {
+      privacyCards.forEach(c => c.classList.toggle('active', c.querySelector('input').checked));
     }
-
     privacyCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const input = card.querySelector('input');
-        input.checked = true;
-        updatePrivacySelection();
+      card.addEventListener('click', () => { card.querySelector('input').checked = true; updatePrivacyCards(); });
+    });
+    updatePrivacyCards();
+
+    // ---- Guest Stepper ----
+    let guestCount = 10;
+    const GUEST_MIN = 2, GUEST_MAX = 50;
+    function updateStepper() {
+      guestCountEl.textContent = guestCount;
+      guestMaxInput.value = guestCount;
+      guestMinusBtn.disabled = guestCount <= GUEST_MIN;
+      guestPlusBtn.disabled = guestCount >= GUEST_MAX;
+      guestCountEl.style.transition = 'none';
+      guestCountEl.style.transform = 'scale(1.3)';
+      requestAnimationFrame(() => {
+        guestCountEl.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        guestCountEl.style.transform = 'scale(1)';
+      });
+    }
+    guestMinusBtn.addEventListener('click', () => { if (guestCount > GUEST_MIN) { guestCount--; updateStepper(); } });
+    guestPlusBtn.addEventListener('click', () => { if (guestCount < GUEST_MAX) { guestCount++; updateStepper(); } });
+    updateStepper();
+
+    // ---- Time logic ----
+    let selectedDateStr = todayStr;
+
+    function buildTimeSlots(dateStr) {
+      const now = new Date();
+      const todayDateStr = now.toISOString().split('T')[0];
+      const isToday = dateStr === todayDateStr;
+      const slots = [];
+      for (let h = 0; h < 24; h++) {
+        for (const m of [0, 30]) {
+          if (isToday) {
+            if (h < now.getHours()) continue;
+            if (h === now.getHours() && m <= now.getMinutes()) continue;
+          }
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const displayHr = h % 12 === 0 ? 12 : h % 12;
+          const minStr = m === 0 ? '00' : '30';
+          slots.push({ value: `${String(h).padStart(2,'0')}:${minStr}`, label: `${displayHr}:${minStr} ${ampm}` });
+        }
+      }
+      return slots;
+    }
+
+    function renderTimeSection(dateStr) {
+      const slots = buildTimeSlots(dateStr);
+      if (slots.length === 0) {
+        timeGrid.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:6px 0;">No future times for today — select another day.</div>';
+        suggestedPillsContainer.innerHTML = '';
+        hiddenTime.value = '';
+        return;
+      }
+
+      const suggestions = slots.slice(0, 4);
+      suggestedPillsContainer.innerHTML = suggestions.map(s => `
+        <button type="button" class="piq-suggested-pill" data-value="${s.value}">
+          <i data-lucide="zap" style="width:11px;height:11px;color:#f59e0b;"></i> ${s.label}
+        </button>`).join('');
+
+      const selectedVal = (hiddenTime.value && slots.some(t => t.value === hiddenTime.value)) ? hiddenTime.value : slots[0].value;
+      hiddenTime.value = selectedVal;
+
+      timeGrid.innerHTML = slots.map(t => `
+        <div class="piq-time-chip ${t.value === selectedVal ? 'active' : ''}" data-value="${t.value}" role="button" tabindex="0">${t.label}</div>
+      `).join('');
+
+      if (window.lucide) window.lucide.createIcons();
+
+      // Wire time chips
+      timeGrid.querySelectorAll('.piq-time-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          timeGrid.querySelectorAll('.piq-time-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          hiddenTime.value = chip.dataset.value;
+          suggestedPillsContainer.querySelectorAll('.piq-suggested-pill').forEach(p => p.classList.toggle('selected', p.dataset.value === chip.dataset.value));
+        });
+      });
+
+      // Wire suggested pills
+      suggestedPillsContainer.querySelectorAll('.piq-suggested-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          const val = pill.dataset.value;
+          hiddenTime.value = val;
+          timeGrid.querySelectorAll('.piq-time-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.value === val);
+            if (c.dataset.value === val) c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+          suggestedPillsContainer.querySelectorAll('.piq-suggested-pill').forEach(p => p.classList.remove('selected'));
+          pill.classList.add('selected');
+          pill.style.transform = 'scale(0.92)';
+          setTimeout(() => { pill.style.transform = ''; }, 150);
+        });
+      });
+    }
+
+    // Wire day chips
+    dayStrip.querySelectorAll('.piq-day-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        dayStrip.querySelectorAll('.piq-day-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        selectedDateStr = chip.dataset.date;
+        hiddenDate.value = selectedDateStr;
+        hiddenTime.value = '';
+        renderTimeSection(selectedDateStr);
       });
     });
-    updatePrivacySelection();
+    renderTimeSection(todayStr);
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (dateInput) {
-      dateInput.min = todayStr;
-      dateInput.value = todayStr;
-    }
-
-    function updateTimesAndPills() {
-      const selectedDateStr = dateInput.value;
-      if (!selectedDateStr) return;
-
-      const today = new Date();
-      const todayDateStr = today.toISOString().split('T')[0];
-      const isToday = selectedDateStr === todayDateStr;
-
-      const currentHour = today.getHours();
-      const currentMin = today.getMinutes();
-
-      const allTimes = [];
-      for (let h = 0; h < 24; h++) {
-        const hr = String(h).padStart(2, '0');
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const displayHr = h % 12 === 0 ? 12 : h % 12;
-        allTimes.push({ hour: h, minute: 0, value: `${hr}:00`, label: `${displayHr}:00 ${ampm}` });
-        allTimes.push({ hour: h, minute: 30, value: `${hr}:30`, label: `${displayHr}:30 ${ampm}` });
-      }
-
-      let filteredTimes = allTimes;
-      if (isToday) {
-        filteredTimes = allTimes.filter(t => {
-          if (t.hour > currentHour) return true;
-          if (t.hour === currentHour && t.minute > currentMin) return true;
-          return false;
-        });
-      }
-
-      const prevSelectedValue = timeSelect.value;
-      timeSelect.innerHTML = filteredTimes.map(t => `<option value="${t.value}" style="background: #141419; color: #fff;">${t.label}</option>`).join('');
-
-      if (prevSelectedValue && filteredTimes.some(t => t.value === prevSelectedValue)) {
-        timeSelect.value = prevSelectedValue;
-      } else if (filteredTimes.length > 0) {
-        timeSelect.value = filteredTimes[0].value;
-      }
-
-      const suggestions = filteredTimes.slice(0, 4);
-      if (suggestions.length > 0) {
-        pillsWrap.style.display = 'flex';
-        pillsContainer.innerHTML = suggestions.map(s => `
-          <button type="button" class="sch-time-pill" data-value="${s.value}">
-            ${s.label}
-          </button>
-        `).join('');
-
-        pillsContainer.querySelectorAll('.sch-time-pill').forEach(pill => {
-          pill.addEventListener('click', (e) => {
-            e.preventDefault();
-            const val = pill.dataset.value;
-            timeSelect.value = val;
-
-            pill.style.transform = 'scale(0.95)';
-            pill.style.background = 'rgba(168, 85, 247, 0.3)';
-            pill.style.borderColor = 'var(--accent, #a855f7)';
-            pill.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.5)';
-
-            timeSelect.style.borderColor = 'var(--accent, #a855f7)';
-            timeSelect.style.boxShadow = '0 0 8px rgba(168, 85, 247, 0.3)';
-
-            setTimeout(() => {
-              pill.style.transform = '';
-              pillsContainer.querySelectorAll('.sch-time-pill').forEach(p => {
-                p.removeAttribute('style');
-              });
-              pill.style.background = 'rgba(168, 85, 247, 0.2)';
-              pill.style.borderColor = 'var(--accent, #a855f7)';
-              pill.style.color = '#fff';
-            }, 150);
-
-            setTimeout(() => {
-              timeSelect.style.borderColor = '';
-              timeSelect.style.boxShadow = '';
-            }, 1000);
-          });
-        });
-      } else {
-        pillsWrap.style.display = 'none';
-        pillsContainer.innerHTML = '';
-      }
-    }
-
-    if (dateInput) {
-      dateInput.addEventListener('change', updateTimesAndPills);
-      dateInput.addEventListener('input', updateTimesAndPills);
-    }
-    updateTimesAndPills();
-
-    if (inviteesAutocomplete) inviteesAutocomplete.destroy();
-    if (inviteeInput) {
-      // Use single-input mode for autocomplete, so isMulti = false
-      inviteesAutocomplete = initFriendAutocomplete(inviteeInput, () => currentFriendsList.filter(f => !f.isPending), false);
-    }
-
-    closeBtn.addEventListener('click', () => {
-      modalOverlay.classList.add('hidden');
-      if (inviteesAutocomplete) {
-        inviteesAutocomplete.destroy();
-        inviteesAutocomplete = null;
-      }
-    });
-
-    const searchInput = modalOverlay.querySelector('#sch-media-search');
-    const dropdown = modalOverlay.querySelector('#sch-search-dropdown');
-    const tvSelectors = modalOverlay.querySelector('#sch-tv-selectors');
-    const seasonSelect = modalOverlay.querySelector('#sch-tv-season');
-    const episodeSelect = modalOverlay.querySelector('#sch-tv-episode');
-    const form = modalOverlay.querySelector('#schedule-party-form');
-
+    // ---- Media Search ----
     let selectedMedia = null;
     let searchDebounce = null;
 
     searchInput.addEventListener('input', () => {
       clearTimeout(searchDebounce);
       const query = searchInput.value.trim();
-      if (!query) {
-        dropdown.classList.add('hidden');
-        return;
-      }
-
+      if (!query) { dropdown.classList.add('hidden'); return; }
+      if (searchIcon) { searchIcon.setAttribute('data-lucide', 'loader'); searchIcon.classList.add('spinning'); if (window.lucide) window.lucide.createIcons(); }
       searchDebounce = setTimeout(async () => {
         try {
           const data = await searchMovieBox(query);
-          const results = data.results.slice(0, 5);
+          const results = data.results.slice(0, 6);
+          if (searchIcon) { searchIcon.setAttribute('data-lucide', 'search'); searchIcon.classList.remove('spinning'); if (window.lucide) window.lucide.createIcons(); }
           if (results.length === 0) {
-            dropdown.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:6px;">No matches found.</div>';
-            dropdown.classList.remove('hidden');
-            return;
+            dropdown.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;text-align:center;">No matches found</div>';
+            dropdown.classList.remove('hidden'); return;
           }
-
           dropdown.innerHTML = results.map(item => {
             const title = item.title || item.name || 'Unknown';
             const year = (item.releaseDate || item.year || '').slice(0, 4);
             const type = item.subjectType === 2 ? 'TV' : 'Movie';
+            const poster = item.cover?.url || item.poster_path || '';
             return `
-              <div class="search-suggestion-item sch-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${item.cover?.url || item.poster_path || ''}" style="padding:6px; margin-bottom:4px; font-size:12px;">
-                <div style="font-weight:700;">${title} (${year})</div>
-                <div style="font-size:10px; color:var(--text-muted);">${type}</div>
-              </div>
-            `;
+              <div class="piq-search-result sch-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${poster}">
+                ${poster ? `<img class="piq-search-result-poster" src="${poster}" alt="" />` : `<div class="piq-search-result-poster" style="background:rgba(168,85,247,0.08);display:flex;align-items:center;justify-content:center;"><i data-lucide="film" style="width:14px;height:14px;color:rgba(168,85,247,0.4);"></i></div>`}
+                <div class="piq-search-result-info">
+                  <div class="piq-search-result-title">${title}</div>
+                  <div class="piq-search-result-meta">${year}</div>
+                </div>
+                <span class="piq-search-result-badge ${type === 'TV' ? 'piq-badge-tv' : 'piq-badge-movie'}">${type}</span>
+              </div>`;
           }).join('');
-
           dropdown.classList.remove('hidden');
+          if (window.lucide) window.lucide.createIcons();
 
           dropdown.querySelectorAll('.sch-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
-              selectedMedia = {
-                id: opt.dataset.id,
-                type: opt.dataset.type === 'TV' ? 'tv' : 'movie',
-                title: opt.dataset.title,
-                posterPath: opt.dataset.poster
-              };
+              selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
 
-              // Populating metadata in side drawer dynamically
-              const drawer = modalOverlay.querySelector('#sch-metadata-drawer');
+              // Show drawer
               drawer.classList.add('show');
               drawer.querySelector('#drawer-media-title').textContent = selectedMedia.title;
               drawer.querySelector('#drawer-media-type').textContent = selectedMedia.type === 'tv' ? 'TV Show' : 'Movie';
-              drawer.querySelector('#drawer-media-overview').textContent = 'Loading content summary...';
-              
-              const drawerPoster = drawer.querySelector('#drawer-poster');
-              const drawerBackdrop = drawer.querySelector('#drawer-backdrop');
-
-              if (selectedMedia.posterPath) {
-                drawerPoster.src = selectedMedia.posterPath;
-                drawerPoster.style.display = 'block';
-              } else {
-                drawerPoster.style.display = 'none';
-              }
-              drawerBackdrop.style.display = 'none';
+              drawer.querySelector('#drawer-media-overview').textContent = 'Loading...';
+              if (selectedMedia.posterPath) { drawerPoster.src = selectedMedia.posterPath; drawerPoster.style.display = 'block'; if (drawerPh) drawerPh.style.display = 'none'; }
 
               try {
-                const details = selectedMedia.type === 'tv' 
-                  ? await getTVDetails(selectedMedia.id) 
-                  : await getMovieDetails(selectedMedia.id);
+                const details = selectedMedia.type === 'tv' ? await getTVDetails(selectedMedia.id) : await getMovieDetails(selectedMedia.id);
                 if (details) {
-                  const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}` : '';
-                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : (selectedMedia.posterPath || '');
-                  const rating = details.vote_average ? details.vote_average.toFixed(1) : '—';
-                  const release = details.release_date || details.first_air_date || '—';
-                  const overview = details.overview || 'No overview available.';
-
-                  if (backdropUrl) {
-                    drawerBackdrop.src = backdropUrl;
-                    drawerBackdrop.style.display = 'block';
-                  }
-                  if (posterUrl) {
-                    drawerPoster.src = posterUrl;
-                    drawerPoster.style.display = 'block';
-                  }
-                  drawer.querySelector('#drawer-media-rating').textContent = rating;
-                  drawer.querySelector('#drawer-media-release').textContent = release.slice(0, 4);
-                  drawer.querySelector('#drawer-media-overview').textContent = overview;
+                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : selectedMedia.posterPath;
+                  if (posterUrl) { drawerPoster.src = posterUrl; drawerPoster.style.display = 'block'; if (drawerPh) drawerPh.style.display = 'none'; }
+                  drawer.querySelector('#drawer-media-rating').textContent = details.vote_average ? details.vote_average.toFixed(1) : '—';
+                  drawer.querySelector('#drawer-media-release').textContent = (details.release_date || details.first_air_date || '—').slice(0, 4);
+                  drawer.querySelector('#drawer-media-overview').textContent = details.overview || 'No overview available.';
                 }
-              } catch (err) {
-                console.error('Failed to load content details in side drawer:', err);
-                drawer.querySelector('#drawer-media-overview').textContent = 'Summary unavailable.';
-              }
+              } catch(err) { drawer.querySelector('#drawer-media-overview').textContent = 'Summary unavailable.'; }
 
-              // If TV, load seasons
               if (selectedMedia.type === 'tv') {
                 tvSelectors.style.display = 'flex';
                 seasonSelect.innerHTML = '<option>Loading...</option>';
@@ -1676,27 +1635,25 @@ END:VCALENDAR`;
                   const details = await getTVDetails(tvId);
                   if (details && details.seasons) {
                     seasonSelect.innerHTML = details.seasons.map(s => `<option value="${s.season_number}">${s.name}</option>`).join('');
-                    
-                    // Trigger episode population for first season
                     loadScheduleEpisodes(tvId, seasonSelect.value);
                   }
-                } catch(e) {
-                  seasonSelect.innerHTML = '<option value="1">Season 1</option>';
-                  episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-                }
+                } catch(e) { seasonSelect.innerHTML = '<option value="1">Season 1</option>'; episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
               } else {
                 tvSelectors.style.display = 'none';
               }
             });
           });
-
         } catch(e) {
           console.error(e);
+          if (searchIcon) { searchIcon.setAttribute('data-lucide', 'search'); searchIcon.classList.remove('spinning'); if (window.lucide) window.lucide.createIcons(); }
         }
       }, 300);
     });
 
-    // Load episodes when season changes
+    // Close dropdown on outside click
+    const hideSchDropdown = (e) => { if (!dropdown.contains(e.target) && !searchInput.contains(e.target)) { dropdown.classList.add('hidden'); document.removeEventListener('click', hideSchDropdown); } };
+    document.addEventListener('click', hideSchDropdown);
+
     seasonSelect.addEventListener('change', () => {
       const tvId = selectedMedia.id.startsWith('mb_') ? selectedMedia.id : `mb_${selectedMedia.id}`;
       loadScheduleEpisodes(tvId, seasonSelect.value);
@@ -1709,18 +1666,28 @@ END:VCALENDAR`;
         const seasonDetails = await getSeasonDetails(tvId, seasonNum, selectedMedia.title);
         if (seasonDetails && seasonDetails.episodes) {
           episodeSelect.innerHTML = seasonDetails.episodes.map(ep => `<option value="${ep.episode_number}">Episode ${ep.episode_number}</option>`).join('');
-        } else {
-          episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-        }
-      } catch(e) {
-        episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-      }
+        } else { episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
+      } catch(e) { episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
     }
 
+    // ---- Autocomplete ----
+    if (inviteesAutocomplete) inviteesAutocomplete.destroy();
+    if (inviteeInput) {
+      inviteesAutocomplete = initFriendAutocomplete(inviteeInput, () => currentFriendsList.filter(f => !f.isPending), false);
+    }
+
+    // ---- Close ----
+    const closeModal = () => {
+      modalOverlay.classList.add('hidden');
+      if (inviteesAutocomplete) { inviteesAutocomplete.destroy(); inviteesAutocomplete = null; }
+    };
+    closeBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+
+    // ---- Form Submit ----
+    const form = modalOverlay.querySelector('#schedule-party-form');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const validationError = modalOverlay.querySelector('#sch-validation-error');
       validationError.style.display = 'none';
 
       if (!selectedMedia) {
@@ -1729,10 +1696,15 @@ END:VCALENDAR`;
         return;
       }
 
-      const dateVal = modalOverlay.querySelector('#sch-date').value;
-      const timeVal = modalOverlay.querySelector('#sch-time').value;
-      const selectedDate = new Date(`${dateVal}T${timeVal}`);
+      const timeVal = hiddenTime.value;
+      const dateVal = hiddenDate.value;
+      if (!timeVal) {
+        validationError.textContent = 'Please select a time for the party.';
+        validationError.style.display = 'block';
+        return;
+      }
 
+      const selectedDate = new Date(`${dateVal}T${timeVal}`);
       if (selectedDate <= new Date()) {
         validationError.textContent = 'Selected time must be in the future.';
         validationError.style.display = 'block';
@@ -1742,9 +1714,8 @@ END:VCALENDAR`;
       const partyId = `party_${Math.random().toString(36).substring(2, 11)}`;
       const name = modalOverlay.querySelector('#sch-party-name').value.trim();
       const privacy = modalOverlay.querySelector('input[name="sch-privacy"]:checked').value;
-      const maxVal = modalOverlay.querySelector('#sch-max').value;
-
-      const invitees = inviteesList;
+      const maxVal = parseInt(guestMaxInput.value);
+      const invitees = [...inviteesList];
 
       const scheduledData = {
         partyId,
@@ -1760,28 +1731,28 @@ END:VCALENDAR`;
         scheduledTime: selectedDate.toISOString(),
         invitees,
         privacy,
-        maxParticipants: parseInt(maxVal)
+        maxParticipants: maxVal
       };
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader" class="btn-spinner" style="width:17px;height:17px;"></i> Creating...`;
+      if (window.lucide) window.lucide.createIcons();
 
       try {
         await createScheduledPartyInCloud(partyId, scheduledData);
-        showToast('Party Scheduled successfully!');
-        
-        // Auto send notification invites to friends in the invite list
+        showToast('🎉 Watch party scheduled!');
+
         invitees.forEach(async (email) => {
           try {
             await sendPartyInviteNotification(
               user.uid,
               scheduledData.hostName,
               getInitialsAvatar(user.displayName, user.email, user.photoURL),
-              email,
-              partyId,
+              email, partyId,
               `${name} (Scheduled: ${selectedMedia.title})`,
               selectedMedia.posterPath,
               selectedMedia.type
             );
-
-            // Trigger actual invitation email via proxy endpoint
             fetch(`${NODE_PROXY}/api/email/send-invite`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1789,29 +1760,22 @@ END:VCALENDAR`;
                 hostName: scheduledData.hostName,
                 inviteeEmail: email,
                 title: `${name} (Scheduled: ${selectedMedia.title})`,
-                partyId,
-                mediaType: selectedMedia.type,
-                posterPath: selectedMedia.posterPath
+                partyId, mediaType: selectedMedia.type, posterPath: selectedMedia.posterPath
               })
-            }).catch(emailErr => {
-              console.warn('Failed to send email invite to', email, emailErr);
-            });
-
-          } catch(notifErr) {
-            console.warn('Failed to send real-time notification to', email, notifErr);
-          }
+            }).catch(emailErr => console.warn('Email send failed:', emailErr));
+          } catch(notifErr) { console.warn('Notification failed for', email, notifErr); }
         });
 
-        // Trigger calendar .ics download immediately!
         downloadCalendarFile(name, scheduledData.scheduledTime, partyId);
 
-        modalOverlay.classList.add('hidden');
-        if (inviteesAutocomplete) {
-          inviteesAutocomplete.destroy();
-          inviteesAutocomplete = null;
-        }
-      } catch(e) {
+        submitBtn.innerHTML = `<i data-lucide="check" style="width:17px;height:17px;"></i> Scheduled!`;
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => closeModal(), 900);
+      } catch(err) {
         showToast('Failed to schedule party.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i data-lucide="calendar-plus"></i> Schedule Watch Party`;
+        if (window.lucide) window.lucide.createIcons();
       }
     });
   }
@@ -1826,98 +1790,114 @@ END:VCALENDAR`;
   function showStartPartyModal() {
     modalOverlay.classList.remove('hidden');
     modalOverlay.innerHTML = `
-      <div class="modal-wrapper">
-        <!-- Left Metadata Drawer -->
-        <div id="start-metadata-drawer" class="metadata-drawer">
-          <div class="drawer-header" style="position:relative; margin-top:-24px; margin-left:-24px; margin-right:-24px; border-top-left-radius:16px; border-top-right-radius:16px; height:120px; overflow:hidden; background:#10111a;">
-            <img id="start-drawer-backdrop" src="" style="width:100%; height:100%; object-fit:cover; opacity:0.4; display:none;" />
-            <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="start-drawer-media-title"></div>
-          </div>
-          <div style="display:flex; gap:12px; margin-top:8px;">
-            <div class="drawer-poster-container">
-              <img id="start-drawer-poster" class="drawer-poster-3d" src="" style="display:none;" />
-            </div>
-            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
-              <div><strong>Type:</strong> <span id="start-drawer-media-type">—</span></div>
-              <div><strong>Release:</strong> <span id="start-drawer-media-release">—</span></div>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <strong>Rating:</strong>
-                <svg viewBox="0 0 24 24" fill="var(--accent)" style="width:12px; height:12px; color:var(--accent);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span id="start-drawer-media-rating">—</span>
-              </div>
+      <div class="modal-wrapper piq-modal-bg">
+        <!-- Left: Metadata Drawer -->
+        <div id="start-metadata-drawer" class="piq-content-drawer">
+          <div class="piq-drawer-poster-wrap">
+            <img id="start-drawer-poster" class="piq-drawer-poster" src="" alt="" style="display:none;" />
+            <div id="start-drawer-poster-ph" style="width:130px;height:195px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="film" style="width:34px;height:34px;color:rgba(168,85,247,0.3);"></i>
             </div>
           </div>
-          <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:8px; overflow-y:auto; flex-grow:1; max-height:160px;" id="start-drawer-media-overview"></div>
+          <div class="piq-drawer-meta">
+            <div class="piq-drawer-title" id="start-drawer-media-title">Select a title to preview</div>
+            <div class="piq-drawer-badges">
+              <span class="piq-drawer-badge" id="start-drawer-media-type">—</span>
+              <span class="piq-drawer-badge" id="start-drawer-media-release">—</span>
+            </div>
+            <div class="piq-drawer-rating">
+              <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
+              <span id="start-drawer-media-rating">—</span>
+            </div>
+            <div class="piq-drawer-overview" id="start-drawer-media-overview"></div>
+          </div>
         </div>
 
-        <!-- Main Modal Card -->
-        <div class="modal-content-card" style="max-width:440px; width: 100%; position: relative; z-index: 10;">
-          <button class="modal-close-btn" id="modal-close-btn">
-            <i data-lucide="x"></i>
-          </button>
-          <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Create Instant Watch Room</h3>
-          <form id="start-party-form" style="display:flex; flex-direction:column; gap:12px;">
-            
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Name</label>
-            <input type="text" id="start-party-name" class="party-chat-input" placeholder="e.g. Friday Movie Night" required />
+        <!-- Right: Form Panel -->
+        <div class="piq-form-panel">
+          <button class="piq-close-btn" id="modal-close-btn"><i data-lucide="x"></i></button>
 
-            <!-- TMDB Search input -->
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
-            <div style="position:relative;">
-              <input type="text" id="start-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
-              <div id="start-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+          <div class="piq-modal-header">
+            <div class="piq-modal-header-icon"><i data-lucide="tv"></i></div>
+            <div>
+              <h2 class="piq-modal-title">Create Watch Room</h2>
+              <p class="piq-modal-subtitle">Start watching instantly with friends</p>
             </div>
-            
-            <!-- TV show season/ep selects (hidden initially) -->
-            <div id="start-tv-selectors" style="display:none; gap:10px;">
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
-                <select id="start-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
-              </div>
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
-                <select id="start-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+          </div>
+
+          <form id="start-party-form" novalidate>
+
+            <!-- Room Name -->
+            <div class="piq-field">
+              <div class="piq-floating-label">
+                <input type="text" id="start-party-name" class="piq-input" placeholder=" " required autocomplete="off" />
+                <label for="start-party-name">Room Name</label>
+                <i data-lucide="edit-3" class="piq-input-icon"></i>
               </div>
             </div>
 
-            <!-- Privacy Card Radio Group -->
-            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-top:4px;">Privacy Option</label>
-            <div class="privacy-radio-group" style="display:flex; gap:10px;">
-              <label class="privacy-radio-card start-privacy-card">
+            <!-- Content Search -->
+            <div class="piq-field" style="position:relative;">
+              <div class="piq-floating-label">
+                <input type="text" id="start-media-search" class="piq-input" placeholder=" " autocomplete="off" />
+                <label for="start-media-search">Search Movie or TV Show</label>
+                <i data-lucide="search" class="piq-input-icon" id="start-search-icon"></i>
+              </div>
+              <div id="start-search-dropdown" class="piq-search-dropdown hidden"></div>
+            </div>
+
+            <!-- TV Selectors -->
+            <div id="start-tv-selectors" class="piq-tv-selectors">
+              <div style="flex:1;"><select id="start-tv-season" class="piq-select"></select></div>
+              <div style="flex:1;"><select id="start-tv-episode" class="piq-select"></select></div>
+            </div>
+
+            <!-- Privacy -->
+            <div class="piq-section-label">
+              <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
+            </div>
+            <div class="piq-privacy-group">
+              <label class="piq-privacy-card active">
                 <input type="radio" name="start-privacy" value="Open" checked style="display:none;" />
-                <i data-lucide="globe" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Open</span>
-                <span style="font-size:9px; color:var(--text-muted);">Friends can join</span>
+                <i data-lucide="globe"></i>
+                <span class="piq-privacy-title">Open</span>
+                <span class="piq-privacy-sub">Anyone with link</span>
               </label>
-              <label class="privacy-radio-card start-privacy-card">
+              <label class="piq-privacy-card">
                 <input type="radio" name="start-privacy" value="Friends-only" style="display:none;" />
-                <i data-lucide="users" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Friends-only</span>
-                <span style="font-size:9px; color:var(--text-muted);">Only friends</span>
+                <i data-lucide="users"></i>
+                <span class="piq-privacy-title">Friends</span>
+                <span class="piq-privacy-sub">Only your friends</span>
               </label>
-              <label class="privacy-radio-card start-privacy-card">
+              <label class="piq-privacy-card">
                 <input type="radio" name="start-privacy" value="Closed" style="display:none;" />
-                <i data-lucide="lock" style="width:16px; height:16px;"></i>
-                <span style="font-size:11px; font-weight:700; color:#fff;">Closed</span>
-                <span style="font-size:9px; color:var(--text-muted);">Invite only</span>
+                <i data-lucide="lock"></i>
+                <span class="piq-privacy-title">Private</span>
+                <span class="piq-privacy-sub">Invite only</span>
               </label>
             </div>
 
-            <div style="display:flex; gap:10px; margin-top:8px;">
-              <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
-                <select id="start-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                  <option value="5">5 People</option>
-                  <option value="10" selected>10 People</option>
-                  <option value="20">20 People</option>
-                </select>
-              </div>
+            <!-- Guest Stepper -->
+            <div class="piq-section-label">
+              <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
             </div>
+            <div class="piq-guest-stepper">
+              <button type="button" id="start-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
+              <div class="piq-stepper-count">
+                <span class="piq-stepper-num" id="start-guest-count">10</span>
+                <span class="piq-stepper-label">guests max</span>
+              </div>
+              <button type="button" id="start-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+            </div>
+            <input type="hidden" id="start-max" value="10" />
 
-            <div id="start-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
+            <!-- Validation Error -->
+            <div id="start-validation-error" class="piq-validation-error"></div>
 
-            <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
-              Start Sync Room Now
+            <!-- CTA -->
+            <button type="submit" class="piq-hero-btn" id="start-submit-btn">
+              <i data-lucide="play-circle"></i>
+              Open the Room
             </button>
           </form>
         </div>
@@ -1927,138 +1907,111 @@ END:VCALENDAR`;
     if (window.lucide) window.lucide.createIcons();
 
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
-    closeBtn.addEventListener('click', () => modalOverlay.classList.add('hidden'));
-
+    const form = modalOverlay.querySelector('#start-party-form');
+    const privacyCards = modalOverlay.querySelectorAll('.piq-privacy-card');
+    const guestCountEl = modalOverlay.querySelector('#start-guest-count');
+    const guestMinusBtn = modalOverlay.querySelector('#start-guest-minus');
+    const guestPlusBtn = modalOverlay.querySelector('#start-guest-plus');
+    const guestMaxInput = modalOverlay.querySelector('#start-max');
+    const validationError = modalOverlay.querySelector('#start-validation-error');
+    const submitBtn = modalOverlay.querySelector('#start-submit-btn');
     const searchInput = modalOverlay.querySelector('#start-media-search');
     const dropdown = modalOverlay.querySelector('#start-search-dropdown');
     const tvSelectors = modalOverlay.querySelector('#start-tv-selectors');
     const seasonSelect = modalOverlay.querySelector('#start-tv-season');
     const episodeSelect = modalOverlay.querySelector('#start-tv-episode');
-    const form = modalOverlay.querySelector('#start-party-form');
-    const privacyCards = modalOverlay.querySelectorAll('.start-privacy-card');
+    const searchIcon = modalOverlay.querySelector('#start-search-icon');
+    const drawer = modalOverlay.querySelector('#start-metadata-drawer');
+    const drawerPoster = drawer.querySelector('#start-drawer-poster');
+    const drawerPh = drawer.querySelector('#start-drawer-poster-ph');
 
-    function updatePrivacySelection() {
-      privacyCards.forEach(card => {
-        const input = card.querySelector('input');
-        const icon = card.querySelector('i');
-        if (input.checked) {
-          card.style.background = 'rgba(168, 85, 247, 0.12)';
-          card.style.borderColor = 'var(--accent, #a855f7)';
-          card.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.3)';
-          card.style.transform = 'scale(1.02)';
-          if (icon) icon.style.color = 'var(--accent, #a855f7)';
-        } else {
-          card.style.background = 'rgba(255, 255, 255, 0.02)';
-          card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-          card.style.boxShadow = 'none';
-          card.style.transform = 'scale(1)';
-          if (icon) icon.style.color = 'var(--text-secondary)';
-        }
+    // Privacy cards
+    function updatePrivacyCards() {
+      privacyCards.forEach(c => c.classList.toggle('active', c.querySelector('input').checked));
+    }
+    privacyCards.forEach(card => {
+      card.addEventListener('click', () => { card.querySelector('input').checked = true; updatePrivacyCards(); });
+    });
+    updatePrivacyCards();
+
+    // Guest stepper
+    let guestCount = 10;
+    const GUEST_MIN = 2, GUEST_MAX = 50;
+    function updateStepper() {
+      guestCountEl.textContent = guestCount;
+      guestMaxInput.value = guestCount;
+      guestMinusBtn.disabled = guestCount <= GUEST_MIN;
+      guestPlusBtn.disabled = guestCount >= GUEST_MAX;
+      guestCountEl.style.transition = 'none';
+      guestCountEl.style.transform = 'scale(1.3)';
+      requestAnimationFrame(() => {
+        guestCountEl.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        guestCountEl.style.transform = 'scale(1)';
       });
     }
+    guestMinusBtn.addEventListener('click', () => { if (guestCount > GUEST_MIN) { guestCount--; updateStepper(); } });
+    guestPlusBtn.addEventListener('click', () => { if (guestCount < GUEST_MAX) { guestCount++; updateStepper(); } });
+    updateStepper();
 
-    privacyCards.forEach(card => {
-      card.addEventListener('click', () => {
-        const input = card.querySelector('input');
-        input.checked = true;
-        updatePrivacySelection();
-      });
-    });
-    updatePrivacySelection();
-
+    // Media search
     let selectedMedia = null;
     let searchDebounce = null;
 
     searchInput.addEventListener('input', () => {
       clearTimeout(searchDebounce);
       const query = searchInput.value.trim();
-      if (!query) {
-        dropdown.classList.add('hidden');
-        return;
-      }
-
+      if (!query) { dropdown.classList.add('hidden'); return; }
+      if (searchIcon) { searchIcon.setAttribute('data-lucide', 'loader'); searchIcon.classList.add('spinning'); if (window.lucide) window.lucide.createIcons(); }
       searchDebounce = setTimeout(async () => {
         try {
           const data = await searchMovieBox(query);
-          const results = data.results.slice(0, 5);
+          const results = data.results.slice(0, 6);
+          if (searchIcon) { searchIcon.setAttribute('data-lucide', 'search'); searchIcon.classList.remove('spinning'); if (window.lucide) window.lucide.createIcons(); }
           if (results.length === 0) {
-            dropdown.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:6px;">No matches found.</div>';
-            dropdown.classList.remove('hidden');
-            return;
+            dropdown.innerHTML = '<div style="padding:14px;color:var(--text-muted);font-size:12px;text-align:center;">No matches found</div>';
+            dropdown.classList.remove('hidden'); return;
           }
-
           dropdown.innerHTML = results.map(item => {
             const title = item.title || item.name || 'Unknown';
             const year = (item.releaseDate || item.year || '').slice(0, 4);
             const type = item.subjectType === 2 ? 'TV' : 'Movie';
+            const poster = item.cover?.url || item.poster_path || '';
             return `
-              <div class="search-suggestion-item start-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${item.cover?.url || item.poster_path || ''}" style="padding:6px; margin-bottom:4px; font-size:12px;">
-                <div style="font-weight:700;">${title} (${year})</div>
-                <div style="font-size:10px; color:var(--text-muted);">${type}</div>
-              </div>
-            `;
+              <div class="piq-search-result start-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${poster}">
+                ${poster ? `<img class="piq-search-result-poster" src="${poster}" alt="" />` : `<div class="piq-search-result-poster" style="background:rgba(168,85,247,0.08);display:flex;align-items:center;justify-content:center;"><i data-lucide="film" style="width:14px;height:14px;color:rgba(168,85,247,0.4);"></i></div>`}
+                <div class="piq-search-result-info">
+                  <div class="piq-search-result-title">${title}</div>
+                  <div class="piq-search-result-meta">${year}</div>
+                </div>
+                <span class="piq-search-result-badge ${type === 'TV' ? 'piq-badge-tv' : 'piq-badge-movie'}">${type}</span>
+              </div>`;
           }).join('');
-
           dropdown.classList.remove('hidden');
+          if (window.lucide) window.lucide.createIcons();
 
           dropdown.querySelectorAll('.start-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
-              selectedMedia = {
-                id: opt.dataset.id,
-                type: opt.dataset.type === 'TV' ? 'tv' : 'movie',
-                title: opt.dataset.title,
-                posterPath: opt.dataset.poster
-              };
+              selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
 
-              // Populating metadata in side drawer dynamically
-              const drawer = modalOverlay.querySelector('#start-metadata-drawer');
               drawer.classList.add('show');
               drawer.querySelector('#start-drawer-media-title').textContent = selectedMedia.title;
               drawer.querySelector('#start-drawer-media-type').textContent = selectedMedia.type === 'tv' ? 'TV Show' : 'Movie';
-              drawer.querySelector('#start-drawer-media-overview').textContent = 'Loading content summary...';
-              
-              const drawerPoster = drawer.querySelector('#start-drawer-poster');
-              const drawerBackdrop = drawer.querySelector('#start-drawer-backdrop');
-
-              if (selectedMedia.posterPath) {
-                drawerPoster.src = selectedMedia.posterPath;
-                drawerPoster.style.display = 'block';
-              } else {
-                drawerPoster.style.display = 'none';
-              }
-              drawerBackdrop.style.display = 'none';
+              drawer.querySelector('#start-drawer-media-overview').textContent = 'Loading...';
+              if (selectedMedia.posterPath) { drawerPoster.src = selectedMedia.posterPath; drawerPoster.style.display = 'block'; if (drawerPh) drawerPh.style.display = 'none'; }
 
               try {
-                const details = selectedMedia.type === 'tv' 
-                  ? await getTVDetails(selectedMedia.id) 
-                  : await getMovieDetails(selectedMedia.id);
+                const details = selectedMedia.type === 'tv' ? await getTVDetails(selectedMedia.id) : await getMovieDetails(selectedMedia.id);
                 if (details) {
-                  const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}` : '';
-                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : (selectedMedia.posterPath || '');
-                  const rating = details.vote_average ? details.vote_average.toFixed(1) : '—';
-                  const release = details.release_date || details.first_air_date || '—';
-                  const overview = details.overview || 'No overview available.';
-
-                  if (backdropUrl) {
-                    drawerBackdrop.src = backdropUrl;
-                    drawerBackdrop.style.display = 'block';
-                  }
-                  if (posterUrl) {
-                    drawerPoster.src = posterUrl;
-                    drawerPoster.style.display = 'block';
-                  }
-                  drawer.querySelector('#start-drawer-media-rating').textContent = rating;
-                  drawer.querySelector('#start-drawer-media-release').textContent = release.slice(0, 4);
-                  drawer.querySelector('#start-drawer-media-overview').textContent = overview;
+                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : selectedMedia.posterPath;
+                  if (posterUrl) { drawerPoster.src = posterUrl; drawerPoster.style.display = 'block'; if (drawerPh) drawerPh.style.display = 'none'; }
+                  drawer.querySelector('#start-drawer-media-rating').textContent = details.vote_average ? details.vote_average.toFixed(1) : '—';
+                  drawer.querySelector('#start-drawer-media-release').textContent = (details.release_date || details.first_air_date || '—').slice(0, 4);
+                  drawer.querySelector('#start-drawer-media-overview').textContent = details.overview || 'No overview available.';
                 }
-              } catch (err) {
-                console.error('Failed to load content details in side drawer:', err);
-                drawer.querySelector('#start-drawer-media-overview').textContent = 'Summary unavailable.';
-              }
+              } catch(err) { drawer.querySelector('#start-drawer-media-overview').textContent = 'Summary unavailable.'; }
 
-              // If TV, load seasons
               if (selectedMedia.type === 'tv') {
                 tvSelectors.style.display = 'flex';
                 seasonSelect.innerHTML = '<option>Loading...</option>';
@@ -2069,21 +2022,21 @@ END:VCALENDAR`;
                     seasonSelect.innerHTML = details.seasons.map(s => `<option value="${s.season_number}">${s.name}</option>`).join('');
                     loadStartEpisodes(tvId, seasonSelect.value);
                   }
-                } catch(e) {
-                  seasonSelect.innerHTML = '<option value="1">Season 1</option>';
-                  episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-                }
+                } catch(e) { seasonSelect.innerHTML = '<option value="1">Season 1</option>'; episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
               } else {
                 tvSelectors.style.display = 'none';
               }
             });
           });
-
         } catch(e) {
           console.error(e);
+          if (searchIcon) { searchIcon.setAttribute('data-lucide', 'search'); searchIcon.classList.remove('spinning'); if (window.lucide) window.lucide.createIcons(); }
         }
       }, 300);
     });
+
+    const hideStartDropdown = (e) => { if (!dropdown.contains(e.target) && !searchInput.contains(e.target)) { dropdown.classList.add('hidden'); document.removeEventListener('click', hideStartDropdown); } };
+    document.addEventListener('click', hideStartDropdown);
 
     seasonSelect.addEventListener('change', () => {
       const tvId = selectedMedia.id.startsWith('mb_') ? selectedMedia.id : `mb_${selectedMedia.id}`;
@@ -2097,18 +2050,15 @@ END:VCALENDAR`;
         const seasonDetails = await getSeasonDetails(tvId, seasonNum, selectedMedia.title);
         if (seasonDetails && seasonDetails.episodes) {
           episodeSelect.innerHTML = seasonDetails.episodes.map(ep => `<option value="${ep.episode_number}">Episode ${ep.episode_number}</option>`).join('');
-        } else {
-          episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-        }
-      } catch(e) {
-        episodeSelect.innerHTML = '<option value="1">Episode 1</option>';
-      }
+        } else { episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
+      } catch(e) { episodeSelect.innerHTML = '<option value="1">Episode 1</option>'; }
     }
+
+    closeBtn.addEventListener('click', () => modalOverlay.classList.add('hidden'));
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.classList.add('hidden'); });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const validationError = modalOverlay.querySelector('#start-validation-error');
       validationError.style.display = 'none';
 
       if (!selectedMedia) {
@@ -2120,7 +2070,7 @@ END:VCALENDAR`;
       const partyId = `party_${Math.random().toString(36).substring(2, 11)}`;
       const name = modalOverlay.querySelector('#start-party-name').value.trim();
       const privacy = modalOverlay.querySelector('input[name="start-privacy"]:checked').value;
-      const maxVal = modalOverlay.querySelector('#start-max').value;
+      const maxVal = parseInt(guestMaxInput.value);
 
       const roomData = {
         partyId,
@@ -2135,26 +2085,34 @@ END:VCALENDAR`;
         season: selectedMedia.type === 'tv' ? parseInt(seasonSelect.value) : null,
         episode: selectedMedia.type === 'tv' ? parseInt(episodeSelect.value) : null,
         privacy,
-        maxParticipants: parseInt(maxVal),
+        maxParticipants: maxVal,
         status: 'paused',
         currentTime: 0,
         members: [],
         locked: false
       };
 
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader" class="btn-spinner" style="width:17px;height:17px;"></i> Starting...`;
+      if (window.lucide) window.lucide.createIcons();
+
       try {
         await createWatchPartyInCloud(partyId, roomData);
-        
         // Write to status database that we are hosting/watching this room
         await updateUserStatusInCloud(user.uid, 'online', partyId, roomData.mediaTitle);
-
         modalOverlay.classList.add('hidden');
         navigate(`/watch-party/${partyId}`);
       } catch(e) {
         showToast('Failed to start room.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i data-lucide="play-circle"></i> Open the Room`;
+        if (window.lucide) window.lucide.createIcons();
       }
     });
   }
+
+
+
 
   // Toast notifier
   function showToast(message) {
