@@ -1170,90 +1170,252 @@ END:VCALENDAR`;
     modalOverlay.classList.remove('hidden');
     
     modalOverlay.innerHTML = `
-      <div class="modal-content-card" style="max-width:440px;">
-        <button class="modal-close-btn" id="modal-close-btn">
-          <i data-lucide="x"></i>
-        </button>
-        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Schedule Future Watch Party</h3>
-        <form id="schedule-party-form" style="display:flex; flex-direction:column; gap:12px;">
-          
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Code Name</label>
-          <input type="text" id="sch-party-name" class="party-chat-input" placeholder="e.g. Anime Night with Crew" required />
-
-          <!-- TMDB Search input -->
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
-          <div style="position:relative;">
-            <input type="text" id="sch-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
-            <div id="sch-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+      <div class="modal-wrapper">
+        <!-- Left Metadata Drawer -->
+        <div id="sch-metadata-drawer" class="metadata-drawer">
+          <div class="drawer-header" style="position:relative; margin-top:-24px; margin-left:-24px; margin-right:-24px; border-top-left-radius:16px; border-top-right-radius:16px; height:120px; overflow:hidden; background:#10111a;">
+            <img id="drawer-backdrop" src="" style="width:100%; height:100%; object-fit:cover; opacity:0.4; display:none;" />
+            <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="drawer-media-title"></div>
           </div>
-          
-          <!-- TV show season/ep selects (hidden initially) -->
-          <div id="sch-tv-selectors" style="display:none; gap:10px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
-              <select id="sch-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
-            </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
-              <select id="sch-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <img id="drawer-poster" src="" style="width:80px; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 8px 16px rgba(0,0,0,0.5); flex-shrink:0; display:none;" />
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
+              <div><strong>Type:</strong> <span id="drawer-media-type">—</span></div>
+              <div><strong>Release:</strong> <span id="drawer-media-release">—</span></div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <strong>Rating:</strong>
+                <svg viewBox="0 0 24 24" fill="var(--accent)" style="width:12px; height:12px; color:var(--accent);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span id="drawer-media-rating">—</span>
+              </div>
             </div>
           </div>
+          <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:8px; overflow-y:auto; flex-grow:1; max-height:160px;" id="drawer-media-overview"></div>
+        </div>
 
-          <div style="display:flex; gap:10px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Date</label>
-              <input type="date" id="sch-date" class="party-chat-input" required style="width:100%; height:34px; box-sizing:border-box; color:#fff;" />
-            </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Time</label>
-              <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required></select>
-            </div>
-          </div>
-
-          <div id="sch-suggested-pills-wrap" style="display:none; flex-direction:column; gap:6px;">
-            <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom: 2px;">Suggested Times</label>
-            <div id="sch-suggested-pills" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-          </div>
-
-          <div id="sch-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
-
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Invite Friends (Emails, comma separated)</label>
-          <input type="text" id="sch-invitees" class="party-chat-input" placeholder="friend1@email.com, friend2@email.com" />
-
-          <div style="display:flex; gap:10px; margin-top:8px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Privacy</label>
-              <select id="sch-privacy" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                <option value="Open">Open (Friends join)</option>
-                <option value="Friends-only">Friends-only</option>
-                <option value="Closed">Closed (Invite only)</option>
-              </select>
-            </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
-              <select id="sch-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                <option value="5">5 People</option>
-                <option value="10" selected>10 People</option>
-                <option value="20">20 People</option>
-              </select>
-            </div>
-          </div>
-
-          <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
-            Create Event Calendar
+        <!-- Main Modal Card -->
+        <div class="modal-content-card" style="max-width:440px; width: 100%; position: relative; z-index: 10;">
+          <button class="modal-close-btn" id="modal-close-btn">
+            <i data-lucide="x"></i>
           </button>
-        </form>
+          <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Schedule Future Watch Party</h3>
+          <form id="schedule-party-form" style="display:flex; flex-direction:column; gap:12px;">
+            
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Code Name</label>
+            <input type="text" id="sch-party-name" class="party-chat-input" placeholder="e.g. Anime Night with Crew" required />
+
+            <!-- TMDB Search input -->
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
+            <div style="position:relative;">
+              <input type="text" id="sch-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
+              <div id="sch-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+            </div>
+            
+            <!-- TV show season/ep selects (hidden initially) -->
+            <div id="sch-tv-selectors" style="display:none; gap:10px;">
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
+                <select id="sch-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
+                <select id="sch-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Date</label>
+                <input type="date" id="sch-date" class="party-chat-input" required style="width:100%; height:34px; box-sizing:border-box; color:#fff;" />
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Time</label>
+                <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required></select>
+              </div>
+            </div>
+
+            <div id="sch-suggested-pills-wrap" style="display:none; flex-direction:column; gap:6px;">
+              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom: 2px;">Suggested Times</label>
+              <div id="sch-suggested-pills" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            </div>
+
+            <div id="sch-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
+
+            <!-- Invite Friends Section with Pills & Add Button -->
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Invite Friends</label>
+            <div style="display:flex; gap:8px; position:relative;">
+              <input type="email" id="sch-invitee-input" class="party-chat-input" placeholder="friend@email.com" autocomplete="off" style="flex:1;" />
+              <button type="button" id="sch-add-invitee-btn" class="user-empty-btn" style="height:36px; padding:0 16px; font-size:12px; margin:0;">Add</button>
+            </div>
+            <div id="sch-invitee-pills" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;"></div>
+
+            <!-- Privacy Card Radio Group -->
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-top:4px;">Privacy Option</label>
+            <div class="privacy-radio-group" style="display:flex; gap:10px;">
+              <label class="privacy-radio-card">
+                <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
+                <i data-lucide="globe" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Open</span>
+                <span style="font-size:9px; color:var(--text-muted);">Friends can join</span>
+              </label>
+              <label class="privacy-radio-card">
+                <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
+                <i data-lucide="users" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Friends-only</span>
+                <span style="font-size:9px; color:var(--text-muted);">Only friends</span>
+              </label>
+              <label class="privacy-radio-card">
+                <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
+                <i data-lucide="lock" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Closed</span>
+                <span style="font-size:9px; color:var(--text-muted);">Invite only</span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:8px;">
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
+                <select id="sch-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
+                  <option value="5">5 People</option>
+                  <option value="10" selected>10 People</option>
+                  <option value="20">20 People</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
+              Create Event Calendar
+            </button>
+          </form>
+        </div>
       </div>
     `;
 
     if (window.lucide) window.lucide.createIcons();
 
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
-    const inviteesInput = modalOverlay.querySelector('#sch-invitees');
+    const inviteeInput = modalOverlay.querySelector('#sch-invitee-input');
+    const addInviteeBtn = modalOverlay.querySelector('#sch-add-invitee-btn');
+    const inviteePillsContainer = modalOverlay.querySelector('#sch-invitee-pills');
     const dateInput = modalOverlay.querySelector('#sch-date');
     const timeSelect = modalOverlay.querySelector('#sch-time');
     const pillsWrap = modalOverlay.querySelector('#sch-suggested-pills-wrap');
     const pillsContainer = modalOverlay.querySelector('#sch-suggested-pills');
+    const privacyCards = modalOverlay.querySelectorAll('.privacy-radio-card');
+
+    // Manage invitees list locally
+    const inviteesList = [];
+
+    function renderInviteePills() {
+      inviteePillsContainer.innerHTML = inviteesList.map((email, idx) => `
+        <div class="invite-pill" style="
+          background: rgba(168, 85, 247, 0.1);
+          border: 1.5px solid rgba(168, 85, 247, 0.3);
+          color: #e9d5ff;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          animation: pillScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+          <span>${email}</span>
+          <button type="button" class="remove-pill-btn" data-index="${idx}" style="
+            background: none;
+            border: none;
+            color: #d8b4fe;
+            cursor: pointer;
+            padding: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+          }">
+            <i data-lucide="x" style="width:10px; height:10px;"></i>
+          </button>
+        </div>
+      `).join('');
+
+      if (window.lucide) window.lucide.createIcons();
+
+      inviteePillsContainer.querySelectorAll('.remove-pill-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const idx = parseInt(btn.dataset.index);
+          const pill = btn.parentElement;
+          pill.style.transform = 'scale(0.8)';
+          pill.style.opacity = '0';
+          setTimeout(() => {
+            inviteesList.splice(idx, 1);
+            renderInviteePills();
+          }, 150);
+        });
+      });
+    }
+
+    const addInvitee = () => {
+      const email = inviteeInput.value.trim().toLowerCase();
+      if (!email) return;
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showToast('Please enter a valid email address.');
+        return;
+      }
+
+      if (inviteesList.includes(email)) {
+        showToast('This email has already been added.');
+        return;
+      }
+
+      inviteesList.push(email);
+      inviteeInput.value = '';
+      renderInviteePills();
+    };
+
+    addInviteeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      addInvitee();
+    });
+
+    inviteeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addInvitee();
+      }
+    });
+
+    // Privacy Radio Custom Management
+    function updatePrivacySelection() {
+      privacyCards.forEach(card => {
+        const input = card.querySelector('input');
+        const icon = card.querySelector('i');
+        if (input.checked) {
+          card.style.background = 'rgba(168, 85, 247, 0.12)';
+          card.style.borderColor = 'var(--accent, #a855f7)';
+          card.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.3)';
+          card.style.transform = 'scale(1.02)';
+          if (icon) icon.style.color = 'var(--accent, #a855f7)';
+        } else {
+          card.style.background = 'rgba(255, 255, 255, 0.02)';
+          card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          card.style.boxShadow = 'none';
+          card.style.transform = 'scale(1)';
+          if (icon) icon.style.color = 'var(--text-secondary)';
+        }
+      });
+    }
+
+    privacyCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const input = card.querySelector('input');
+        input.checked = true;
+        updatePrivacySelection();
+      });
+    });
+    updatePrivacySelection();
 
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateInput) {
@@ -1351,8 +1513,9 @@ END:VCALENDAR`;
     updateTimesAndPills();
 
     if (inviteesAutocomplete) inviteesAutocomplete.destroy();
-    if (inviteesInput) {
-      inviteesAutocomplete = initFriendAutocomplete(inviteesInput, () => currentFriendsList.filter(f => !f.isPending), true);
+    if (inviteeInput) {
+      // Use single-input mode for autocomplete, so isMulti = false
+      inviteesAutocomplete = initFriendAutocomplete(inviteeInput, () => currentFriendsList.filter(f => !f.isPending), false);
     }
 
     closeBtn.addEventListener('click', () => {
@@ -1415,6 +1578,52 @@ END:VCALENDAR`;
               };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
+
+              // Populating metadata in side drawer dynamically
+              const drawer = modalOverlay.querySelector('#sch-metadata-drawer');
+              drawer.classList.add('show');
+              drawer.querySelector('#drawer-media-title').textContent = selectedMedia.title;
+              drawer.querySelector('#drawer-media-type').textContent = selectedMedia.type === 'tv' ? 'TV Show' : 'Movie';
+              drawer.querySelector('#drawer-media-overview').textContent = 'Loading content summary...';
+              
+              const drawerPoster = drawer.querySelector('#drawer-poster');
+              const drawerBackdrop = drawer.querySelector('#drawer-backdrop');
+
+              if (selectedMedia.posterPath) {
+                drawerPoster.src = selectedMedia.posterPath;
+                drawerPoster.style.display = 'block';
+              } else {
+                drawerPoster.style.display = 'none';
+              }
+              drawerBackdrop.style.display = 'none';
+
+              try {
+                const details = selectedMedia.type === 'tv' 
+                  ? await getTVDetails(selectedMedia.id) 
+                  : await getMovieDetails(selectedMedia.id);
+                if (details) {
+                  const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}` : '';
+                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : (selectedMedia.posterPath || '');
+                  const rating = details.vote_average ? details.vote_average.toFixed(1) : '—';
+                  const release = details.release_date || details.first_air_date || '—';
+                  const overview = details.overview || 'No overview available.';
+
+                  if (backdropUrl) {
+                    drawerBackdrop.src = backdropUrl;
+                    drawerBackdrop.style.display = 'block';
+                  }
+                  if (posterUrl) {
+                    drawerPoster.src = posterUrl;
+                    drawerPoster.style.display = 'block';
+                  }
+                  drawer.querySelector('#drawer-media-rating').textContent = rating;
+                  drawer.querySelector('#drawer-media-release').textContent = release.slice(0, 4);
+                  drawer.querySelector('#drawer-media-overview').textContent = overview;
+                }
+              } catch (err) {
+                console.error('Failed to load content details in side drawer:', err);
+                drawer.querySelector('#drawer-media-overview').textContent = 'Summary unavailable.';
+              }
 
               // If TV, load seasons
               if (selectedMedia.type === 'tv') {
@@ -1490,11 +1699,10 @@ END:VCALENDAR`;
 
       const partyId = `party_${Math.random().toString(36).substring(2, 11)}`;
       const name = modalOverlay.querySelector('#sch-party-name').value.trim();
-      const inviteesStr = modalOverlay.querySelector('#sch-invitees').value.trim();
-      const privacy = modalOverlay.querySelector('#sch-privacy').value;
+      const privacy = modalOverlay.querySelector('input[name="sch-privacy"]:checked').value;
       const maxVal = modalOverlay.querySelector('#sch-max').value;
 
-      const invitees = inviteesStr ? inviteesStr.split(',').map(em => em.trim().toLowerCase()).filter(Boolean) : [];
+      const invitees = inviteesList;
 
       const scheduledData = {
         partyId,
@@ -1576,60 +1784,99 @@ END:VCALENDAR`;
   function showStartPartyModal() {
     modalOverlay.classList.remove('hidden');
     modalOverlay.innerHTML = `
-      <div class="modal-content-card" style="max-width:440px;">
-        <button class="modal-close-btn" id="modal-close-btn">
-          <i data-lucide="x"></i>
-        </button>
-        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Create Instant Watch Room</h3>
-        <form id="start-party-form" style="display:flex; flex-direction:column; gap:12px;">
-          
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Name</label>
-          <input type="text" id="start-party-name" class="party-chat-input" placeholder="e.g. Friday Movie Night" required />
-
-          <!-- TMDB Search input -->
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
-          <div style="position:relative;">
-            <input type="text" id="start-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
-            <div id="start-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+      <div class="modal-wrapper">
+        <!-- Left Metadata Drawer -->
+        <div id="start-metadata-drawer" class="metadata-drawer">
+          <div class="drawer-header" style="position:relative; margin-top:-24px; margin-left:-24px; margin-right:-24px; border-top-left-radius:16px; border-top-right-radius:16px; height:120px; overflow:hidden; background:#10111a;">
+            <img id="start-drawer-backdrop" src="" style="width:100%; height:100%; object-fit:cover; opacity:0.4; display:none;" />
+            <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="start-drawer-media-title"></div>
           </div>
-          
-          <!-- TV show season/ep selects (hidden initially) -->
-          <div id="start-tv-selectors" style="display:none; gap:10px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
-              <select id="start-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
-            </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
-              <select id="start-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <img id="start-drawer-poster" src="" style="width:80px; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 8px 16px rgba(0,0,0,0.5); flex-shrink:0; display:none;" />
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
+              <div><strong>Type:</strong> <span id="start-drawer-media-type">—</span></div>
+              <div><strong>Release:</strong> <span id="start-drawer-media-release">—</span></div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <strong>Rating:</strong>
+                <svg viewBox="0 0 24 24" fill="var(--accent)" style="width:12px; height:12px; color:var(--accent);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span id="start-drawer-media-rating">—</span>
+              </div>
             </div>
           </div>
+          <div style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:8px; overflow-y:auto; flex-grow:1; max-height:160px;" id="start-drawer-media-overview"></div>
+        </div>
 
-          <div style="display:flex; gap:10px; margin-top:8px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Privacy</label>
-              <select id="start-privacy" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                <option value="Open">Open (Friends join)</option>
-                <option value="Friends-only">Friends-only</option>
-                <option value="Closed">Closed (Invite only)</option>
-              </select>
-            </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
-              <select id="start-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
-                <option value="5">5 People</option>
-                <option value="10" selected>10 People</option>
-                <option value="20">20 People</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="start-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
-
-          <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
-            Start Sync Room Now
+        <!-- Main Modal Card -->
+        <div class="modal-content-card" style="max-width:440px; width: 100%; position: relative; z-index: 10;">
+          <button class="modal-close-btn" id="modal-close-btn">
+            <i data-lucide="x"></i>
           </button>
-        </form>
+          <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Create Instant Watch Room</h3>
+          <form id="start-party-form" style="display:flex; flex-direction:column; gap:12px;">
+            
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Name</label>
+            <input type="text" id="start-party-name" class="party-chat-input" placeholder="e.g. Friday Movie Night" required />
+
+            <!-- TMDB Search input -->
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Search Content</label>
+            <div style="position:relative;">
+              <input type="text" id="start-media-search" class="party-chat-input" placeholder="Search Movie/TV Show" required autocomplete="off" />
+              <div id="start-search-dropdown" class="party-gif-panel hidden" style="top:calc(100% + 4px); bottom:auto; max-height:160px; overflow-y:auto; padding:6px; background:rgba(18,18,24,0.98);"></div>
+            </div>
+            
+            <!-- TV show season/ep selects (hidden initially) -->
+            <div id="start-tv-selectors" style="display:none; gap:10px;">
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Season</label>
+                <select id="start-tv-season" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Episode</label>
+                <select id="start-tv-episode" class="settings-select" style="width:100%; height:34px; min-width:0;"></select>
+              </div>
+            </div>
+
+            <!-- Privacy Card Radio Group -->
+            <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-top:4px;">Privacy Option</label>
+            <div class="privacy-radio-group" style="display:flex; gap:10px;">
+              <label class="privacy-radio-card start-privacy-card">
+                <input type="radio" name="start-privacy" value="Open" checked style="display:none;" />
+                <i data-lucide="globe" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Open</span>
+                <span style="font-size:9px; color:var(--text-muted);">Friends can join</span>
+              </label>
+              <label class="privacy-radio-card start-privacy-card">
+                <input type="radio" name="start-privacy" value="Friends-only" style="display:none;" />
+                <i data-lucide="users" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Friends-only</span>
+                <span style="font-size:9px; color:var(--text-muted);">Only friends</span>
+              </label>
+              <label class="privacy-radio-card start-privacy-card">
+                <input type="radio" name="start-privacy" value="Closed" style="display:none;" />
+                <i data-lucide="lock" style="width:16px; height:16px;"></i>
+                <span style="font-size:11px; font-weight:700; color:#fff;">Closed</span>
+                <span style="font-size:9px; color:var(--text-muted);">Invite only</span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:8px;">
+              <div style="flex:1;">
+                <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Max Guests</label>
+                <select id="start-max" class="settings-select" style="width:100%; height:34px; min-width:0;">
+                  <option value="5">5 People</option>
+                  <option value="10" selected>10 People</option>
+                  <option value="20">20 People</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="start-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
+
+            <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
+              Start Sync Room Now
+            </button>
+          </form>
+        </div>
       </div>
     `;
 
@@ -1644,6 +1891,36 @@ END:VCALENDAR`;
     const seasonSelect = modalOverlay.querySelector('#start-tv-season');
     const episodeSelect = modalOverlay.querySelector('#start-tv-episode');
     const form = modalOverlay.querySelector('#start-party-form');
+    const privacyCards = modalOverlay.querySelectorAll('.start-privacy-card');
+
+    function updatePrivacySelection() {
+      privacyCards.forEach(card => {
+        const input = card.querySelector('input');
+        const icon = card.querySelector('i');
+        if (input.checked) {
+          card.style.background = 'rgba(168, 85, 247, 0.12)';
+          card.style.borderColor = 'var(--accent, #a855f7)';
+          card.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.3)';
+          card.style.transform = 'scale(1.02)';
+          if (icon) icon.style.color = 'var(--accent, #a855f7)';
+        } else {
+          card.style.background = 'rgba(255, 255, 255, 0.02)';
+          card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          card.style.boxShadow = 'none';
+          card.style.transform = 'scale(1)';
+          if (icon) icon.style.color = 'var(--text-secondary)';
+        }
+      });
+    }
+
+    privacyCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const input = card.querySelector('input');
+        input.checked = true;
+        updatePrivacySelection();
+      });
+    });
+    updatePrivacySelection();
 
     let selectedMedia = null;
     let searchDebounce = null;
@@ -1690,6 +1967,52 @@ END:VCALENDAR`;
               };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
+
+              // Populating metadata in side drawer dynamically
+              const drawer = modalOverlay.querySelector('#start-metadata-drawer');
+              drawer.classList.add('show');
+              drawer.querySelector('#start-drawer-media-title').textContent = selectedMedia.title;
+              drawer.querySelector('#start-drawer-media-type').textContent = selectedMedia.type === 'tv' ? 'TV Show' : 'Movie';
+              drawer.querySelector('#start-drawer-media-overview').textContent = 'Loading content summary...';
+              
+              const drawerPoster = drawer.querySelector('#start-drawer-poster');
+              const drawerBackdrop = drawer.querySelector('#start-drawer-backdrop');
+
+              if (selectedMedia.posterPath) {
+                drawerPoster.src = selectedMedia.posterPath;
+                drawerPoster.style.display = 'block';
+              } else {
+                drawerPoster.style.display = 'none';
+              }
+              drawerBackdrop.style.display = 'none';
+
+              try {
+                const details = selectedMedia.type === 'tv' 
+                  ? await getTVDetails(selectedMedia.id) 
+                  : await getMovieDetails(selectedMedia.id);
+                if (details) {
+                  const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}` : '';
+                  const posterUrl = details.poster_path ? `https://image.tmdb.org/t/p/w342${details.poster_path}` : (selectedMedia.posterPath || '');
+                  const rating = details.vote_average ? details.vote_average.toFixed(1) : '—';
+                  const release = details.release_date || details.first_air_date || '—';
+                  const overview = details.overview || 'No overview available.';
+
+                  if (backdropUrl) {
+                    drawerBackdrop.src = backdropUrl;
+                    drawerBackdrop.style.display = 'block';
+                  }
+                  if (posterUrl) {
+                    drawerPoster.src = posterUrl;
+                    drawerPoster.style.display = 'block';
+                  }
+                  drawer.querySelector('#start-drawer-media-rating').textContent = rating;
+                  drawer.querySelector('#start-drawer-media-release').textContent = release.slice(0, 4);
+                  drawer.querySelector('#start-drawer-media-overview').textContent = overview;
+                }
+              } catch (err) {
+                console.error('Failed to load content details in side drawer:', err);
+                drawer.querySelector('#start-drawer-media-overview').textContent = 'Summary unavailable.';
+              }
 
               // If TV, load seasons
               if (selectedMedia.type === 'tv') {
@@ -1752,7 +2075,7 @@ END:VCALENDAR`;
 
       const partyId = `party_${Math.random().toString(36).substring(2, 11)}`;
       const name = modalOverlay.querySelector('#start-party-name').value.trim();
-      const privacy = modalOverlay.querySelector('#start-privacy').value;
+      const privacy = modalOverlay.querySelector('input[name="start-privacy"]:checked').value;
       const maxVal = modalOverlay.querySelector('#start-max').value;
 
       const roomData = {

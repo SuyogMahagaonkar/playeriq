@@ -943,3 +943,94 @@
   transform: scale(0.95);
 }
 
+/* Metadata Drawer on Left */
+.modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.metadata-drawer {
+  width: 320px;
+  background: linear-gradient(145deg, #131422 0%, #0c0d16 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-30px) scale(0.95);
+  opacity: 0;
+  pointer-events: none;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.metadata-drawer.show {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .modal-wrapper {
+    flex-direction: column-reverse;
+    gap: 12px;
+    align-items: center;
+  }
+  .metadata-drawer {
+    width: 100%;
+    max-width: 440px;
+    max-height: 30vh;
+  }
+}
+
+/* Privacy radio buttons */
+.privacy-radio-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.privacy-radio-card:hover {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  transform: translateY(-1px);
+}
+
+/* Invite Pills styling */
+@keyframes pillScaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.invite-pill {
+  transition: all 0.2s ease;
+}
+
+.invite-pill:hover {
+  border-color: var(--accent, #a855f7);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+}
+
+.remove-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff !important;
+}
+
+
