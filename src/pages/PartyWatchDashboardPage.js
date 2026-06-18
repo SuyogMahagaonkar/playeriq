@@ -767,10 +767,12 @@ END:VCALENDAR`;
               btn.className = 'remind-participant-btn sent';
               if (window.lucide) window.lucide.createIcons();
             } else {
-              throw new Error('Failed to send email');
+              const resData = await emailResponse.json().catch(() => ({}));
+              throw new Error(resData.details || resData.error || 'Failed to send email');
             }
           } catch (err) {
             console.error(err);
+            showToast(`Reminder failed: ${err.message}`);
             btn.innerHTML = '<span>Failed</span>';
             btn.disabled = false;
             setTimeout(() => {
@@ -849,7 +851,7 @@ END:VCALENDAR`;
             }
 
             try {
-              await fetch(`${NODE_PROXY}/api/email/send-invite`, {
+              const res = await fetch(`${NODE_PROXY}/api/email/send-invite`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -861,8 +863,13 @@ END:VCALENDAR`;
                   posterPath: sch.posterPath
                 })
               });
+              if (!res.ok) {
+                const resData = await res.json().catch(() => ({}));
+                throw new Error(resData.details || resData.error || 'Failed to send invite email.');
+              }
             } catch (emailErr) {
               console.warn('Failed to send email invite to', email, emailErr);
+              showToast(`Warning: Email invite failed (${emailErr.message}).`);
             }
 
             if (autocompleteInst) {
@@ -1753,16 +1760,25 @@ END:VCALENDAR`;
               selectedMedia.posterPath,
               selectedMedia.type
             );
-            fetch(`${NODE_PROXY}/api/email/send-invite`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                hostName: scheduledData.hostName,
-                inviteeEmail: email,
-                title: `${name} (Scheduled: ${selectedMedia.title})`,
-                partyId, mediaType: selectedMedia.type, posterPath: selectedMedia.posterPath
-              })
-            }).catch(emailErr => console.warn('Email send failed:', emailErr));
+            try {
+              const emailRes = await fetch(`${NODE_PROXY}/api/email/send-invite`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  hostName: scheduledData.hostName,
+                  inviteeEmail: email,
+                  title: `${name} (Scheduled: ${selectedMedia.title})`,
+                  partyId, mediaType: selectedMedia.type, posterPath: selectedMedia.posterPath
+                })
+              });
+              if (!emailRes.ok) {
+                const resData = await emailRes.json().catch(() => ({}));
+                throw new Error(resData.details || resData.error || 'Failed to send invite email.');
+              }
+            } catch (emailErr) {
+              console.warn('Email send failed for', email, emailErr);
+              showToast(`Warning: Email invite failed for ${email} (${emailErr.message}).`);
+            }
           } catch(notifErr) { console.warn('Notification failed for', email, notifErr); }
         });
 
