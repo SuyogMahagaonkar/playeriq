@@ -1240,6 +1240,17 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.piq-modal-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2.5px;
+  left: 1.5px;
+  right: 1.5px;
+  height: 4px;
+  background: #15151f;
+  z-index: 12;
+}
+
 .piq-modal-tab:hover {
   border-color: rgba(168, 85, 247, 0.35);
 }

@@ -1256,6 +1256,33 @@ END:VCALENDAR`;
     }
     const todayStr = today.toISOString().split('T')[0];
 
+    function buildTimeSlots(dateStr) {
+      const now = new Date();
+      const todayDateStr = now.toISOString().split('T')[0];
+      const isToday = dateStr === todayDateStr;
+      const slots = [];
+      for (let h = 0; h < 24; h++) {
+        for (const m of [0, 30]) {
+          if (isToday) {
+            if (h < now.getHours()) continue;
+            if (h === now.getHours() && m <= now.getMinutes()) continue;
+          }
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const displayHr = h % 12 === 0 ? 12 : h % 12;
+          const minStr = m === 0 ? '00' : '30';
+          slots.push({ value: `${String(h).padStart(2,'0')}:${minStr}`, label: `${displayHr}:${minStr} ${ampm}` });
+        }
+      }
+      return slots;
+    }
+
+    let initialIndex = 0;
+    const todaySlots = buildTimeSlots(todayStr);
+    if (todaySlots.length === 0 && dayChips.length > 1) {
+      initialIndex = 1;
+    }
+    const initialDateStr = dayChips[initialIndex].fullDate;
+
     modalOverlay.innerHTML = `
       <div class="modal-wrapper piq-modal-bg">
         <!-- Protruding Document Tab: Room Name -->
@@ -1334,7 +1361,7 @@ END:VCALENDAR`;
                 </div>
                 <div id="sch-day-strip" class="piq-day-strip">
                   ${dayChips.map((chip, i) => `
-                    <div class="piq-day-chip ${i === 0 ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
+                    <div class="piq-day-chip ${i === initialIndex ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
                       <span class="piq-day-chip-name">${chip.label}</span>
                       <span class="piq-day-chip-num">${chip.date}</span>
                       <span class="piq-day-chip-month">${chip.month}</span>
@@ -1526,27 +1553,7 @@ END:VCALENDAR`;
     updateStepper();
 
     // ---- Time logic ----
-    let selectedDateStr = todayStr;
-
-    function buildTimeSlots(dateStr) {
-      const now = new Date();
-      const todayDateStr = now.toISOString().split('T')[0];
-      const isToday = dateStr === todayDateStr;
-      const slots = [];
-      for (let h = 0; h < 24; h++) {
-        for (const m of [0, 30]) {
-          if (isToday) {
-            if (h < now.getHours()) continue;
-            if (h === now.getHours() && m <= now.getMinutes()) continue;
-          }
-          const ampm = h >= 12 ? 'PM' : 'AM';
-          const displayHr = h % 12 === 0 ? 12 : h % 12;
-          const minStr = m === 0 ? '00' : '30';
-          slots.push({ value: `${String(h).padStart(2,'0')}:${minStr}`, label: `${displayHr}:${minStr} ${ampm}` });
-        }
-      }
-      return slots;
-    }
+    let selectedDateStr = initialDateStr;
 
     function renderTimeSection(dateStr) {
       const slots = buildTimeSlots(dateStr);
@@ -1610,7 +1617,7 @@ END:VCALENDAR`;
         renderTimeSection(selectedDateStr);
       });
     });
-    renderTimeSection(todayStr);
+    renderTimeSection(initialDateStr);
 
     // ---- Media Search ----
     let selectedMedia = null;
