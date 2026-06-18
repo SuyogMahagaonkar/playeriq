@@ -648,7 +648,7 @@ END:VCALENDAR`;
     modal.className = 'piq-confirm-overlay'; 
     modal.style.zIndex = '2000';
     
-    const maxGuests = sch.maxParticipants || 10;
+    const maxGuests = sch.maxParticipants || 4;
     let autocompleteInst = null;
     
     function renderModalContent() {
@@ -1235,29 +1235,13 @@ END:VCALENDAR`;
 
     modalOverlay.innerHTML = `
       <div class="modal-wrapper piq-modal-bg">
-        <!-- Left: Metadata Drawer -->
-        <div id="sch-metadata-drawer" class="piq-content-drawer">
-          <div class="piq-drawer-poster-wrap">
-            <img id="drawer-poster" class="piq-drawer-poster" src="" alt="" style="display:none;" />
-            <div id="drawer-poster-ph" style="width:130px;height:195px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
-              <i data-lucide="film" style="width:34px;height:34px;color:rgba(168,85,247,0.3);"></i>
-            </div>
-          </div>
-          <div class="piq-drawer-meta">
-            <div class="piq-drawer-title" id="drawer-media-title">Select a title to preview</div>
-            <div class="piq-drawer-badges">
-              <span class="piq-drawer-badge" id="drawer-media-type">—</span>
-              <span class="piq-drawer-badge" id="drawer-media-release">—</span>
-            </div>
-            <div class="piq-drawer-rating">
-              <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
-              <span id="drawer-media-rating">—</span>
-            </div>
-            <div class="piq-drawer-overview" id="drawer-media-overview"></div>
-          </div>
+        <!-- Protruding Document Tab: Room Name -->
+        <div class="piq-modal-tab">
+          <input type="text" id="sch-party-name" class="piq-tab-input" placeholder="Enter Room Name..." required autocomplete="off" />
+          <i data-lucide="edit-3" style="width: 12px; height: 12px; color: var(--text-muted);"></i>
         </div>
 
-        <!-- Right: Form Panel -->
+        <!-- Right: Form Panel (Actually the main two-column grid) -->
         <div class="piq-form-panel">
           <button class="piq-close-btn" id="modal-close-btn"><i data-lucide="x"></i></button>
 
@@ -1270,115 +1254,158 @@ END:VCALENDAR`;
           </div>
 
           <form id="schedule-party-form" novalidate>
-
-            <!-- Room Name -->
-            <div class="piq-field">
-              <div class="piq-floating-label">
-                <input type="text" id="sch-party-name" class="piq-input" placeholder=" " required autocomplete="off" />
-                <label for="sch-party-name">Room Name</label>
-                <i data-lucide="edit-3" class="piq-input-icon"></i>
-              </div>
-            </div>
-
-            <!-- Content Search -->
-            <div class="piq-field" style="position:relative;">
-              <div class="piq-floating-label">
-                <input type="text" id="sch-media-search" class="piq-input" placeholder=" " autocomplete="off" />
-                <label for="sch-media-search">Search Movie or TV Show</label>
-                <i data-lucide="search" class="piq-input-icon" id="sch-search-icon"></i>
-              </div>
-              <div id="sch-search-dropdown" class="piq-search-dropdown hidden"></div>
-            </div>
-
-            <!-- TV Selectors -->
-            <div id="sch-tv-selectors" class="piq-tv-selectors">
-              <div style="flex:1;"><select id="sch-tv-season" class="piq-select"></select></div>
-              <div style="flex:1;"><select id="sch-tv-episode" class="piq-select"></select></div>
-            </div>
-
-            <!-- Date Strip -->
-            <div class="piq-section-label">
-              <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Pick a Date
-            </div>
-            <div id="sch-day-strip" class="piq-day-strip">
-              ${dayChips.map((chip, i) => `
-                <div class="piq-day-chip ${i === 0 ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
-                  <span class="piq-day-chip-name">${chip.label}</span>
-                  <span class="piq-day-chip-num">${chip.date}</span>
-                  <span class="piq-day-chip-month">${chip.month}</span>
+            <div class="piq-modal-two-col">
+              <!-- Left Column: Search & Preview -->
+              <div class="piq-modal-left-col">
+                <!-- Content Search -->
+                <div class="piq-field" style="position:relative; margin-bottom:0;">
+                  <div class="piq-floating-label">
+                    <input type="text" id="sch-media-search" class="piq-input" placeholder=" " autocomplete="off" />
+                    <label for="sch-media-search">Search Movie or TV Show</label>
+                    <i data-lucide="search" class="piq-input-icon" id="sch-search-icon"></i>
+                  </div>
+                  <div id="sch-search-dropdown" class="piq-search-dropdown hidden"></div>
                 </div>
-              `).join('')}
-            </div>
 
-            <!-- Suggested Times -->
-            <div class="piq-section-label">
-              <i data-lucide="zap" style="width:13px;height:13px;color:#f59e0b;"></i> Suggested Times
-            </div>
-            <div id="sch-suggested-pills" class="piq-suggested-pills"></div>
+                <!-- TV Selectors -->
+                <div id="sch-tv-selectors" class="piq-tv-selectors">
+                  <div style="flex:1;"><select id="sch-tv-season" class="piq-select"></select></div>
+                  <div style="flex:1;"><select id="sch-tv-episode" class="piq-select"></select></div>
+                </div>
 
-            <!-- Time Grid -->
-            <div class="piq-section-label">
-              <i data-lucide="clock" style="width:13px;height:13px;"></i> Select Time
+                <!-- Media Preview Card -->
+                <div class="piq-media-preview-card" id="sch-preview-card">
+                  <div id="sch-preview-placeholder" class="piq-preview-placeholder">
+                    <i data-lucide="film" class="piq-preview-ph-icon"></i>
+                    <div class="piq-preview-ph-title">No Media Selected</div>
+                    <div class="piq-preview-ph-text">Search and select a movie or show to preview details.</div>
+                  </div>
+                  <div id="sch-preview-content" style="display:none; flex-direction:column; gap:12px; height:100%;">
+                    <div class="piq-preview-poster-wrap">
+                      <img id="drawer-poster" class="piq-preview-poster" src="" alt="" style="display:none;" />
+                      <div id="drawer-poster-ph" style="width:110px;height:165px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
+                        <i data-lucide="film" style="width:28px;height:28px;color:rgba(168,85,247,0.3);"></i>
+                      </div>
+                    </div>
+                    <div class="piq-preview-meta">
+                      <div class="piq-drawer-title" id="drawer-media-title">Select a title</div>
+                      <div class="piq-drawer-badges">
+                        <span class="piq-drawer-badge" id="drawer-media-type">—</span>
+                        <span class="piq-drawer-badge" id="drawer-media-release">—</span>
+                      </div>
+                      <div class="piq-drawer-rating">
+                        <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
+                        <span id="drawer-media-rating">—</span>
+                      </div>
+                      <div class="piq-drawer-overview" id="drawer-media-overview" style="margin-top:4px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Settings -->
+              <div class="piq-modal-right-col">
+                <div class="piq-form-row">
+                  <div class="piq-form-column">
+                    <!-- Date Strip -->
+                    <div class="piq-section-label" style="margin-top:0;">
+                      <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> Pick a Date
+                    </div>
+                    <div id="sch-day-strip" class="piq-day-strip">
+                      ${dayChips.map((chip, i) => `
+                        <div class="piq-day-chip ${i === 0 ? 'active' : ''}" data-date="${chip.fullDate}" role="button" tabindex="0">
+                          <span class="piq-day-chip-name">${chip.label}</span>
+                          <span class="piq-day-chip-num">${chip.date}</span>
+                          <span class="piq-day-chip-month">${chip.month}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+
+                    <!-- Suggested Times -->
+                    <div class="piq-section-label" style="margin-top:14px;">
+                      <i data-lucide="zap" style="width:13px;height:13px;color:#f59e0b;"></i> Suggested Times
+                    </div>
+                    <div id="sch-suggested-pills" class="piq-suggested-pills"></div>
+                  </div>
+
+                  <div class="piq-form-column">
+                    <!-- Time Grid -->
+                    <div class="piq-section-label" style="margin-top:0;">
+                      <i data-lucide="clock" style="width:13px;height:13px;"></i> Select Time
+                    </div>
+                    <div id="sch-time-grid" class="piq-time-grid"></div>
+                    <input type="hidden" id="sch-time" value="" />
+                    <input type="hidden" id="sch-date" value="${todayStr}" />
+                  </div>
+                </div>
+
+                <div class="piq-form-row">
+                  <div class="piq-form-column">
+                    <!-- Invite Friends -->
+                    <div class="piq-section-label" style="margin-top:0;">
+                      <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Invite Friends
+                    </div>
+                    <div class="piq-invite-input-wrap">
+                      <div class="piq-floating-label">
+                        <input type="email" id="sch-invitee-input" class="piq-input" placeholder=" " autocomplete="off" />
+                        <label for="sch-invitee-input">Email address</label>
+                        <i data-lucide="at-sign" class="piq-input-icon"></i>
+                      </div>
+                      <button type="button" id="sch-add-invitee-btn" class="piq-add-btn">Add</button>
+                    </div>
+                    <div id="sch-invitee-pills" class="piq-invitee-pills"></div>
+                  </div>
+
+                  <div class="piq-form-column">
+                    <!-- Privacy & Stepper side-by-side row -->
+                    <div class="piq-bottom-controls-row">
+                      <div style="flex:1.4;">
+                        <!-- Privacy -->
+                        <div class="piq-section-label" style="margin-top:0;">
+                          <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
+                        </div>
+                        <div class="piq-privacy-group">
+                          <label class="piq-privacy-card active">
+                            <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
+                            <i data-lucide="globe"></i>
+                            <span class="piq-privacy-title">Open</span>
+                          </label>
+                          <label class="piq-privacy-card">
+                            <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
+                            <i data-lucide="users"></i>
+                            <span class="piq-privacy-title">Friends</span>
+                          </label>
+                          <label class="piq-privacy-card">
+                            <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
+                            <i data-lucide="lock"></i>
+                            <span class="piq-privacy-title">Private</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div style="flex:1;">
+                        <!-- Guest Stepper -->
+                        <div class="piq-section-label" style="margin-top:0;">
+                          <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
+                        </div>
+                        <div class="piq-guest-stepper">
+                          <button type="button" id="sch-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
+                          <div class="piq-stepper-count">
+                            <span class="piq-stepper-num" id="sch-guest-count">4</span>
+                            <span class="piq-stepper-label">max</span>
+                          </div>
+                          <button type="button" id="sch-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+                        </div>
+                        <input type="hidden" id="sch-max" value="4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div id="sch-time-grid" class="piq-time-grid"></div>
-            <input type="hidden" id="sch-time" value="" />
-            <input type="hidden" id="sch-date" value="${todayStr}" />
 
             <!-- Validation Error -->
             <div id="sch-validation-error" class="piq-validation-error"></div>
-
-            <!-- Invite Friends -->
-            <div class="piq-section-label" style="margin-top:22px;">
-              <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Invite Friends
-            </div>
-            <div class="piq-invite-input-wrap">
-              <div class="piq-floating-label">
-                <input type="email" id="sch-invitee-input" class="piq-input" placeholder=" " autocomplete="off" />
-                <label for="sch-invitee-input">Email address</label>
-                <i data-lucide="at-sign" class="piq-input-icon"></i>
-              </div>
-              <button type="button" id="sch-add-invitee-btn" class="piq-add-btn">Add</button>
-            </div>
-            <div id="sch-invitee-pills" class="piq-invitee-pills"></div>
-
-            <!-- Privacy -->
-            <div class="piq-section-label" style="margin-top:22px;">
-              <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
-            </div>
-            <div class="piq-privacy-group">
-              <label class="piq-privacy-card active">
-                <input type="radio" name="sch-privacy" value="Open" checked style="display:none;" />
-                <i data-lucide="globe"></i>
-                <span class="piq-privacy-title">Open</span>
-                <span class="piq-privacy-sub">Anyone with link</span>
-              </label>
-              <label class="piq-privacy-card">
-                <input type="radio" name="sch-privacy" value="Friends-only" style="display:none;" />
-                <i data-lucide="users"></i>
-                <span class="piq-privacy-title">Friends</span>
-                <span class="piq-privacy-sub">Only your friends</span>
-              </label>
-              <label class="piq-privacy-card">
-                <input type="radio" name="sch-privacy" value="Closed" style="display:none;" />
-                <i data-lucide="lock"></i>
-                <span class="piq-privacy-title">Private</span>
-                <span class="piq-privacy-sub">Invite only</span>
-              </label>
-            </div>
-
-            <!-- Guest Stepper -->
-            <div class="piq-section-label">
-              <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
-            </div>
-            <div class="piq-guest-stepper">
-              <button type="button" id="sch-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
-              <div class="piq-stepper-count">
-                <span class="piq-stepper-num" id="sch-guest-count">10</span>
-                <span class="piq-stepper-label">guests max</span>
-              </div>
-              <button type="button" id="sch-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
-            </div>
-            <input type="hidden" id="sch-max" value="10" />
 
             <!-- CTA -->
             <button type="submit" class="piq-hero-btn" id="sch-submit-btn">
@@ -1415,7 +1442,7 @@ END:VCALENDAR`;
     const seasonSelect = modalOverlay.querySelector('#sch-tv-season');
     const episodeSelect = modalOverlay.querySelector('#sch-tv-episode');
     const searchIcon = modalOverlay.querySelector('#sch-search-icon');
-    const drawer = modalOverlay.querySelector('#sch-metadata-drawer');
+    const drawer = modalOverlay.querySelector('#sch-preview-card');
     const drawerPoster = drawer.querySelector('#drawer-poster');
     const drawerPh = drawer.querySelector('#drawer-poster-ph');
 
@@ -1469,8 +1496,8 @@ END:VCALENDAR`;
     updatePrivacyCards();
 
     // ---- Guest Stepper ----
-    let guestCount = 10;
-    const GUEST_MIN = 2, GUEST_MAX = 50;
+    let guestCount = 4;
+    const GUEST_MIN = 2, GUEST_MAX = 10;
     function updateStepper() {
       guestCountEl.textContent = guestCount;
       guestMaxInput.value = guestCount;
@@ -1615,6 +1642,11 @@ END:VCALENDAR`;
               selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
+
+              const ph = drawer.querySelector('#sch-preview-placeholder');
+              const content = drawer.querySelector('#sch-preview-content');
+              if (ph) ph.style.display = 'none';
+              if (content) content.style.display = 'flex';
 
               // Show drawer
               drawer.classList.add('show');
@@ -1807,29 +1839,13 @@ END:VCALENDAR`;
     modalOverlay.classList.remove('hidden');
     modalOverlay.innerHTML = `
       <div class="modal-wrapper piq-modal-bg">
-        <!-- Left: Metadata Drawer -->
-        <div id="start-metadata-drawer" class="piq-content-drawer">
-          <div class="piq-drawer-poster-wrap">
-            <img id="start-drawer-poster" class="piq-drawer-poster" src="" alt="" style="display:none;" />
-            <div id="start-drawer-poster-ph" style="width:130px;height:195px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
-              <i data-lucide="film" style="width:34px;height:34px;color:rgba(168,85,247,0.3);"></i>
-            </div>
-          </div>
-          <div class="piq-drawer-meta">
-            <div class="piq-drawer-title" id="start-drawer-media-title">Select a title to preview</div>
-            <div class="piq-drawer-badges">
-              <span class="piq-drawer-badge" id="start-drawer-media-type">—</span>
-              <span class="piq-drawer-badge" id="start-drawer-media-release">—</span>
-            </div>
-            <div class="piq-drawer-rating">
-              <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
-              <span id="start-drawer-media-rating">—</span>
-            </div>
-            <div class="piq-drawer-overview" id="start-drawer-media-overview"></div>
-          </div>
+        <!-- Protruding Document Tab: Room Name -->
+        <div class="piq-modal-tab">
+          <input type="text" id="start-party-name" class="piq-tab-input" placeholder="Enter Room Name..." required autocomplete="off" />
+          <i data-lucide="edit-3" style="width: 12px; height: 12px; color: var(--text-muted);"></i>
         </div>
 
-        <!-- Right: Form Panel -->
+        <!-- Right: Form Panel (Actually the main two-column grid) -->
         <div class="piq-form-panel">
           <button class="piq-close-btn" id="modal-close-btn"><i data-lucide="x"></i></button>
 
@@ -1842,70 +1858,97 @@ END:VCALENDAR`;
           </div>
 
           <form id="start-party-form" novalidate>
+            <div class="piq-modal-two-col">
+              <!-- Left Column: Search & Preview -->
+              <div class="piq-modal-left-col">
+                <!-- Content Search -->
+                <div class="piq-field" style="position:relative; margin-bottom:0;">
+                  <div class="piq-floating-label">
+                    <input type="text" id="start-media-search" class="piq-input" placeholder=" " autocomplete="off" />
+                    <label for="start-media-search">Search Movie or TV Show</label>
+                    <i data-lucide="search" class="piq-input-icon" id="start-search-icon"></i>
+                  </div>
+                  <div id="start-search-dropdown" class="piq-search-dropdown hidden"></div>
+                </div>
 
-            <!-- Room Name -->
-            <div class="piq-field">
-              <div class="piq-floating-label">
-                <input type="text" id="start-party-name" class="piq-input" placeholder=" " required autocomplete="off" />
-                <label for="start-party-name">Room Name</label>
-                <i data-lucide="edit-3" class="piq-input-icon"></i>
+                <!-- TV Selectors -->
+                <div id="start-tv-selectors" class="piq-tv-selectors">
+                  <div style="flex:1;"><select id="start-tv-season" class="piq-select"></select></div>
+                  <div style="flex:1;"><select id="start-tv-episode" class="piq-select"></select></div>
+                </div>
+
+                <!-- Media Preview Card -->
+                <div class="piq-media-preview-card" id="start-preview-card">
+                  <div id="start-preview-placeholder" class="piq-preview-placeholder">
+                    <i data-lucide="film" class="piq-preview-ph-icon"></i>
+                    <div class="piq-preview-ph-title">No Media Selected</div>
+                    <div class="piq-preview-ph-text">Search and select a movie or show to preview details.</div>
+                  </div>
+                  <div id="start-preview-content" style="display:none; flex-direction:column; gap:12px; height:100%;">
+                    <div class="piq-preview-poster-wrap">
+                      <img id="start-drawer-poster" class="piq-preview-poster" src="" alt="" style="display:none;" />
+                      <div id="start-drawer-poster-ph" style="width:110px;height:165px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">
+                        <i data-lucide="film" style="width:28px;height:28px;color:rgba(168,85,247,0.3);"></i>
+                      </div>
+                    </div>
+                    <div class="piq-preview-meta">
+                      <div class="piq-drawer-title" id="start-drawer-media-title">Select a title</div>
+                      <div class="piq-drawer-badges">
+                        <span class="piq-drawer-badge" id="start-drawer-media-type">—</span>
+                        <span class="piq-drawer-badge" id="start-drawer-media-release">—</span>
+                      </div>
+                      <div class="piq-drawer-rating">
+                        <i data-lucide="star" style="width:12px;height:12px;fill:#fbbf24;color:#fbbf24;"></i>
+                        <span id="start-drawer-media-rating">—</span>
+                      </div>
+                      <div class="piq-drawer-overview" id="start-drawer-media-overview" style="margin-top:4px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Settings -->
+              <div class="piq-modal-right-col">
+                <!-- Privacy -->
+                <div class="piq-section-label" style="margin-top:0;">
+                  <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
+                </div>
+                <div class="piq-privacy-group">
+                  <label class="piq-privacy-card active">
+                    <input type="radio" name="start-privacy" value="Open" checked style="display:none;" />
+                    <i data-lucide="globe"></i>
+                    <span class="piq-privacy-title">Open</span>
+                    <span class="piq-privacy-sub">Anyone with link</span>
+                  </label>
+                  <label class="piq-privacy-card">
+                    <input type="radio" name="start-privacy" value="Friends-only" style="display:none;" />
+                    <i data-lucide="users"></i>
+                    <span class="piq-privacy-title">Friends</span>
+                    <span class="piq-privacy-sub">Only your friends</span>
+                  </label>
+                  <label class="piq-privacy-card">
+                    <input type="radio" name="start-privacy" value="Closed" style="display:none;" />
+                    <i data-lucide="lock"></i>
+                    <span class="piq-privacy-title">Private</span>
+                    <span class="piq-privacy-sub">Invite only</span>
+                  </label>
+                </div>
+
+                <!-- Guest Stepper -->
+                <div class="piq-section-label">
+                  <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
+                </div>
+                <div class="piq-guest-stepper">
+                  <button type="button" id="start-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
+                  <div class="piq-stepper-count">
+                    <span class="piq-stepper-num" id="start-guest-count">4</span>
+                    <span class="piq-stepper-label">guests max</span>
+                  </div>
+                  <button type="button" id="start-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
+                </div>
+                <input type="hidden" id="start-max" value="4" />
               </div>
             </div>
-
-            <!-- Content Search -->
-            <div class="piq-field" style="position:relative;">
-              <div class="piq-floating-label">
-                <input type="text" id="start-media-search" class="piq-input" placeholder=" " autocomplete="off" />
-                <label for="start-media-search">Search Movie or TV Show</label>
-                <i data-lucide="search" class="piq-input-icon" id="start-search-icon"></i>
-              </div>
-              <div id="start-search-dropdown" class="piq-search-dropdown hidden"></div>
-            </div>
-
-            <!-- TV Selectors -->
-            <div id="start-tv-selectors" class="piq-tv-selectors">
-              <div style="flex:1;"><select id="start-tv-season" class="piq-select"></select></div>
-              <div style="flex:1;"><select id="start-tv-episode" class="piq-select"></select></div>
-            </div>
-
-            <!-- Privacy -->
-            <div class="piq-section-label">
-              <i data-lucide="shield" style="width:13px;height:13px;"></i> Privacy
-            </div>
-            <div class="piq-privacy-group">
-              <label class="piq-privacy-card active">
-                <input type="radio" name="start-privacy" value="Open" checked style="display:none;" />
-                <i data-lucide="globe"></i>
-                <span class="piq-privacy-title">Open</span>
-                <span class="piq-privacy-sub">Anyone with link</span>
-              </label>
-              <label class="piq-privacy-card">
-                <input type="radio" name="start-privacy" value="Friends-only" style="display:none;" />
-                <i data-lucide="users"></i>
-                <span class="piq-privacy-title">Friends</span>
-                <span class="piq-privacy-sub">Only your friends</span>
-              </label>
-              <label class="piq-privacy-card">
-                <input type="radio" name="start-privacy" value="Closed" style="display:none;" />
-                <i data-lucide="lock"></i>
-                <span class="piq-privacy-title">Private</span>
-                <span class="piq-privacy-sub">Invite only</span>
-              </label>
-            </div>
-
-            <!-- Guest Stepper -->
-            <div class="piq-section-label">
-              <i data-lucide="users" style="width:13px;height:13px;"></i> Max Guests
-            </div>
-            <div class="piq-guest-stepper">
-              <button type="button" id="start-guest-minus" class="piq-stepper-btn" aria-label="Decrease"><i data-lucide="minus"></i></button>
-              <div class="piq-stepper-count">
-                <span class="piq-stepper-num" id="start-guest-count">10</span>
-                <span class="piq-stepper-label">guests max</span>
-              </div>
-              <button type="button" id="start-guest-plus" class="piq-stepper-btn" aria-label="Increase"><i data-lucide="plus"></i></button>
-            </div>
-            <input type="hidden" id="start-max" value="10" />
 
             <!-- Validation Error -->
             <div id="start-validation-error" class="piq-validation-error"></div>
@@ -1937,7 +1980,7 @@ END:VCALENDAR`;
     const seasonSelect = modalOverlay.querySelector('#start-tv-season');
     const episodeSelect = modalOverlay.querySelector('#start-tv-episode');
     const searchIcon = modalOverlay.querySelector('#start-search-icon');
-    const drawer = modalOverlay.querySelector('#start-metadata-drawer');
+    const drawer = modalOverlay.querySelector('#start-preview-card');
     const drawerPoster = drawer.querySelector('#start-drawer-poster');
     const drawerPh = drawer.querySelector('#start-drawer-poster-ph');
 
@@ -1951,8 +1994,8 @@ END:VCALENDAR`;
     updatePrivacyCards();
 
     // Guest stepper
-    let guestCount = 10;
-    const GUEST_MIN = 2, GUEST_MAX = 50;
+    let guestCount = 4;
+    const GUEST_MIN = 2, GUEST_MAX = 10;
     function updateStepper() {
       guestCountEl.textContent = guestCount;
       guestMaxInput.value = guestCount;
@@ -2010,6 +2053,11 @@ END:VCALENDAR`;
               selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
+
+              const ph = drawer.querySelector('#start-preview-placeholder');
+              const content = drawer.querySelector('#start-preview-content');
+              if (ph) ph.style.display = 'none';
+              if (content) content.style.display = 'flex';
 
               drawer.classList.add('show');
               drawer.querySelector('#start-drawer-media-title').textContent = selectedMedia.title;
