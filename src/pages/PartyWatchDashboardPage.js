@@ -1168,12 +1168,23 @@ END:VCALENDAR`;
 
   function showScheduleModal() {
     modalOverlay.classList.remove('hidden');
+    
+    // Generate 30 minute options for time select picker
+    const times = [];
+    for (let h = 0; h < 24; h++) {
+      const hr = String(h).padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayHr = h % 12 === 0 ? 12 : h % 12;
+      times.push({ value: `${hr}:00`, label: `${displayHr}:00 ${ampm}` });
+      times.push({ value: `${hr}:30`, label: `${displayHr}:30 ${ampm}` });
+    }
+
     modalOverlay.innerHTML = `
       <div class="modal-content-card" style="max-width:440px;">
         <button class="modal-close-btn" id="modal-close-btn">
           <i data-lucide="x"></i>
         </button>
-        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800;">Schedule Future Watch Party</h3>
+        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Schedule Future Watch Party</h3>
         <form id="schedule-party-form" style="display:flex; flex-direction:column; gap:12px;">
           
           <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Code Name</label>
@@ -1198,8 +1209,19 @@ END:VCALENDAR`;
             </div>
           </div>
 
-          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Schedule Date & Time</label>
-          <input type="datetime-local" id="sch-date-time" class="party-chat-input" required style="color:#fff;" />
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Date</label>
+              <input type="date" id="sch-date" class="party-chat-input" required style="width:100%; height:34px; box-sizing:border-box; color:#fff;" />
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Time</label>
+              <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required>
+                ${times.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div id="sch-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
 
           <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Invite Friends (Emails, comma separated)</label>
           <input type="text" id="sch-invitees" class="party-chat-input" placeholder="friend1@email.com, friend2@email.com" />
@@ -1234,6 +1256,13 @@ END:VCALENDAR`;
 
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
     const inviteesInput = modalOverlay.querySelector('#sch-invitees');
+    const dateInput = modalOverlay.querySelector('#sch-date');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateInput) {
+      dateInput.min = todayStr;
+      dateInput.value = todayStr;
+    }
 
     if (inviteesAutocomplete) inviteesAutocomplete.destroy();
     if (inviteesInput) {
@@ -1353,14 +1382,28 @@ END:VCALENDAR`;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const validationError = modalOverlay.querySelector('#sch-validation-error');
+      validationError.style.display = 'none';
+
       if (!selectedMedia) {
-        showToast('Please search and select a movie or show first.');
+        validationError.textContent = 'Please search and select a movie or show first.';
+        validationError.style.display = 'block';
+        return;
+      }
+
+      const dateVal = modalOverlay.querySelector('#sch-date').value;
+      const timeVal = modalOverlay.querySelector('#sch-time').value;
+      const selectedDate = new Date(`${dateVal}T${timeVal}`);
+
+      if (selectedDate <= new Date()) {
+        validationError.textContent = 'Selected time must be in the future.';
+        validationError.style.display = 'block';
         return;
       }
 
       const partyId = `party_${Math.random().toString(36).substring(2, 11)}`;
       const name = modalOverlay.querySelector('#sch-party-name').value.trim();
-      const dateTime = modalOverlay.querySelector('#sch-date-time').value;
       const inviteesStr = modalOverlay.querySelector('#sch-invitees').value.trim();
       const privacy = modalOverlay.querySelector('#sch-privacy').value;
       const maxVal = modalOverlay.querySelector('#sch-max').value;
@@ -1378,7 +1421,7 @@ END:VCALENDAR`;
         posterPath: selectedMedia.posterPath,
         season: selectedMedia.type === 'tv' ? parseInt(seasonSelect.value) : null,
         episode: selectedMedia.type === 'tv' ? parseInt(episodeSelect.value) : null,
-        scheduledTime: new Date(dateTime).toISOString(),
+        scheduledTime: selectedDate.toISOString(),
         invitees,
         privacy,
         maxParticipants: parseInt(maxVal)
@@ -1424,7 +1467,7 @@ END:VCALENDAR`;
         });
 
         // Trigger calendar .ics download immediately!
-        downloadCalendarFile(name, dateTime, partyId);
+        downloadCalendarFile(name, scheduledData.scheduledTime, partyId);
 
         modalOverlay.classList.add('hidden');
         if (inviteesAutocomplete) {
@@ -1451,7 +1494,7 @@ END:VCALENDAR`;
         <button class="modal-close-btn" id="modal-close-btn">
           <i data-lucide="x"></i>
         </button>
-        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800;">Create Instant Watch Room</h3>
+        <h3 style="margin-top:0; margin-bottom:16px; font-family:var(--font-display); font-size:18px; font-weight:800; color:#fff;">Create Instant Watch Room</h3>
         <form id="start-party-form" style="display:flex; flex-direction:column; gap:12px;">
           
           <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Room Name</label>
@@ -1494,6 +1537,8 @@ END:VCALENDAR`;
               </select>
             </div>
           </div>
+
+          <div id="start-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
 
           <button type="submit" class="user-empty-btn" style="margin-top:10px; width:100%; justify-content:center; height:38px;">
             Start Sync Room Now
@@ -1609,8 +1654,13 @@ END:VCALENDAR`;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const validationError = modalOverlay.querySelector('#start-validation-error');
+      validationError.style.display = 'none';
+
       if (!selectedMedia) {
-        showToast('Please search and select a movie or show first.');
+        validationError.textContent = 'Please search and select a movie or show first.';
+        validationError.style.display = 'block';
         return;
       }
 
