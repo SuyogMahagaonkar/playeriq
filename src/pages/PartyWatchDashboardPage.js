@@ -1169,16 +1169,6 @@ END:VCALENDAR`;
   function showScheduleModal() {
     modalOverlay.classList.remove('hidden');
     
-    // Generate 30 minute options for time select picker
-    const times = [];
-    for (let h = 0; h < 24; h++) {
-      const hr = String(h).padStart(2, '0');
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const displayHr = h % 12 === 0 ? 12 : h % 12;
-      times.push({ value: `${hr}:00`, label: `${displayHr}:00 ${ampm}` });
-      times.push({ value: `${hr}:30`, label: `${displayHr}:30 ${ampm}` });
-    }
-
     modalOverlay.innerHTML = `
       <div class="modal-content-card" style="max-width:440px;">
         <button class="modal-close-btn" id="modal-close-btn">
@@ -1216,11 +1206,15 @@ END:VCALENDAR`;
             </div>
             <div style="flex:1;">
               <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase;">Select Time</label>
-              <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required>
-                ${times.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
-              </select>
+              <select id="sch-time" class="settings-select" style="width:100%; height:34px; box-sizing:border-box;" required></select>
             </div>
           </div>
+
+          <div id="sch-suggested-pills-wrap" style="display:none; flex-direction:column; gap:6px;">
+            <label style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom: 2px;">Suggested Times</label>
+            <div id="sch-suggested-pills" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+          </div>
+
           <div id="sch-validation-error" style="display:none; color:#ef4444; font-size:11px; font-weight:600; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); border-radius:8px; padding:10px 12px; margin-top:4px;"></div>
 
           <label style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Invite Friends (Emails, comma separated)</label>
@@ -1257,12 +1251,104 @@ END:VCALENDAR`;
     const closeBtn = modalOverlay.querySelector('#modal-close-btn');
     const inviteesInput = modalOverlay.querySelector('#sch-invitees');
     const dateInput = modalOverlay.querySelector('#sch-date');
+    const timeSelect = modalOverlay.querySelector('#sch-time');
+    const pillsWrap = modalOverlay.querySelector('#sch-suggested-pills-wrap');
+    const pillsContainer = modalOverlay.querySelector('#sch-suggested-pills');
 
     const todayStr = new Date().toISOString().split('T')[0];
     if (dateInput) {
       dateInput.min = todayStr;
       dateInput.value = todayStr;
     }
+
+    function updateTimesAndPills() {
+      const selectedDateStr = dateInput.value;
+      if (!selectedDateStr) return;
+
+      const today = new Date();
+      const todayDateStr = today.toISOString().split('T')[0];
+      const isToday = selectedDateStr === todayDateStr;
+
+      const currentHour = today.getHours();
+      const currentMin = today.getMinutes();
+
+      const allTimes = [];
+      for (let h = 0; h < 24; h++) {
+        const hr = String(h).padStart(2, '0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const displayHr = h % 12 === 0 ? 12 : h % 12;
+        allTimes.push({ hour: h, minute: 0, value: `${hr}:00`, label: `${displayHr}:00 ${ampm}` });
+        allTimes.push({ hour: h, minute: 30, value: `${hr}:30`, label: `${displayHr}:30 ${ampm}` });
+      }
+
+      let filteredTimes = allTimes;
+      if (isToday) {
+        filteredTimes = allTimes.filter(t => {
+          if (t.hour > currentHour) return true;
+          if (t.hour === currentHour && t.minute > currentMin) return true;
+          return false;
+        });
+      }
+
+      const prevSelectedValue = timeSelect.value;
+      timeSelect.innerHTML = filteredTimes.map(t => `<option value="${t.value}" style="background: #141419; color: #fff;">${t.label}</option>`).join('');
+
+      if (prevSelectedValue && filteredTimes.some(t => t.value === prevSelectedValue)) {
+        timeSelect.value = prevSelectedValue;
+      } else if (filteredTimes.length > 0) {
+        timeSelect.value = filteredTimes[0].value;
+      }
+
+      const suggestions = filteredTimes.slice(0, 4);
+      if (suggestions.length > 0) {
+        pillsWrap.style.display = 'flex';
+        pillsContainer.innerHTML = suggestions.map(s => `
+          <button type="button" class="sch-time-pill" data-value="${s.value}">
+            ${s.label}
+          </button>
+        `).join('');
+
+        pillsContainer.querySelectorAll('.sch-time-pill').forEach(pill => {
+          pill.addEventListener('click', (e) => {
+            e.preventDefault();
+            const val = pill.dataset.value;
+            timeSelect.value = val;
+
+            pill.style.transform = 'scale(0.95)';
+            pill.style.background = 'rgba(168, 85, 247, 0.3)';
+            pill.style.borderColor = 'var(--accent, #a855f7)';
+            pill.style.boxShadow = '0 0 12px rgba(168, 85, 247, 0.5)';
+
+            timeSelect.style.borderColor = 'var(--accent, #a855f7)';
+            timeSelect.style.boxShadow = '0 0 8px rgba(168, 85, 247, 0.3)';
+
+            setTimeout(() => {
+              pill.style.transform = '';
+              pillsContainer.querySelectorAll('.sch-time-pill').forEach(p => {
+                p.removeAttribute('style');
+              });
+              pill.style.background = 'rgba(168, 85, 247, 0.2)';
+              pill.style.borderColor = 'var(--accent, #a855f7)';
+              pill.style.color = '#fff';
+            }, 150);
+
+            setTimeout(() => {
+              timeSelect.style.borderColor = '';
+              timeSelect.style.boxShadow = '';
+            }, 1000);
+          });
+        });
+      } else {
+        pillsWrap.style.display = 'none';
+        pillsContainer.innerHTML = '';
+      }
+    }
+
+    if (dateInput) {
+      dateInput.addEventListener('change', updateTimesAndPills);
+      dateInput.addEventListener('input', updateTimesAndPills);
+    }
+    updateTimesAndPills();
 
     if (inviteesAutocomplete) inviteesAutocomplete.destroy();
     if (inviteesInput) {

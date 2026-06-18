@@ -926,3 +926,20 @@
   height: 48px;
   margin-bottom: 16px;
 }
+
+/* Suggested Time Pills */
+.sch-time-pill {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sch-time-pill:hover {
+  background: rgba(168, 85, 247, 0.16) !important;
+  border-color: rgba(168, 85, 247, 0.6) !important;
+  color: #fff !important;
+  transform: translateY(-1px) scale(1.03);
+}
+
+.sch-time-pill:active {
+  transform: scale(0.95);
+}
+
