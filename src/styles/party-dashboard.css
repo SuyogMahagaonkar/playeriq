@@ -1223,18 +1223,34 @@
 /* Protruding room tab folder tag */
 .piq-modal-tab {
   position: absolute;
-  top: -33px;
-  left: 20px;
+  top: -32px;
+  left: 32px;
+  height: 33px;
+  box-sizing: border-box;
   background: #15151f;
   border: 1.5px solid rgba(255,255,255,0.07);
   border-bottom: none;
-  border-radius: 12px 12px 0 0;
-  padding: 6px 14px 4px;
+  border-radius: 10px 10px 0 0;
+  padding: 0 14px;
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   box-shadow: 0 -8px 16px rgba(0,0,0,0.4);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.piq-modal-tab:hover {
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.piq-modal-tab:has(.piq-tab-input:focus) {
+  border-color: var(--accent);
+  box-shadow: 0 -8px 20px rgba(168, 85, 247, 0.2);
+}
+
+.piq-modal-tab:has(.piq-tab-input:focus) svg {
+  color: var(--accent) !important;
 }
 
 .piq-tab-input {
