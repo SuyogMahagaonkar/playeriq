@@ -129,16 +129,16 @@ export async function renderPartyWatchDashboard({ container }) {
             <!-- Right Column: Direct Join & Friend Activity -->
             <div style="display:flex; flex-direction:column; gap:24px;">
               <!-- Direct Join Card -->
-              <div class="glass-card">
+              <div class="glass-card" id="direct-join-card" style="transition: all 0.3s ease;">
                 <div class="card-title-row" style="margin-bottom:12px; padding-bottom:6px;">
                   <h3>Join with Room ID</h3>
                 </div>
-                <div style="display:flex; gap:8px;">
-                  <input type="text" id="direct-join-code-input" class="party-chat-input" placeholder="Enter Room ID" style="height:36px; box-sizing:border-box; padding:6px 12px;" />
-                  <button class="party-chat-send-btn" id="direct-join-btn" style="width:36px; height:36px; flex-shrink:0;" title="Join Room">
+                <form id="direct-join-form" style="display:flex; gap:8px; margin:0; padding:0; width:100%;">
+                  <input type="text" id="direct-join-code-input" class="party-chat-input" placeholder="Enter Room ID" style="flex:1; height:36px; box-sizing:border-box; padding:6px 12px;" required />
+                  <button type="submit" class="party-chat-send-btn" id="direct-join-btn" style="width:36px; height:36px; flex-shrink:0; cursor:pointer;" title="Join Room">
                     <i data-lucide="arrow-right" style="width:16px; height:16px;"></i>
                   </button>
-                </div>
+                </form>
               </div>
 
               <!-- Friend Activity presence panel -->
@@ -241,26 +241,36 @@ export async function renderPartyWatchDashboard({ container }) {
 
   // Direct Code Join
   const codeInput = container.querySelector('#direct-join-code-input');
-  const joinBtn = container.querySelector('#direct-join-btn');
-  const runJoin = async () => {
+  const directJoinForm = container.querySelector('#direct-join-form');
+  const directJoinCard = container.querySelector('#direct-join-card');
+
+  const runJoin = async (e) => {
+    if (e) e.preventDefault();
     const code = codeInput.value.trim();
-    if (!code) return;
-    codeInput.value = '';
+    if (!code) {
+      directJoinCard?.classList.add('piq-shake-error');
+      setTimeout(() => directJoinCard?.classList.remove('piq-shake-error'), 450);
+      return;
+    }
     
     // Check if room code exists
     try {
       const room = await getWatchPartyFromCloud(code);
       if (!room) {
+        directJoinCard?.classList.add('piq-shake-error');
+        setTimeout(() => directJoinCard?.classList.remove('piq-shake-error'), 450);
         showToast('Room not found. Check the ID and try again.');
         return;
       }
+      codeInput.value = '';
       navigate(`/watch-party/join/${code}`);
-    } catch (e) {
+    } catch (err) {
+      directJoinCard?.classList.add('piq-shake-error');
+      setTimeout(() => directJoinCard?.classList.remove('piq-shake-error'), 450);
       showToast('Error verifying room.');
     }
   };
-  joinBtn?.addEventListener('click', runJoin);
-  codeInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') runJoin(); });
+  directJoinForm?.addEventListener('submit', runJoin);
 
   // Add Friend Request
   const addFriendForm = container.querySelector('#add-friend-form');
@@ -645,68 +655,88 @@ END:VCALENDAR`;
       const currentGuestsCount = sch.invitees ? sch.invitees.length : 0;
       const totalCount = currentGuestsCount + 1; 
       const limitReached = totalCount >= maxGuests;
+      const pct = Math.min(100, (totalCount / maxGuests) * 100);
 
       modal.innerHTML = `
-        <div class="piq-confirm-card" style="max-width: 480px; width: 90%; background: #10121e; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="piq-confirm-card" style="max-width: 480px; width: 90%;">
+          <button class="modal-close-btn" id="close-part-x-btn" style="position:absolute; top:20px; right:20px;">
+            <i data-lucide="x"></i>
+          </button>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h3 style="margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #fff;">Invited Participants</h3>
-            <span id="sch-part-count" style="font-size: 12px; color: ${limitReached ? '#ef4444' : 'var(--text-muted)'}; font-weight: 700;">
-              ${totalCount} / ${maxGuests} Members ${limitReached ? '(Room Full)' : ''}
+            <span id="sch-part-count" style="font-size: 12px; color: ${limitReached ? '#ef4444' : 'var(--accent, #a855f7)'}; font-weight: 700; transition: color 0.3s;">
+              ${totalCount} / ${maxGuests} Members ${limitReached ? '(Full)' : ''}
             </span>
           </div>
 
-          <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;" id="sch-part-list">
+          <!-- Capacity gauge -->
+          <div class="sch-progress-bar-wrap">
+            <div class="sch-progress-bar-fill ${limitReached ? 'full' : ''}" style="width: ${pct}%;"></div>
+          </div>
+
+          <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;" id="sch-part-list">
             <!-- Host -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+            <div class="participant-item-card" style="animation-delay: 0.05s;">
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">H</div>
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; box-shadow:0 0 10px rgba(168,85,247,0.3);">H</div>
                 <div style="font-size: 13px; color: #fff; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 200px;">${sch.hostName} (Host)</div>
               </div>
-              <span style="font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase;">Host</span>
+              <span style="font-size: 10px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Host</span>
             </div>
             
-            <!-- Invitees -->
-            ${sch.invitees && sch.invitees.length > 0 ? sch.invitees.map(email => `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px;">
-                <div style="font-size: 13px; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 240px;" title="${email}">${email}</div>
+            <!-- Invitees with staggered delay animation -->
+            ${sch.invitees && sch.invitees.length > 0 ? sch.invitees.map((email, idx) => `
+              <div class="participant-item-card" style="animation-delay: ${(idx + 2) * 0.05}s;">
+                <div style="font-size: 13px; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 240px; display:flex; align-items:center; gap:8px;" title="${email}">
+                  <div style="width: 8px; height: 8px; border-radius: 50%; background: rgba(168,85,247,0.4);"></div>
+                  <span>${email}</span>
+                </div>
                 ${isHost ? `
-                  <button class="remind-participant-btn" data-email="${email}" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); color: var(--accent); font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                    Remind again
+                  <button class="remind-participant-btn" data-email="${email}" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.15); color: var(--accent); font-size: 10px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="bell" style="width: 10px; height: 10px;"></i>
+                    <span>Remind</span>
                   </button>
                 ` : ''}
               </div>
-            `).join('') : `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 12px;">No invited participants yet.</div>`}
+            `).join('') : `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px 12px;">No invited participants yet.</div>`}
           </div>
 
           ${isHost ? `
-            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
-              <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Invite New Member</label>
+            <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing:0.5px;">Invite New Member</label>
               <div style="display: flex; gap: 8px; position: relative;">
                 <input type="email" id="new-part-email" class="party-chat-input" style="flex: 1; height: 36px; min-width: 0;" 
                   ${limitReached ? `disabled placeholder="Selected limit of ${maxGuests} reached"` : 'placeholder="friend@email.com"'} />
-                <button id="add-part-btn" class="user-empty-btn" style="height: 36px; padding: 0 16px;" ${limitReached ? 'disabled' : ''}>Add</button>
+                <button id="add-part-btn" class="user-empty-btn" style="height: 36px; padding: 0 16px; margin:0;" ${limitReached ? 'disabled' : ''}>Add</button>
               </div>
               <div id="add-part-error" style="color: #ef4444; font-size: 11px; margin-top: 4px; display: none;"></div>
             </div>
           ` : ''}
 
           <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
-            <button id="close-part-modal-btn" class="user-empty-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary);">Close</button>
+            <button id="close-part-modal-btn" class="user-empty-btn" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); height:36px; padding:0 20px; font-size:12px; margin:0;">Close</button>
           </div>
         </div>
       `;
 
+      if (window.lucide) window.lucide.createIcons();
+
       const closeBtn = modal.querySelector('#close-part-modal-btn');
-      closeBtn.addEventListener('click', () => {
+      const closeXBtn = modal.querySelector('#close-part-x-btn');
+      const cleanupAndClose = () => {
         if (autocompleteInst) autocompleteInst.destroy();
         modal.remove();
-      });
+      };
+      closeBtn?.addEventListener('click', cleanupAndClose);
+      closeXBtn?.addEventListener('click', cleanupAndClose);
 
       modal.querySelectorAll('.remind-participant-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const email = btn.dataset.email;
           btn.disabled = true;
-          btn.textContent = 'Sending...';
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<span>Sending...</span>';
           try {
             await sendPartyInviteNotification(
               user.uid,
@@ -733,17 +763,19 @@ END:VCALENDAR`;
             });
 
             if (emailResponse.ok) {
-              btn.textContent = 'Sent!';
-              btn.style.color = '#10b981';
-              btn.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-              btn.style.background = 'rgba(16, 185, 129, 0.1)';
+              btn.innerHTML = '<i data-lucide="check" style="width:10px; height:10px;"></i><span>Sent!</span>';
+              btn.className = 'remind-participant-btn sent';
+              if (window.lucide) window.lucide.createIcons();
             } else {
               throw new Error('Failed to send email');
             }
           } catch (err) {
             console.error(err);
-            btn.textContent = 'Failed';
+            btn.innerHTML = '<span>Failed</span>';
             btn.disabled = false;
+            setTimeout(() => {
+              btn.innerHTML = originalText;
+            }, 2000);
           }
         });
       });
@@ -763,18 +795,24 @@ END:VCALENDAR`;
           if (!emailRegex.test(email)) {
             errorDiv.textContent = 'Please enter a valid email address.';
             errorDiv.style.display = 'block';
+            emailInput.classList.add('piq-shake-error');
+            setTimeout(() => emailInput.classList.remove('piq-shake-error'), 450);
             return;
           }
 
           if (email === user.email.toLowerCase()) {
             errorDiv.textContent = 'You cannot add yourself as a guest.';
             errorDiv.style.display = 'block';
+            emailInput.classList.add('piq-shake-error');
+            setTimeout(() => emailInput.classList.remove('piq-shake-error'), 450);
             return;
           }
 
           if (sch.invitees && sch.invitees.includes(email)) {
             errorDiv.textContent = 'This participant is already invited.';
             errorDiv.style.display = 'block';
+            emailInput.classList.add('piq-shake-error');
+            setTimeout(() => emailInput.classList.remove('piq-shake-error'), 450);
             return;
           }
 
@@ -782,6 +820,8 @@ END:VCALENDAR`;
           if (currentCount + 1 >= maxGuests) {
             errorDiv.textContent = `Selected limit of ${maxGuests} reached. Cannot add more participants.`;
             errorDiv.style.display = 'block';
+            emailInput.classList.add('piq-shake-error');
+            setTimeout(() => emailInput.classList.remove('piq-shake-error'), 450);
             return;
           }
 
@@ -1178,7 +1218,9 @@ END:VCALENDAR`;
             <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="drawer-media-title"></div>
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
-            <img id="drawer-poster" src="" style="width:80px; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 8px 16px rgba(0,0,0,0.5); flex-shrink:0; display:none;" />
+            <div class="drawer-poster-container">
+              <img id="drawer-poster" class="drawer-poster-3d" src="" style="display:none;" />
+            </div>
             <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
               <div><strong>Type:</strong> <span id="drawer-media-type">—</span></div>
               <div><strong>Release:</strong> <span id="drawer-media-release">—</span></div>
@@ -1792,7 +1834,9 @@ END:VCALENDAR`;
             <div style="position:absolute; bottom:12px; left:16px; font-weight:800; font-family:var(--font-display); font-size:16px; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);" id="start-drawer-media-title"></div>
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
-            <img id="start-drawer-poster" src="" style="width:80px; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.1); box-shadow:0 8px 16px rgba(0,0,0,0.5); flex-shrink:0; display:none;" />
+            <div class="drawer-poster-container">
+              <img id="start-drawer-poster" class="drawer-poster-3d" src="" style="display:none;" />
+            </div>
             <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-secondary); justify-content:center;">
               <div><strong>Type:</strong> <span id="start-drawer-media-type">—</span></div>
               <div><strong>Release:</strong> <span id="start-drawer-media-release">—</span></div>

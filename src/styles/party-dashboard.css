@@ -1033,4 +1033,160 @@
   color: #fff !important;
 }
 
+/* ============================================================
+   Redesigned Premium UX & Form redline animations
+   ============================================================ */
 
+/* Shake animation for validation errors */
+@keyframes piqShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.piq-shake-error {
+  animation: piqShake 0.4s ease-in-out !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Staggered list entrance for participants */
+@keyframes listItemEntrance {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Spring scale entrance for guest pills */
+@keyframes inviteePillSpring {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.invite-pill-spring {
+  animation: inviteePillSpring 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+/* Capacity bar pulse */
+@keyframes progressPulse {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.4)); }
+  50% { filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.8)); }
+}
+
+/* Glassmorphic Participants Modal Overhaul */
+.piq-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 4, 6, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+  animation: modalFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.piq-confirm-card {
+  background: linear-gradient(145deg, #131422 0%, #0c0d16 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  padding: 28px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* List card animations */
+.participant-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  animation: listItemEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.participant-item-card:hover {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(168, 85, 247, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Limit Capacity gauge */
+.sch-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.01);
+}
+
+.sch-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent, #a855f7) 0%, #7c3aed 100%);
+  border-radius: 4px;
+  transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+  animation: progressPulse 2.5s infinite ease-in-out;
+}
+
+.sch-progress-bar-fill.full {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* Reminder button animation updates */
+.remind-participant-btn {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.remind-participant-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+.remind-participant-btn:active {
+  transform: scale(0.96);
+}
+
+.remind-participant-btn.sent {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #10b981 !important;
+  cursor: default;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+/* 3D Poster Perspective effect */
+.drawer-poster-container {
+  perspective: 800px;
+  flex-shrink: 0;
+}
+
+.drawer-poster-3d {
+  width: 80px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: -8px 8px 16px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.06);
+  transform: rotateY(12deg) rotateX(2deg);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.drawer-poster-3d:hover {
+  transform: rotateY(0deg) rotateX(0deg) scale(1.04);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.65), 0 0 24px rgba(168, 85, 247, 0.15);
+}
