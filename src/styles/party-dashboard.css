@@ -1213,6 +1213,7 @@
   gap: 0;
   overflow: visible; /* Prevent protruding tab from getting clipped */
   border-radius: 20px;
+  border-top-left-radius: 0; /* Align with folder tab */
   max-height: 90vh;
   position: relative;
   box-shadow: 0 40px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05);
@@ -1238,26 +1239,25 @@
 .piq-modal-tab::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: -2px;
-  background: linear-gradient(to bottom, #1b1b28 0%, #15151f 100%);
-  border: 1.5px solid rgba(255,255,255,0.07);
-  border-bottom: none;
-  border-radius: 12px 12px 0 0; /* both corners rounded — creates the swooping curves */
-  transform: perspective(16px) rotateX(12deg); /* slightly stronger for more visible curve */
-  transform-origin: bottom center;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 34px; /* 33px height + 1px overlap to sit flush on the modal edge */
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20220%2033'%3E%3Cdefs%3E%3ClinearGradient%20id%3D'g'%20x1%3D'0'%20y1%3D'0'%20x2%3D'0'%20y2%3D'1'%3E%3Cstop%20offset%3D'0'%20stop-color%3D'%231b1b28'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%2315151f'%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33%20L%200%2C33%20Z'%20fill%3D'url(%23g)'%2F%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33'%20fill%3D'none'%20stroke%3D'rgba(255%2C255%2C255%2C0.08)'%20stroke-width%3D'1.5'%2F%3E%3C%2Fsvg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
   z-index: -1;
-  box-shadow: 0 -8px 16px rgba(0,0,0,0.45);
-  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.3));
+  transition: background-image 0.25s, filter 0.25s;
 }
 
 .piq-modal-tab:hover::before {
-  border-color: rgba(168, 85, 247, 0.4);
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20220%2033'%3E%3Cdefs%3E%3ClinearGradient%20id%3D'g'%20x1%3D'0'%20y1%3D'0'%20x2%3D'0'%20y2%3D'1'%3E%3Cstop%20offset%3D'0'%20stop-color%3D'%231b1b28'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%2315151f'%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33%20L%200%2C33%20Z'%20fill%3D'url(%23g)'%2F%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33'%20fill%3D'none'%20stroke%3D'rgba(168%2C85%2C247%2C0.4)'%20stroke-width%3D'1.5'%2F%3E%3C%2Fsvg%3E");
 }
 
 .piq-modal-tab:has(.piq-tab-input:focus)::before {
-  border-color: var(--accent);
-  box-shadow: 0 -8px 20px rgba(168, 85, 247, 0.25);
-  background: linear-gradient(to bottom, #201b30 0%, #15151f 100%);
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20220%2033'%3E%3Cdefs%3E%3ClinearGradient%20id%3D'g'%20x1%3D'0'%20y1%3D'0'%20x2%3D'0'%20y2%3D'1'%3E%3Cstop%20offset%3D'0'%20stop-color%3D'%23201b30'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%2315151f'%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33%20L%200%2C33%20Z'%20fill%3D'url(%23g)'%2F%3E%3Cpath%20d%3D'M%200%2C33%20L%200%2C8%20A%208%2C8%200%200%201%208%2C0%20L%20196%2C0%20A%207%2C7%200%200%201%20203%2C6%20L%20211%2C22%20Q%20215%2C33%20220%2C33'%20fill%3D'none'%20stroke%3D'%23a855f7'%20stroke-width%3D'1.5'%2F%3E%3C%2Fsvg%3E");
+  filter: drop-shadow(0 -4px 10px rgba(168, 85, 247, 0.25)) drop-shadow(0 -2px 4px rgba(0,0,0,0.3));
 }
 
 .piq-modal-tab svg {
@@ -1521,6 +1521,7 @@
   max-width: 100%;
   overflow-y: auto;
   border-radius: 20px;
+  border-top-left-radius: 0; /* Align with folder tab */
   scrollbar-width: thin;
   scrollbar-color: rgba(168,85,247,0.2) transparent;
   position: relative;
@@ -2133,8 +2134,8 @@
 /* Mobile */
 @media (max-width: 768px) {
   .piq-content-drawer { display: none !important; }
-  .piq-form-panel { width: 100%; max-width: calc(100vw - 32px); border-radius: 20px !important; padding: 22px 18px; }
-  .modal-wrapper.piq-modal-bg { border-radius: 18px; }
+  .piq-form-panel { width: 100%; max-width: calc(100vw - 32px); border-radius: 20px !important; border-top-left-radius: 0 !important; padding: 22px 18px; }
+  .modal-wrapper.piq-modal-bg { border-radius: 18px; border-top-left-radius: 0 !important; }
   .piq-privacy-group { gap: 6px; }
   .piq-privacy-card { padding: 11px 5px; min-height: 68px; }
   .piq-form-row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
