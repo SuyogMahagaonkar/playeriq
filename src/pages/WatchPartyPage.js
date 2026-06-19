@@ -194,7 +194,7 @@ export async function renderWatchPartyPage({ params, container }) {
 
         <div class="party-sidebar-content">
           <!-- Room Title -->
-          <div class="party-room-header" style="position:relative;">
+          <div class="party-room-header party-sidebar-panel" style="position:relative;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <h2 id="party-media-title" style="flex:1; margin-right:8px;">Watch Together</h2>
               <button class="party-exit-btn" id="party-exit-btn" title="Leave Watch Party" aria-label="Leave Watch Party">
@@ -208,7 +208,7 @@ export async function renderWatchPartyPage({ params, container }) {
           </div>
 
           <!-- Active Members List -->
-          <div class="party-members-block">
+          <div class="party-members-block party-sidebar-panel">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <div class="party-section-label" style="margin:0;">Active Members</div>
               <button class="party-invite-toggle-btn" id="party-invite-toggle-btn" title="Invite Friends" aria-label="Invite Friends">
@@ -233,7 +233,7 @@ export async function renderWatchPartyPage({ params, container }) {
           </div>
 
           <!-- Chat messages area -->
-          <div class="party-chat-section">
+          <div class="party-chat-section party-sidebar-panel">
             <div class="party-section-label">Live Chat</div>
             <div class="party-chat-messages" id="party-chat-messages">
               <!-- Chat messages rendered dynamically -->
@@ -646,7 +646,7 @@ export async function renderWatchPartyPage({ params, container }) {
       // Sync members list
       const members = partyDoc.members || [];
       membersListEl._latestMembers = members; // cache for exit modal
-      membersListEl.innerHTML = members.map(m => {
+      let membersHtml = members.map(m => {
         const isMe = m.uid === user.uid;
         let actionsHtml = '';
         if (!isMe) {
@@ -682,6 +682,16 @@ export async function renderWatchPartyPage({ params, container }) {
         `;
       }).join('');
 
+      if (members.length === 1) {
+        membersHtml += `
+          <div class="party-members-waiting" style="font-size:11px; color:rgba(255, 255, 255, 0.45); display:flex; align-items:center; gap:6px; margin-left:4px; font-family:var(--font-body, 'Inter', sans-serif); margin-top:2px;">
+            <span class="pulse-waiting-dot" style="width:6px; height:6px; background:#a855f7; border-radius:50%; display:inline-block; animation: pulseWait 1.5s infinite ease-in-out;"></span>
+            <span>Waiting for friends...</span>
+          </div>
+        `;
+      }
+      membersListEl.innerHTML = membersHtml;
+
       // Wire Admin Clicks on updated members list
       membersListEl.querySelectorAll('.member-action-btn.promote').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -708,6 +718,29 @@ export async function renderWatchPartyPage({ params, container }) {
           } catch(err) {
             console.error(err);
           }
+        });
+      });
+
+      // Position member tooltips dynamically using fixed positioning to avoid overflow clipping
+      membersListEl.querySelectorAll('.party-member-avatar-wrap').forEach(wrap => {
+        const tooltip = wrap.querySelector('.party-member-tooltip');
+        if (!tooltip) return;
+
+        wrap.addEventListener('mouseenter', () => {
+          tooltip.style.display = 'block';
+          tooltip.style.position = 'fixed';
+          tooltip.style.transform = 'none';
+          tooltip.style.visibility = 'hidden';
+          const width = tooltip.offsetWidth || 140;
+          const height = tooltip.offsetHeight || 98;
+          const rect = wrap.getBoundingClientRect();
+          tooltip.style.top = `${rect.top - height - 8}px`;
+          tooltip.style.left = `${rect.left + rect.width / 2 - width / 2}px`;
+          tooltip.style.visibility = 'visible';
+        });
+
+        wrap.addEventListener('mouseleave', () => {
+          tooltip.style.display = 'none';
         });
       });
 
@@ -1030,7 +1063,25 @@ export async function renderWatchPartyPage({ params, container }) {
 
     function renderGIFs(gifs) {
       if (!gifs || gifs.length === 0) {
-        gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">No GIFs found.</div>';
+        const query = gifSearchInput ? gifSearchInput.value.trim() : '';
+        if (query) {
+          gifResultsGrid.innerHTML = `
+            <div style="color:rgba(255,255,255,0.45); font-size:12px; padding:24px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; font-family:var(--font-body, 'Inter', sans-serif);">
+              <i data-lucide="help-circle" style="width:20px; height:20px; opacity:0.6; color:#ef4444;"></i>
+              <div style="font-weight:600; color:#fff;">No GIFs found for "${query}"</div>
+              <span style="font-size:10px; opacity:0.8;">Try searching for "funny", "happy", or "clap"!</span>
+            </div>
+          `;
+        } else {
+          gifResultsGrid.innerHTML = `
+            <div style="color:rgba(255,255,255,0.45); font-size:12px; padding:24px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; font-family:var(--font-body, 'Inter', sans-serif);">
+              <i data-lucide="search" style="width:20px; height:20px; opacity:0.6; color:var(--accent);"></i>
+              <div style="font-weight:600; color:#fff;">Search GIPHY</div>
+              <span style="font-size:10px; opacity:0.8;">Try typing keywords to find reaction GIFs.</span>
+            </div>
+          `;
+        }
+        if (window.lucide) window.lucide.createIcons();
         return;
       }
 
@@ -1081,12 +1132,29 @@ export async function renderWatchPartyPage({ params, container }) {
     // Subscribe to chat subcollection
     const unsubChat = subscribeToChatMessages(partyId, (messages) => {
       latestChatMessages = messages;
-      chatMessagesEl.innerHTML = messages.map(m => {
+
+      // Group consecutive reactions and limit to latest 60 messages for DOM performance
+      const processedMessages = [];
+      const sliced = messages.slice(-60);
+      for (const m of sliced) {
         if (m.type === 'reaction') {
+          const last = processedMessages[processedMessages.length - 1];
+          if (last && last.type === 'reaction' && last.senderId === m.senderId && last.reactionEmoji === m.reactionEmoji) {
+            last.count = (last.count || 1) + 1;
+            last.id = m.id; // Keep the latest message ID
+            continue;
+          }
+        }
+        processedMessages.push({ ...m, count: 1 });
+      }
+
+      chatMessagesEl.innerHTML = processedMessages.map(m => {
+        if (m.type === 'reaction') {
+          const countText = m.count > 1 ? ` ×${m.count}` : '';
           return `
             <div class="chat-message system">
               <span class="chat-sender">${m.senderName}</span>
-              <span class="chat-text">reacted with ${m.reactionEmoji}</span>
+              <span class="chat-text">reacted with ${m.reactionEmoji}${countText}</span>
             </div>
           `;
         }

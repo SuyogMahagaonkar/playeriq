@@ -77,12 +77,21 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 16px;
   overflow: hidden;
 }
 
+.party-sidebar-panel {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .party-room-header {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .party-room-header h2 {
@@ -98,8 +107,9 @@
 
 .party-room-id-tag {
   font-size: 11px;
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 3px 8px;
   border-radius: 4px;
   display: inline-block;
@@ -111,7 +121,7 @@
 .party-section-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
@@ -119,13 +129,26 @@
 
 /* Members List */
 .party-members-block {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .party-members-list {
   display: flex;
-  flex-wrap: wrap;
+  overflow-x: auto;
   gap: 10px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.party-members-list::-webkit-scrollbar {
+  height: 4px;
+}
+.party-members-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.party-members-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
 }
 
 .party-member-avatar-wrap {
@@ -224,7 +247,7 @@
 
 .chat-msg-sender-name {
   font-size: 11px;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.65);
   margin-bottom: 2px;
 }
 
@@ -250,7 +273,7 @@
 .chat-message.system {
   justify-content: center;
   font-size: 11px;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.75);
   background: rgba(255,255,255,0.02);
   padding: 4px 12px;
   border-radius: 20px;
@@ -300,37 +323,44 @@
 
 .party-chat-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 12px 16px 12px 48px;
   color: #fff;
   font-size: 13px;
   outline: none;
-  transition: all var(--transition-normal);
+  transition: all var(--transition-normal, 0.25s);
+  height: 44px;
+  box-sizing: border-box;
 }
 
 .party-chat-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--accent-hover, #c084fc);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
 }
 
 .party-chat-send-btn {
   background: var(--gradient-accent);
   border: none;
   color: #fff;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--transition-fast);
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.party-chat-send-btn:hover {
+  transform: scale(1.05);
 }
 
 .party-chat-send-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 /* Floating wiggling reactions animation */
@@ -427,10 +457,18 @@
   gap: 4px;
   transition: all 0.25s ease;
 }
+.party-lock-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
 .party-lock-btn.locked {
-  background: rgba(239, 68, 68, 0.1);
+  background: #ef4444;
   border-color: #ef4444;
-  color: #ef4444;
+  color: #fff;
+}
+.party-lock-btn.locked:hover {
+  background: #dc2626;
+  border-color: #dc2626;
 }
 .party-lock-status-badge {
   background: rgba(255,255,255,0.04);
@@ -580,14 +618,14 @@
 /* GIPHY Panel Popover */
 .party-gif-toggle-btn {
   position: absolute;
-  left: 10px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
-  border-radius: 6px;
-  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  padding: 4px 10px;
   font-size: 10px;
   font-weight: 800;
   cursor: pointer;
@@ -741,7 +779,6 @@
   font-weight: 700;
   color: #ef4444;
 }
-
 /* Wiggling floatReaction animation */
 @keyframes floatReaction {
   0% {
@@ -759,5 +796,18 @@
   100% {
     transform: translateY(-450px) scale(0.8) rotate(5deg);
     opacity: 0;
+  }
+}
+
+@keyframes pulseWait {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0);
   }
 }
