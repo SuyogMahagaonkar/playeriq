@@ -1286,9 +1286,14 @@ END:VCALENDAR`;
     modalOverlay.innerHTML = `
       <div class="modal-wrapper piq-modal-bg">
         <!-- Protruding Document Tab: Room Name -->
-        <div class="piq-modal-tab">
-          <input type="text" id="sch-party-name" class="piq-tab-input" value="${defaultRoomName}" required autocomplete="off" />
-          <i data-lucide="edit-3" style="width: 12px; height: 12px; color: var(--text-muted);"></i>
+        <div class="piq-modal-tab" id="sch-tab-container">
+          <span class="piq-tab-label">Room Name</span>
+          <div style="display:flex; align-items:center; gap:6px; width:100%;">
+            <input type="text" id="sch-party-name" class="piq-tab-input" value="${defaultRoomName}" required autocomplete="off" placeholder="Enter room name..." />
+          </div>
+          <span class="piq-tab-edit-icon">
+            <i data-lucide="pencil-line" style="width:11px;height:11px;"></i>
+          </span>
         </div>
 
         <!-- Right: Form Panel (Actually the main two-column grid) -->
@@ -1925,9 +1930,14 @@ END:VCALENDAR`;
     modalOverlay.innerHTML = `
       <div class="modal-wrapper piq-modal-bg">
         <!-- Protruding Document Tab: Room Name -->
-        <div class="piq-modal-tab">
-          <input type="text" id="start-party-name" class="piq-tab-input" value="${defaultRoomName}" required autocomplete="off" />
-          <i data-lucide="edit-3" style="width: 12px; height: 12px; color: var(--text-muted);"></i>
+        <div class="piq-modal-tab" id="start-tab-container">
+          <span class="piq-tab-label">Room Name</span>
+          <div style="display:flex; align-items:center; gap:6px; width:100%;">
+            <input type="text" id="start-party-name" class="piq-tab-input" value="${defaultRoomName}" required autocomplete="off" placeholder="Enter room name..." />
+          </div>
+          <span class="piq-tab-edit-icon">
+            <i data-lucide="pencil-line" style="width:11px;height:11px;"></i>
+          </span>
         </div>
 
         <!-- Right: Form Panel (Actually the main two-column grid) -->
