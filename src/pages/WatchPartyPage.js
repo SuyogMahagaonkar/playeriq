@@ -168,7 +168,7 @@ export async function renderWatchPartyPage({ params, container }) {
     <div class="watch-party-layout" id="party-layout">
       <!-- Player Panel -->
       <div class="party-player-section">
-        <div id="party-video-wrapper" class="party-video-wrapper">
+        <div id="party-video-wrapper" class="party-video-wrapper player-video-wrapper mobile-player-container">
           <div class="player-loading-overlay plc-overlay" id="party-loading">
             <div class="plc-card">
               <div class="plc-spinner-ring">
