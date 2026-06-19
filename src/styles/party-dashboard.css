@@ -1211,154 +1211,83 @@
   display: flex;
   align-items: stretch;
   gap: 0;
-  overflow: visible;
+  overflow: visible; /* Prevent protruding tab from getting clipped */
   border-radius: 20px;
   max-height: 90vh;
   position: relative;
   box-shadow: 0 40px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05);
   animation: modalSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  margin-top: 52px; /* Offset for taller folder tab */
+  margin-top: 38px; /* Offset to make room for folder tab */
 }
 
-/* ── Folder Tab (Document Style) ── */
+/* Protruding room tab folder tag */
 .piq-modal-tab {
   position: absolute;
-  top: -50px;
-  left: 28px;
-  height: 52px;
-  width: 220px;
+  top: -32px;
+  left: 32px;
+  height: 33px;
+  width: 210px;
   z-index: 10;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  padding: 8px 18px 10px 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
   box-sizing: border-box;
-  cursor: text;
-
-  /* Folder shape: angled top-right corner via clip-path */
-  clip-path: polygon(0% 0%, calc(100% - 18px) 0%, 100% 18px, 100% 100%, 0% 100%);
-
-  /* Folder body gradient */
-  background: linear-gradient(165deg, #252535 0%, #1a1a27 55%, #16161f 100%);
-
-  /* Bottom is open — merged into modal */
-  border: 1.5px solid rgba(255,255,255,0.09);
-  border-bottom: none;
-
-  /* Soft shadow so it lifts above the modal surface */
-  box-shadow:
-    0 -6px 24px rgba(0,0,0,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.06);
-
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
-/* Folded-corner triangle (top-right dog-ear) */
-.piq-modal-tab::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(225deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-  border-left: 1.5px solid rgba(255,255,255,0.07);
-  border-bottom: 1.5px solid rgba(255,255,255,0.07);
-  /* Matches clip-path cut */
-  pointer-events: none;
-}
-
-/* Cover the border line where tab meets modal */
 .piq-modal-tab::before {
   content: '';
   position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(to bottom, #1a1a27, #16161f);
-  z-index: 2;
-  pointer-events: none;
+  top: 0; left: 0; right: 0; bottom: -2px;
+  background: linear-gradient(to bottom, #1b1b28 0%, #15151f 100%);
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  transform: perspective(20px) rotateX(10deg);
+  transform-origin: bottom center;
+  z-index: -1;
+  box-shadow: 0 -8px 16px rgba(0,0,0,0.45);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
 }
 
-/* Hover state */
-.piq-modal-tab:hover {
-  border-color: rgba(168, 85, 247, 0.3);
-  background: linear-gradient(165deg, #28243a 0%, #1d1b2e 55%, #16161f 100%);
-  box-shadow:
-    0 -6px 28px rgba(0,0,0,0.6),
-    0 -2px 12px rgba(168, 85, 247, 0.1),
-    inset 0 1px 0 rgba(255,255,255,0.08);
+.piq-modal-tab:hover::before {
+  border-color: rgba(168, 85, 247, 0.4);
 }
 
-/* Focus state (input focused) */
-.piq-modal-tab:has(.piq-tab-input:focus) {
-  border-color: rgba(168, 85, 247, 0.55);
-  background: linear-gradient(165deg, #2a2040 0%, #1f1830 55%, #16161f 100%);
-  box-shadow:
-    0 -6px 28px rgba(0,0,0,0.6),
-    0 -4px 18px rgba(168, 85, 247, 0.22),
-    inset 0 1px 0 rgba(168, 85, 247, 0.12);
+.piq-modal-tab:has(.piq-tab-input:focus)::before {
+  border-color: var(--accent);
+  box-shadow: 0 -8px 20px rgba(168, 85, 247, 0.25);
+  background: linear-gradient(to bottom, #201b30 0%, #15151f 100%);
 }
 
-/* Edit icon */
-.piq-modal-tab .piq-tab-edit-icon {
-  display: flex;
-  align-items: center;
-  color: rgba(255,255,255,0.25);
-  flex-shrink: 0;
-  transition: color 0.25s, transform 0.25s;
-  position: absolute;
-  right: 14px;
-  bottom: 10px;
+.piq-modal-tab svg {
+  transition: transform 0.25s, color 0.25s;
 }
 
-.piq-modal-tab:hover .piq-tab-edit-icon {
-  color: #c084fc;
-  transform: rotate(12deg);
-}
-.piq-modal-tab:has(.piq-tab-input:focus) .piq-tab-edit-icon {
-  color: var(--accent);
-  transform: rotate(12deg) scale(1.1);
+.piq-modal-tab:hover svg {
+  transform: rotate(15deg);
+  color: #d8b4fe !important;
 }
 
-/* ROOM label */
-.piq-tab-label {
-  font-size: 8.5px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  color: rgba(168, 85, 247, 0.55);
-  text-transform: uppercase;
-  line-height: 1;
-  user-select: none;
-  transition: color 0.25s;
-}
-.piq-modal-tab:hover .piq-tab-label {
-  color: rgba(192, 132, 252, 0.7);
-}
-.piq-modal-tab:has(.piq-tab-input:focus) .piq-tab-label {
-  color: #a855f7;
+.piq-modal-tab:has(.piq-tab-input:focus) svg {
+  transform: rotate(15deg) scale(1.1);
+  color: var(--accent) !important;
 }
 
-/* Name input */
 .piq-tab-input {
   background: transparent;
   border: none;
   color: #fff;
   font-family: var(--font-display);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 800;
   outline: none;
   padding: 0;
-  width: 165px;
-  letter-spacing: -0.2px;
-  line-height: 1.2;
+  width: 145px;
 }
 
 .piq-tab-input::placeholder {
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.35);
 }
 
 /* Step Pane Layout & Transition */
