@@ -1224,14 +1224,14 @@
 .piq-modal-tab {
   position: absolute;
   top: -32px;
-  left: 32px;
+  left: 0;          /* flush with form's left edge */
   height: 33px;
-  width: 210px;
+  width: 220px;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
+  padding: 0 18px 0 22px; /* extra left padding so text never clips the border */
   box-sizing: border-box;
 }
 
@@ -1242,7 +1242,7 @@
   background: linear-gradient(to bottom, #1b1b28 0%, #15151f 100%);
   border: 1.5px solid rgba(255,255,255,0.07);
   border-bottom: none;
-  border-radius: 12px 12px 0 0;
+  border-radius: 0 12px 0 0; /* flat left = merges with form's left border */
   transform: perspective(20px) rotateX(10deg);
   transform-origin: bottom center;
   z-index: -1;
@@ -1283,7 +1283,11 @@
   font-weight: 800;
   outline: none;
   padding: 0;
-  width: 145px;
+  width: 155px;  /* slightly wider to use the extra tab space */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .piq-tab-input::placeholder {
