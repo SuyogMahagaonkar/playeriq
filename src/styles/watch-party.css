@@ -91,10 +91,6 @@
   transition: all 0.25s ease;
 }
 
-.party-room-header {
-  margin-bottom: 0;
-}
-
 .party-room-header h2 {
   font-family: var(--font-display);
   font-size: 18px;
@@ -511,29 +507,34 @@
   color: #ef4444;
 }
 
-/* Pull-tab Toggle chevron at the bottom of the Room Header */
+/* Pull-tab Toggle pill at the bottom border of the Room Header */
 .party-drawer-toggle-btn {
   position: absolute;
   bottom: -14px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent, #a855f7);
-  border: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   color: #fff;
-  width: 28px;
+  padding: 4px 12px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 14px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 10px rgba(168, 85, 247, 0.4);
   z-index: 10;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 .party-drawer-toggle-btn:hover {
   background: var(--accent-hover, #c084fc);
-  transform: translateX(-50%) scale(1.1);
+  transform: translateX(-50%) translateY(-1px) scale(1.05);
+  box-shadow: 0 6px 14px rgba(168, 85, 247, 0.5);
+}
+.party-drawer-toggle-btn:active {
+  transform: translateX(-50%) translateY(0) scale(0.95);
 }
 .drawer-toggle-icon {
   width: 16px;

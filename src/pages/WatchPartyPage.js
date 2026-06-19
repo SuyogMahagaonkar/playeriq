@@ -256,6 +256,7 @@ export async function renderWatchPartyPage({ params, container }) {
             </div>
             <button class="party-drawer-toggle-btn" id="party-members-toggle" aria-label="Toggle Active Members" title="Toggle Active Members">
               <i data-lucide="chevron-up" class="drawer-toggle-icon"></i>
+              <span id="members-count-badge" style="margin-left:4px; font-size:10px; font-weight:700;">1 Active</span>
             </button>
           </div>
 
@@ -770,6 +771,12 @@ export async function renderWatchPartyPage({ params, container }) {
         `;
       }
       membersListEl.innerHTML = membersHtml;
+
+      // Update dynamic members count badge in the toggle button
+      const countBadge = container.querySelector('#members-count-badge');
+      if (countBadge) {
+        countBadge.textContent = `${members.length} Active`;
+      }
 
       // Wire interactive empty state '+' button
       const emptyInviteBtn = membersListEl.querySelector('#empty-invite-btn');
