@@ -374,7 +374,7 @@ export async function renderWatchPartyPage({ params, container }) {
     let hostDisconnectCountdown = 30;
     let countdownInterval = null;
 
-    const displayNameStr = partyData.title + (partyData.type === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
+    const displayNameStr = partyData.title + ((partyData.mediaType || partyData.type) === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
     mediaTitleEl.textContent = displayNameStr;
 
     partyDataObj = partyData;
@@ -401,9 +401,9 @@ export async function renderWatchPartyPage({ params, container }) {
                          document.createElement('video').canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '';
 
     // 2. Fetch Direct Stream URL from proxy
-    const streamEndpoint = partyData.type === 'tv'
-      ? `${NODE_PROXY}/api/stream/tv/${partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}?hevc=${supportsHEVC}`
-      : `${NODE_PROXY}/api/stream/movie/${partyData.id || partyData.partyId}?hevc=${supportsHEVC}`;
+    const streamEndpoint = (partyData.mediaType || partyData.type) === 'tv'
+      ? `${NODE_PROXY}/api/stream/tv/${partyData.mediaId || partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}?hevc=${supportsHEVC}`
+      : `${NODE_PROXY}/api/stream/movie/${partyData.mediaId || partyData.id || partyData.partyId}?hevc=${supportsHEVC}`;
 
     const streamResponse = await fetch(streamEndpoint);
     if (!streamResponse.ok) {
@@ -850,7 +850,7 @@ export async function renderWatchPartyPage({ params, container }) {
               inviteeEmail: email,
               title: displayNameStr,
               partyId,
-              mediaType: partyData.type,
+              mediaType: partyData.mediaType || partyData.type,
               posterPath: partyData.posterPath
             })
           });
