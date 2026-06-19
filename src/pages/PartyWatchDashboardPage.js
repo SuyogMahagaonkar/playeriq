@@ -1694,11 +1694,12 @@ END:VCALENDAR`;
           }
           dropdown.innerHTML = results.map(item => {
             const title = item.title || item.name || 'Unknown';
-            const year = (item.releaseDate || item.year || '').slice(0, 4);
-            const type = item.subjectType === 2 ? 'TV' : 'Movie';
-            const poster = item.cover?.url || item.poster_path || '';
+            const year = (item.release_date || item.releaseDate || item.year || '').slice(0, 4);
+            const type = (item.type === 'tv' || item.subjectType === 2 || item.type === 'TV') ? 'TV' : 'Movie';
+            const poster = item.cover_url || item.cover?.url || item.poster_path || item.coverUrl || '';
+            const itemId = item.subject_id || item.id || item.subjectId || '';
             return `
-              <div class="piq-search-result sch-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${poster}">
+              <div class="piq-search-result sch-media-option" data-id="${itemId}" data-type="${type}" data-title="${title}" data-poster="${poster}">
                 ${poster ? `<img class="piq-search-result-poster" src="${poster}" alt="" />` : `<div class="piq-search-result-poster" style="background:rgba(168,85,247,0.08);display:flex;align-items:center;justify-content:center;"><i data-lucide="film" style="width:14px;height:14px;color:rgba(168,85,247,0.4);"></i></div>`}
                 <div class="piq-search-result-info">
                   <div class="piq-search-result-title">${title}</div>
@@ -1713,7 +1714,7 @@ END:VCALENDAR`;
           dropdown.querySelectorAll('.sch-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
               const rawId = opt.dataset.id || '';
-              const normalizedId = (rawId && !rawId.startsWith('mb_') && !/^\d+$/.test(rawId)) ? `mb_${rawId}` : rawId;
+              const normalizedId = (rawId && !rawId.startsWith('mb_')) ? `mb_${rawId}` : rawId;
               selectedMedia = { id: normalizedId, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
@@ -2119,11 +2120,12 @@ END:VCALENDAR`;
           }
           dropdown.innerHTML = results.map(item => {
             const title = item.title || item.name || 'Unknown';
-            const year = (item.releaseDate || item.year || '').slice(0, 4);
-            const type = item.subjectType === 2 ? 'TV' : 'Movie';
-            const poster = item.cover?.url || item.poster_path || '';
+            const year = (item.release_date || item.releaseDate || item.year || '').slice(0, 4);
+            const type = (item.type === 'tv' || item.subjectType === 2 || item.type === 'TV') ? 'TV' : 'Movie';
+            const poster = item.cover_url || item.cover?.url || item.poster_path || item.coverUrl || '';
+            const itemId = item.subject_id || item.id || item.subjectId || '';
             return `
-              <div class="piq-search-result start-media-option" data-id="${item.id}" data-type="${type}" data-title="${title}" data-poster="${poster}">
+              <div class="piq-search-result start-media-option" data-id="${itemId}" data-type="${type}" data-title="${title}" data-poster="${poster}">
                 ${poster ? `<img class="piq-search-result-poster" src="${poster}" alt="" />` : `<div class="piq-search-result-poster" style="background:rgba(168,85,247,0.08);display:flex;align-items:center;justify-content:center;"><i data-lucide="film" style="width:14px;height:14px;color:rgba(168,85,247,0.4);"></i></div>`}
                 <div class="piq-search-result-info">
                   <div class="piq-search-result-title">${title}</div>
@@ -2138,7 +2140,7 @@ END:VCALENDAR`;
           dropdown.querySelectorAll('.start-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
               const rawId = opt.dataset.id || '';
-              const normalizedId = (rawId && !rawId.startsWith('mb_') && !/^\d+$/.test(rawId)) ? `mb_${rawId}` : rawId;
+              const normalizedId = (rawId && !rawId.startsWith('mb_')) ? `mb_${rawId}` : rawId;
               selectedMedia = { id: normalizedId, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');

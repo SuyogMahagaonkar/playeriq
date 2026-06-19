@@ -411,9 +411,9 @@ export async function renderWatchPartyPage({ params, container }) {
     const resolvedMediaId = (() => {
       if (!_rawMediaId) return _rawMediaId;
       const s = String(_rawMediaId);
-      // Already prefixed or is a plain numeric TMDB ID → use as-is
-      if (s.startsWith('mb_') || /^\d+$/.test(s)) return s;
-      // Raw MovieBox subject_id (alphanumeric, no mb_ prefix) → add prefix
+      // Already prefixed or is a plain numeric TMDB ID (under 10 digits) → use as-is
+      if (s.startsWith('mb_') || (/^\d+$/.test(s) && s.length < 10)) return s;
+      // Raw MovieBox subject_id (alphanumeric or long numeric, no mb_ prefix) → add prefix
       return `mb_${s}`;
     })();
 
