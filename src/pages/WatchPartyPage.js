@@ -404,8 +404,18 @@ export async function renderWatchPartyPage({ params, container }) {
     const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '' ||
                          document.createElement('video').canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '';
 
-    // Resolve the media ID from either Dashboard-created parties (mediaId) or Detail-page parties (id)
-    const resolvedMediaId = partyData.mediaId || partyData.id || partyData.partyId;
+    // Resolve the media ID from either Dashboard-created parties (mediaId) or Detail-page parties (id).
+    // IMPORTANT: Dashboard search stores raw MovieBox subject_id (e.g. "c7as1f86k") without the "mb_" prefix.
+    // The stream server needs "mb_c7as1f86k" to route to MovieBox. Numeric IDs are TMDB IDs and stay as-is.
+    const _rawMediaId = partyData.mediaId || partyData.id || partyData.partyId;
+    const resolvedMediaId = (() => {
+      if (!_rawMediaId) return _rawMediaId;
+      const s = String(_rawMediaId);
+      // Already prefixed or is a plain numeric TMDB ID → use as-is
+      if (s.startsWith('mb_') || /^\d+$/.test(s)) return s;
+      // Raw MovieBox subject_id (alphanumeric, no mb_ prefix) → add prefix
+      return `mb_${s}`;
+    })();
 
     // ── Iframe Embed Fallback ────────────────────────────────────────────────
     // Called when the custom player cannot load (stream fetch failed OR VideoPlayer onFatalError).

@@ -1712,7 +1712,9 @@ END:VCALENDAR`;
 
           dropdown.querySelectorAll('.sch-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
-              selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
+              const rawId = opt.dataset.id || '';
+              const normalizedId = (rawId && !rawId.startsWith('mb_') && !/^\d+$/.test(rawId)) ? `mb_${rawId}` : rawId;
+              selectedMedia = { id: normalizedId, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
 
@@ -2135,7 +2137,9 @@ END:VCALENDAR`;
 
           dropdown.querySelectorAll('.start-media-option').forEach(opt => {
             opt.addEventListener('click', async () => {
-              selectedMedia = { id: opt.dataset.id, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
+              const rawId = opt.dataset.id || '';
+              const normalizedId = (rawId && !rawId.startsWith('mb_') && !/^\d+$/.test(rawId)) ? `mb_${rawId}` : rawId;
+              selectedMedia = { id: normalizedId, type: opt.dataset.type === 'TV' ? 'tv' : 'movie', title: opt.dataset.title, posterPath: opt.dataset.poster };
               searchInput.value = selectedMedia.title;
               dropdown.classList.add('hidden');
 
