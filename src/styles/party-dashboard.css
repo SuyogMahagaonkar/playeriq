@@ -1242,8 +1242,8 @@
   background: linear-gradient(to bottom, #1b1b28 0%, #15151f 100%);
   border: 1.5px solid rgba(255,255,255,0.07);
   border-bottom: none;
-  border-radius: 0 12px 0 0; /* flat left = merges with form's left border */
-  transform: perspective(20px) rotateX(10deg);
+  border-radius: 12px 12px 0 0; /* both corners rounded — creates the swooping curves */
+  transform: perspective(16px) rotateX(12deg); /* slightly stronger for more visible curve */
   transform-origin: bottom center;
   z-index: -1;
   box-shadow: 0 -8px 16px rgba(0,0,0,0.45);
