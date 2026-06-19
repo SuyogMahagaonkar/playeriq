@@ -32,6 +32,55 @@ import '../styles/mobile-player.css';
 // Default emojis for the reaction bar
 const REACTION_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
+// Local fallback database for reaction GIFs when GIPHY API keys fail or throttle
+const MOCK_GIFS = [
+  {
+    title: 'Laughing',
+    url: 'https://media.giphy.com/media/3o7TKSj06tqgEp05Z6/giphy.gif',
+    tags: ['funny', 'lol', 'laugh', 'happy']
+  },
+  {
+    title: 'Thumbs Up',
+    url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif',
+    tags: ['funny', 'yes', 'thumbs up', 'clap']
+  },
+  {
+    title: 'Mind Blown',
+    url: 'https://media.giphy.com/media/l0IykOsT7Bmvs8fVY/giphy.gif',
+    tags: ['wow', 'mind blown', 'shocked']
+  },
+  {
+    title: 'Happy Dance',
+    url: 'https://media.giphy.com/media/l41YkxvOOZJFlsH3a/giphy.gif',
+    tags: ['happy', 'dance', 'excited']
+  },
+  {
+    title: 'Clap',
+    url: 'https://media.giphy.com/media/26AHP7PeR525L6oLq/giphy.gif',
+    tags: ['clap', 'clapping', 'happy', 'yes']
+  },
+  {
+    title: 'Celebrate',
+    url: 'https://media.giphy.com/media/kyLYJR7ql3Ggg/giphy.gif',
+    tags: ['happy', 'party', 'celebrate']
+  },
+  {
+    title: 'Sad Cry',
+    url: 'https://media.giphy.com/media/d2lcHJTG5TGI2kQH/giphy.gif',
+    tags: ['sad', 'cry', 'tears']
+  },
+  {
+    title: 'Popcorn',
+    url: 'https://media.giphy.com/media/13GKP7ACGjVK9y/giphy.gif',
+    tags: ['popcorn', 'watching', 'movie']
+  },
+  {
+    title: 'Shocked face',
+    url: 'https://media.giphy.com/media/3o72F8tGPJDQ5VaspW/giphy.gif',
+    tags: ['wow', 'shocked', 'funny']
+  }
+];
+
 /**
  * Join Page Handler: processes join, updates Firestore members, and redirects to room page.
  */
@@ -209,26 +258,32 @@ export async function renderWatchPartyPage({ params, container }) {
 
           <!-- Active Members List -->
           <div class="party-members-block party-sidebar-panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <div class="party-section-label" style="margin:0;">Active Members</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" id="members-header-toggle">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <i data-lucide="chevron-down" class="members-collapse-icon" style="width:14px; height:14px; transition:transform 0.25s; color:rgba(255,255,255,0.7);"></i>
+                <div class="party-section-label" style="margin:0; user-select:none;">Active Members</div>
+              </div>
               <button class="party-invite-toggle-btn" id="party-invite-toggle-btn" title="Invite Friends" aria-label="Invite Friends">
                 <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
               </button>
             </div>
 
-            <!-- Invite Drawer -->
-            <div class="party-invite-drawer collapsed" id="party-invite-drawer">
-              <div style="display:flex; gap:6px; margin-top:4px; margin-bottom:12px;">
-                <input type="email" placeholder="friend@example.com" class="party-chat-input" id="sidebar-invite-email" style="padding:6px 10px; font-size:12px; height:32px; box-sizing:border-box;" />
-                <button class="party-chat-send-btn" id="sidebar-send-invite-btn" style="width:32px; height:32px; flex-shrink:0;" aria-label="Send Invite">
-                  <i data-lucide="mail" style="width:14px; height:14px;"></i>
-                </button>
+            <!-- Collapsible content wrapper -->
+            <div class="party-members-collapse-content" id="party-members-collapse-content">
+              <!-- Invite Drawer -->
+              <div class="party-invite-drawer collapsed" id="party-invite-drawer">
+                <div style="display:flex; gap:6px; margin-top:4px; margin-bottom:12px;">
+                  <input type="email" placeholder="friend@example.com" class="party-chat-input" id="sidebar-invite-email" style="padding:6px 10px; font-size:12px; height:32px; box-sizing:border-box;" />
+                  <button class="party-chat-send-btn" id="sidebar-send-invite-btn" style="width:32px; height:32px; flex-shrink:0;" aria-label="Send Invite">
+                    <i data-lucide="mail" style="width:14px; height:14px;"></i>
+                  </button>
+                </div>
+                <div id="sidebar-invite-status" style="font-size:11px; display:none; margin-bottom:8px;"></div>
               </div>
-              <div id="sidebar-invite-status" style="font-size:11px; display:none; margin-bottom:8px;"></div>
-            </div>
 
-            <div class="party-members-list" id="party-members-list">
-              <!-- Rendered dynamically -->
+              <div class="party-members-list" id="party-members-list">
+                <!-- Rendered dynamically -->
+              </div>
             </div>
           </div>
 
@@ -241,7 +296,7 @@ export async function renderWatchPartyPage({ params, container }) {
           </div>
 
           <!-- Chat input and reactions -->
-          <div class="party-chat-input-area" style="position:relative;">
+          <div class="party-chat-input-area party-sidebar-panel" style="position:relative; margin-bottom:0;">
             <!-- Default Emoji Reactions Row -->
             <div class="party-reactions-row" id="party-reactions-row">
               ${REACTION_EMOJIS.map(emoji => `<button class="reaction-emoji-btn" data-emoji="${emoji}">${emoji}</button>`).join('')}
@@ -259,8 +314,14 @@ export async function renderWatchPartyPage({ params, container }) {
 
               <!-- GIF Popover Panel -->
               <div class="party-gif-panel hidden" id="party-gif-panel">
-                <div class="gif-panel-header">
+                <div class="gif-panel-header" style="display:flex; flex-direction:column; gap:8px;">
                   <input type="text" placeholder="Search GIPHY..." class="gif-search-input" id="gif-search-input" />
+                  <div class="gif-suggestion-tags" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                    <button type="button" class="gif-tag-btn" data-tag="trending">🔥 Trending</button>
+                    <button type="button" class="gif-tag-btn" data-tag="funny">😂 Funny</button>
+                    <button type="button" class="gif-tag-btn" data-tag="happy">🎉 Happy</button>
+                    <button type="button" class="gif-tag-btn" data-tag="clap">👏 Clap</button>
+                  </div>
                 </div>
                 <div class="gif-results-grid" id="gif-results-grid"></div>
                 <div class="gif-attribution">Powered by GIPHY</div>
@@ -340,6 +401,28 @@ export async function renderWatchPartyPage({ params, container }) {
     sidebarToggle.querySelector('.toggle-icon-right').style.display = isCollapsed ? 'none' : 'block';
     sidebarToggle.querySelector('.toggle-icon-left').style.display = isCollapsed ? 'block' : 'none';
   });
+
+  // Collapsible Active Members Block logic
+  const membersHeaderToggle = container.querySelector('#members-header-toggle');
+  const membersCollapseContent = container.querySelector('#party-members-collapse-content');
+  const membersCollapseIcon = container.querySelector('.members-collapse-icon');
+
+  if (membersHeaderToggle && membersCollapseContent) {
+    membersHeaderToggle.addEventListener('click', (e) => {
+      // Don't toggle collapse if clicking on the user-plus button
+      if (e.target.closest('#party-invite-toggle-btn')) return;
+      
+      membersCollapseContent.classList.toggle('collapsed');
+      const isCollapsed = membersCollapseContent.classList.contains('collapsed');
+      if (membersCollapseIcon) {
+        if (isCollapsed) {
+          membersCollapseIcon.style.transform = 'rotate(-90deg)';
+        } else {
+          membersCollapseIcon.style.transform = 'rotate(0deg)';
+        }
+      }
+    });
+  }
 
   // Floating reactions generator
   function spawnFloatingEmoji(emoji) {
@@ -684,13 +767,26 @@ export async function renderWatchPartyPage({ params, container }) {
 
       if (members.length === 1) {
         membersHtml += `
-          <div class="party-members-waiting" style="font-size:11px; color:rgba(255, 255, 255, 0.45); display:flex; align-items:center; gap:6px; margin-left:4px; font-family:var(--font-body, 'Inter', sans-serif); margin-top:2px;">
+          <div class="party-members-waiting" style="font-size:11px; color:rgba(255, 255, 255, 0.5); display:flex; align-items:center; gap:8px; margin-top:4px; padding:4px 0;">
             <span class="pulse-waiting-dot" style="width:6px; height:6px; background:#a855f7; border-radius:50%; display:inline-block; animation: pulseWait 1.5s infinite ease-in-out;"></span>
-            <span>Waiting for friends...</span>
+            <span>Invite friends to join!</span>
+            <button type="button" class="member-empty-invite-btn" id="empty-invite-btn" style="background:rgba(255, 255, 255, 0.06); border:none; color:var(--accent); width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:12px; transition:all 0.2s;" title="Invite Friends">+</button>
           </div>
         `;
       }
       membersListEl.innerHTML = membersHtml;
+
+      // Wire interactive empty state '+' button
+      const emptyInviteBtn = membersListEl.querySelector('#empty-invite-btn');
+      if (emptyInviteBtn) {
+        emptyInviteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const inviteDrawer = container.querySelector('#party-invite-drawer');
+          if (inviteDrawer) {
+            inviteDrawer.classList.remove('collapsed');
+          }
+        });
+      }
 
       // Wire Admin Clicks on updated members list
       membersListEl.querySelectorAll('.member-action-btn.promote').forEach(btn => {
@@ -1016,20 +1112,44 @@ export async function renderWatchPartyPage({ params, container }) {
       }
     });
 
+    // Wire GIF suggestion tags clicks
+    const gifTags = gifPanel ? gifPanel.querySelectorAll('.gif-tag-btn') : [];
+    gifTags.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gifTags.forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        const tag = btn.dataset.tag;
+        if (gifSearchInput) {
+          if (tag === 'trending') {
+            gifSearchInput.value = '';
+            loadTrendingGIFs();
+          } else {
+            gifSearchInput.value = tag;
+            searchGIFs(tag);
+          }
+        }
+      });
+    });
+
     async function loadTrendingGIFs() {
       gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">Loading...</div>';
       try {
         const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=15&rating=g`);
+        if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
+        if (data.meta && data.meta.status === 403) throw new Error('Banned key');
         renderGIFs(data.data);
       } catch(e) {
-        gifResultsGrid.innerHTML = '<div style="color:#ef4444; font-size:11px; padding:12px; text-align:center;">Failed to load trending.</div>';
+        console.warn('[GIPHY] Key banned/throttled. Using local GIF library...');
+        renderLocalMockGIFs('');
       }
     }
 
     let debounceTimer = null;
     if (gifSearchInput) {
       gifSearchInput.addEventListener('input', () => {
+        gifTags.forEach(t => t.classList.remove('active'));
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           const query = gifSearchInput.value.trim();
@@ -1054,22 +1174,51 @@ export async function renderWatchPartyPage({ params, container }) {
       gifResultsGrid.innerHTML = '<div style="color:var(--text-muted); font-size:11px; padding:12px; text-align:center;">Searching...</div>';
       try {
         const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=dc6zaTOxFJmzC&q=${encodeURIComponent(query)}&limit=15&rating=g`);
+        if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
+        if (data.meta && data.meta.status === 403) throw new Error('Banned key');
         renderGIFs(data.data);
       } catch(e) {
-        gifResultsGrid.innerHTML = '<div style="color:#ef4444; font-size:11px; padding:12px; text-align:center;">Failed to search.</div>';
+        console.warn('[GIPHY] Key banned/throttled. Using local GIF library...');
+        renderLocalMockGIFs(query);
       }
+    }
+
+    function renderLocalMockGIFs(query) {
+      const q = query.toLowerCase().trim();
+      let filtered = MOCK_GIFS;
+      if (q) {
+        filtered = MOCK_GIFS.filter(g => 
+          g.tags.some(tag => tag.includes(q) || q.includes(tag)) || 
+          g.title.toLowerCase().includes(q)
+        );
+      }
+      
+      const formatted = filtered.map(g => ({
+        title: g.title,
+        images: {
+          fixed_width_small: { url: g.url },
+          fixed_height: { url: g.url }
+        }
+      }));
+      renderGIFs(formatted);
     }
 
     function renderGIFs(gifs) {
       if (!gifs || gifs.length === 0) {
         const query = gifSearchInput ? gifSearchInput.value.trim() : '';
         if (query) {
+          const defaultSuggestions = ["funny", "happy", "clap", "dance", "lol", "mind blown"];
+          const filteredSuggestions = defaultSuggestions
+            .filter(s => s !== query.toLowerCase())
+            .slice(0, 3);
+          const suggestionText = filteredSuggestions.map(s => `"${s}"`).join(', ');
+
           gifResultsGrid.innerHTML = `
             <div style="color:rgba(255,255,255,0.45); font-size:12px; padding:24px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; font-family:var(--font-body, 'Inter', sans-serif);">
-              <i data-lucide="help-circle" style="width:20px; height:20px; opacity:0.6; color:#ef4444;"></i>
-              <div style="font-weight:600; color:#fff;">No GIFs found for "${query}"</div>
-              <span style="font-size:10px; opacity:0.8;">Try searching for "funny", "happy", or "clap"!</span>
+              <i data-lucide="search" style="width:20px; height:20px; opacity:0.6; color:rgba(255,255,255,0.4);"></i>
+              <div style="font-weight:600; color:#fff;">No results found for "${query}"</div>
+              <span style="font-size:10px; opacity:0.8;">Try searching for ${suggestionText} instead!</span>
             </div>
           `;
         } else {
