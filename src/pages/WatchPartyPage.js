@@ -254,36 +254,33 @@ export async function renderWatchPartyPage({ params, container }) {
               <div class="party-room-id-tag">Room ID: ${partyId}</div>
               <div id="room-lock-control-wrapper"></div>
             </div>
+            <button class="party-drawer-toggle-btn" id="party-members-toggle" aria-label="Toggle Active Members" title="Toggle Active Members">
+              <i data-lucide="chevron-up" class="drawer-toggle-icon"></i>
+            </button>
           </div>
 
           <!-- Active Members List -->
-          <div class="party-members-block party-sidebar-panel">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; cursor:pointer;" id="members-header-toggle">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <i data-lucide="chevron-down" class="members-collapse-icon" style="width:14px; height:14px; transition:transform 0.25s; color:rgba(255,255,255,0.7);"></i>
-                <div class="party-section-label" style="margin:0; user-select:none;">Active Members</div>
-              </div>
+          <div class="party-members-block party-sidebar-panel" id="party-members-block">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div class="party-section-label" style="margin:0; user-select:none;">Active Members</div>
               <button class="party-invite-toggle-btn" id="party-invite-toggle-btn" title="Invite Friends" aria-label="Invite Friends">
                 <i data-lucide="user-plus" style="width:14px; height:14px;"></i>
               </button>
             </div>
 
-            <!-- Collapsible content wrapper -->
-            <div class="party-members-collapse-content" id="party-members-collapse-content">
-              <!-- Invite Drawer -->
-              <div class="party-invite-drawer collapsed" id="party-invite-drawer">
-                <div style="display:flex; gap:6px; margin-top:4px; margin-bottom:12px;">
-                  <input type="email" placeholder="friend@example.com" class="party-chat-input" id="sidebar-invite-email" style="padding:6px 10px; font-size:12px; height:32px; box-sizing:border-box;" />
-                  <button class="party-chat-send-btn" id="sidebar-send-invite-btn" style="width:32px; height:32px; flex-shrink:0;" aria-label="Send Invite">
-                    <i data-lucide="mail" style="width:14px; height:14px;"></i>
-                  </button>
-                </div>
-                <div id="sidebar-invite-status" style="font-size:11px; display:none; margin-bottom:8px;"></div>
+            <!-- Invite Drawer -->
+            <div class="party-invite-drawer collapsed" id="party-invite-drawer">
+              <div style="display:flex; gap:6px; margin-top:4px; margin-bottom:12px;">
+                <input type="email" placeholder="friend@example.com" class="party-chat-input" id="sidebar-invite-email" style="padding:6px 10px; font-size:12px; height:32px; box-sizing:border-box;" />
+                <button class="party-chat-send-btn" id="sidebar-send-invite-btn" style="width:32px; height:32px; flex-shrink:0;" aria-label="Send Invite">
+                  <i data-lucide="mail" style="width:14px; height:14px;"></i>
+                </button>
               </div>
+              <div id="sidebar-invite-status" style="font-size:11px; display:none; margin-bottom:8px;"></div>
+            </div>
 
-              <div class="party-members-list" id="party-members-list">
-                <!-- Rendered dynamically -->
-              </div>
+            <div class="party-members-list" id="party-members-list">
+              <!-- Rendered dynamically -->
             </div>
           </div>
 
@@ -402,23 +399,21 @@ export async function renderWatchPartyPage({ params, container }) {
     sidebarToggle.querySelector('.toggle-icon-left').style.display = isCollapsed ? 'block' : 'none';
   });
 
-  // Collapsible Active Members Block logic
-  const membersHeaderToggle = container.querySelector('#members-header-toggle');
-  const membersCollapseContent = container.querySelector('#party-members-collapse-content');
-  const membersCollapseIcon = container.querySelector('.members-collapse-icon');
+  // Collapsible Active Members Block logic (Toggle from Room Header pull-tab button)
+  const membersToggleBtn = container.querySelector('#party-members-toggle');
+  const membersBlock = container.querySelector('#party-members-block');
+  const drawerToggleIcon = container.querySelector('.drawer-toggle-icon');
 
-  if (membersHeaderToggle && membersCollapseContent) {
-    membersHeaderToggle.addEventListener('click', (e) => {
-      // Don't toggle collapse if clicking on the user-plus button
-      if (e.target.closest('#party-invite-toggle-btn')) return;
-      
-      membersCollapseContent.classList.toggle('collapsed');
-      const isCollapsed = membersCollapseContent.classList.contains('collapsed');
-      if (membersCollapseIcon) {
+  if (membersToggleBtn && membersBlock) {
+    membersToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      membersBlock.classList.toggle('collapsed');
+      const isCollapsed = membersBlock.classList.contains('collapsed');
+      if (drawerToggleIcon) {
         if (isCollapsed) {
-          membersCollapseIcon.style.transform = 'rotate(-90deg)';
+          drawerToggleIcon.classList.add('collapsed');
         } else {
-          membersCollapseIcon.style.transform = 'rotate(0deg)';
+          drawerToggleIcon.classList.remove('collapsed');
         }
       }
     });

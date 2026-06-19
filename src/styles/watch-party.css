@@ -130,6 +130,20 @@
 /* Members List */
 .party-members-block {
   margin-bottom: 0;
+  max-height: 250px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.party-members-block.collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  pointer-events: none !important;
 }
 
 .party-members-list {
@@ -495,6 +509,39 @@
   background: rgba(239, 68, 68, 0.05);
   border-color: rgba(239, 68, 68, 0.2);
   color: #ef4444;
+}
+
+/* Pull-tab Toggle chevron at the bottom of the Room Header */
+.party-drawer-toggle-btn {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent, #a855f7);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+.party-drawer-toggle-btn:hover {
+  background: var(--accent-hover, #c084fc);
+  transform: translateX(-50%) scale(1.1);
+}
+.drawer-toggle-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.25s ease;
+}
+.drawer-toggle-icon.collapsed {
+  transform: rotate(180deg);
 }
 
 /* In-page Invites Drawer */
