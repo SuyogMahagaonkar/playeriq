@@ -374,7 +374,11 @@ export async function renderWatchPartyPage({ params, container }) {
     let hostDisconnectCountdown = 30;
     let countdownInterval = null;
 
-    const displayNameStr = partyData.title + ((partyData.mediaType || partyData.type) === 'tv' ? ` S${partyData.season} E${partyData.episode}` : '');
+    // Fix: Dashboard parties store the room name in "title" and the actual movie/show name in "mediaTitle".
+    // Detail-page parties store the movie/show name directly in "title". Handle both correctly.
+    const mediaDisplayTitle = partyData.mediaTitle || partyData.title || 'Watch Party';
+    const isTV = (partyData.mediaType || partyData.type) === 'tv';
+    const displayNameStr = mediaDisplayTitle + (isTV ? ` S${partyData.season} E${partyData.episode}` : '');
     mediaTitleEl.textContent = displayNameStr;
 
     partyDataObj = partyData;
@@ -400,80 +404,152 @@ export async function renderWatchPartyPage({ params, container }) {
     const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '' ||
                          document.createElement('video').canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '';
 
-    // 2. Fetch Direct Stream URL from proxy
-    const streamEndpoint = (partyData.mediaType || partyData.type) === 'tv'
-      ? `${NODE_PROXY}/api/stream/tv/${partyData.mediaId || partyData.id || partyData.partyId}/${partyData.season}/${partyData.episode}?hevc=${supportsHEVC}`
-      : `${NODE_PROXY}/api/stream/movie/${partyData.mediaId || partyData.id || partyData.partyId}?hevc=${supportsHEVC}`;
+    // Resolve the media ID from either Dashboard-created parties (mediaId) or Detail-page parties (id)
+    const resolvedMediaId = partyData.mediaId || partyData.id || partyData.partyId;
 
-    const streamResponse = await fetch(streamEndpoint);
-    if (!streamResponse.ok) {
-      throw new Error('Streaming source endpoint failed.');
+    // ── Iframe Embed Fallback ────────────────────────────────────────────────
+    // Called when the custom player cannot load (stream fetch failed OR VideoPlayer onFatalError).
+    // This is a LOCAL fallback — it does NOT affect PlayerPage.js or VideoPlayer.js.
+    // NOTE: Real-time timeline sync is unavailable for cross-origin iframes.
+    function loadWatchPartyIframeFallback(reason) {
+      console.warn(`[WatchParty Fallback] Loading embed iframe. Reason: ${reason}`);
+      const embedUrl = isTV
+        ? `https://www.nontongo.win/embed/tv/${resolvedMediaId}/${partyData.season}/${partyData.episode}`
+        : `https://www.nontongo.win/embed/movie/${resolvedMediaId}`;
+
+      videoWrapper.innerHTML = `
+        <div style="position:relative; width:100%; height:100%; background:#000; border-radius:12px; overflow:hidden;">
+          <iframe
+            src="${embedUrl}"
+            allowfullscreen
+            allow="autoplay; fullscreen; encrypted-media"
+            style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"
+            title="${mediaDisplayTitle}"
+          ></iframe>
+          <div style="
+            position:absolute; bottom:0; left:0; right:0;
+            background:linear-gradient(transparent, rgba(0,0,0,0.75));
+            padding:10px 14px;
+            font-size:11px; color:rgba(255,255,255,0.55);
+            pointer-events:none;
+          ">⚠️ Embed player active — real-time sync is paused for this session.</div>
+        </div>
+      `;
+      videoEl = null; // No programmatic access to cross-origin iframe
+      showToastAlert('⚠️ Direct stream unavailable — switched to embed player. Real-time sync is disabled.');
     }
-    const streamData = await streamResponse.json();
 
-    // Rewrite relative /api/* proxy URLs to absolute using NODE_PROXY
-    const toAbsolute = (url) => {
-      if (!url) return url;
-      if (url.startsWith('/api/')) return `${NODE_PROXY}${url}`;
-      return url;
-    };
-    streamData.url = toAbsolute(streamData.url);
-    if (Array.isArray(streamData.all_streams)) {
-      streamData.all_streams = streamData.all_streams.map(s => ({
-        ...s,
-        url: toAbsolute(s.url)
-      }));
-    }
+    // 2. Fetch Direct Stream URL from proxy (with graceful fallback on failure)
+    const streamEndpoint = isTV
+      ? `${NODE_PROXY}/api/stream/tv/${resolvedMediaId}/${partyData.season}/${partyData.episode}?hevc=${supportsHEVC}`
+      : `${NODE_PROXY}/api/stream/movie/${resolvedMediaId}?hevc=${supportsHEVC}`;
 
-    // 3. Clear loading overlay and mount VideoPlayer
-    videoWrapper.innerHTML = '';
-    activePlayer = createVideoPlayer(videoWrapper, streamData, {
-      startTime: partyData.currentTime || 0,
-      isWatchParty: true,
-      hasPlaybackControl: hasPlaybackControl,
-      onEnded: () => {
-        if (currentUserRole === 'host' || currentUserRole === 'co-host') {
-          updateWatchPartyInCloud(partyId, { status: 'paused', currentTime: 0, lastUpdatedBy: user.uid });
-        }
+    let streamData = null;
+    let streamFetchFailed = false;
+
+    try {
+      const streamResponse = await fetch(streamEndpoint);
+      if (!streamResponse.ok) {
+        console.warn(`[WatchParty] Stream endpoint returned ${streamResponse.status}. Will use iframe fallback.`);
+        streamFetchFailed = true;
+      } else {
+        streamData = await streamResponse.json();
       }
-    });
-
-    videoEl = document.getElementById('vp-video');
-    const isEmbed = streamData.type === 'embed';
-    if (!videoEl && !isEmbed) {
-      throw new Error('Video player media tag not found.');
+    } catch (fetchErr) {
+      console.warn('[WatchParty] Stream fetch threw error:', fetchErr.message, '— will use iframe fallback.');
+      streamFetchFailed = true;
     }
 
-    // 4. Synchronization Logic Bindings
-    const updateRoomStateInCloud = async (event) => {
-      if (!videoEl || isApplyingSync) return;
-      if (currentUserRole === 'host' || currentUserRole === 'co-host') {
-        await updateWatchPartyInCloud(partyId, {
-          status: videoEl.paused ? 'paused' : 'playing',
-          currentTime: videoEl.currentTime,
-          lastUpdatedBy: user.uid
-        });
-      }
-    };
-
-    if (videoEl) {
-      videoEl.addEventListener('play', () => updateRoomStateInCloud('play'));
-      videoEl.addEventListener('pause', () => updateRoomStateInCloud('pause'));
-      videoEl.addEventListener('seeked', () => updateRoomStateInCloud('seeked'));
-
-      // Periodic timer to sync current playtime in Firestore while playing
-      syncInterval = setInterval(() => {
-        if (videoEl && !videoEl.paused && !isApplyingSync) {
-          if (currentUserRole === 'host' || currentUserRole === 'co-host') {
-            updateWatchPartyInCloud(partyId, {
-              currentTime: videoEl.currentTime,
-              lastUpdatedBy: user.uid
-            });
-          }
-        }
-      }, 2000);
+    // If stream fetch failed entirely, load iframe immediately (room UI stays intact)
+    if (streamFetchFailed || !streamData) {
+      videoWrapper.innerHTML = '';
+      loadWatchPartyIframeFallback('stream-fetch-failed');
     } else {
-      console.log('[WatchParty] Embed player loaded. Direct media sync controls bypassed.');
+      // Rewrite relative /api/* proxy URLs to absolute using NODE_PROXY
+      const toAbsolute = (url) => {
+        if (!url) return url;
+        if (url.startsWith('/api/')) return `${NODE_PROXY}${url}`;
+        return url;
+      };
+      streamData.url = toAbsolute(streamData.url);
+      if (Array.isArray(streamData.all_streams)) {
+        streamData.all_streams = streamData.all_streams.map(s => ({
+          ...s,
+          url: toAbsolute(s.url)
+        }));
+      }
+
+      // 3. Clear loading overlay and mount VideoPlayer
+      videoWrapper.innerHTML = '';
+      activePlayer = createVideoPlayer(videoWrapper, streamData, {
+        startTime: partyData.currentTime || 0,
+        isWatchParty: true,
+        hasPlaybackControl: hasPlaybackControl,
+        onEnded: () => {
+          if (currentUserRole === 'host' || currentUserRole === 'co-host') {
+            updateWatchPartyInCloud(partyId, { status: 'paused', currentTime: 0, lastUpdatedBy: user.uid });
+          }
+        },
+        // onFatalError: fires when VideoPlayer's 15s watchdog, HLS fatal error,
+        // or all-streams exhaustion occur. Fall back gracefully to embed iframe.
+        // This callback is specific to WatchPartyPage and does NOT affect PlayerPage.
+        onFatalError: () => {
+          console.warn('[WatchParty] VideoPlayer reported a fatal error. Loading iframe fallback...');
+          if (activePlayer) {
+            try { activePlayer.destroy(); } catch (_) {}
+            activePlayer = null;
+          }
+          videoEl = null;
+          if (syncInterval) {
+            clearInterval(syncInterval);
+            syncInterval = null;
+          }
+          loadWatchPartyIframeFallback('player-fatal-error');
+        }
+      });
+
+      videoEl = document.getElementById('vp-video');
+      const isEmbed = streamData.type === 'embed';
+      if (!videoEl && !isEmbed) {
+        // Unexpected state: no video tag and not an embed — fall back gracefully
+        console.warn('[WatchParty] Video tag not found and stream is not embed type. Falling back to iframe.');
+        if (activePlayer) { try { activePlayer.destroy(); } catch(_) {} activePlayer = null; }
+        loadWatchPartyIframeFallback('no-video-tag');
+      }
+
+      // 4. Synchronization Logic Bindings
+      const updateRoomStateInCloud = async (event) => {
+        if (!videoEl || isApplyingSync) return;
+        if (currentUserRole === 'host' || currentUserRole === 'co-host') {
+          await updateWatchPartyInCloud(partyId, {
+            status: videoEl.paused ? 'paused' : 'playing',
+            currentTime: videoEl.currentTime,
+            lastUpdatedBy: user.uid
+          });
+        }
+      };
+
+      if (videoEl) {
+        videoEl.addEventListener('play', () => updateRoomStateInCloud('play'));
+        videoEl.addEventListener('pause', () => updateRoomStateInCloud('pause'));
+        videoEl.addEventListener('seeked', () => updateRoomStateInCloud('seeked'));
+
+        // Periodic timer to sync current playtime in Firestore while playing
+        syncInterval = setInterval(() => {
+          if (videoEl && !videoEl.paused && !isApplyingSync) {
+            if (currentUserRole === 'host' || currentUserRole === 'co-host') {
+              updateWatchPartyInCloud(partyId, {
+                currentTime: videoEl.currentTime,
+                lastUpdatedBy: user.uid
+              });
+            }
+          }
+        }, 2000);
+      } else if (isEmbed) {
+        // Embed player loaded (e.g. Nontongo returned type:'embed') — inform users sync is unavailable
+        console.log('[WatchParty] Embed player loaded. Direct media sync controls bypassed.');
+        showToastAlert('ℹ️ Embed player loaded — real-time sync is unavailable for third-party players.');
+      }
     }
 
     function showHostDisconnectOverlay() {
