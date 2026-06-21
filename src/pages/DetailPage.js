@@ -2,7 +2,7 @@
 // PlayerIQ — Detail Page
 // ========================================
 
-import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders, getMediaImages, NODE_PROXY } from '../services/api.js';
+import { getMovieDetails, getTVDetails, getSeasonDetails, img, getWatchProviders, getMediaImages, NODE_PROXY, findMovieBoxMatch } from '../services/api.js';
 import { createContentRow, initContentRows } from '../components/ContentRow.js';
 import { navigate } from '../services/router.js';
 import { getUser, getWatchHistory } from '../services/auth.js';
