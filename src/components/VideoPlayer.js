@@ -93,7 +93,7 @@ export function createVideoPlayer(container, streamData, {
 
   container.innerHTML = `
     <div class="vp-player" id="vp-player">
-      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous" disableRemotePlayback disablePictureInPicture></video>
+      <video class="vp-video" id="vp-video" playsinline crossorigin="anonymous" disableRemotePlayback></video>
 
       <!-- Loading spinner -->
       <div class="vp-loader" id="vp-loader">
@@ -2231,12 +2231,9 @@ export function createVideoPlayer(container, streamData, {
       }
     } else {
       try {
-        video.disablePictureInPicture = false;
         await video.requestPictureInPicture?.();
       } catch (err) {
         console.warn('Failed to enter Picture-in-Picture:', err);
-      } finally {
-        video.disablePictureInPicture = true;
       }
     }
   });
