@@ -1148,10 +1148,6 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
 
   try {
     let scraperSeason = parseInt(season);
-    if (String(resolvedTmdbId) === '124364' && scraperSeason > 1) {
-      scraperSeason = scraperSeason - 1;
-      console.log(`[Stream Fallback] Mapped S${season} -> S${scraperSeason} for TMDB ID ${resolvedTmdbId}`);
-    }
 
     // 2. Fallback: existing scrapers
     const result = await getStreams('tv', resolvedTmdbId, scraperSeason, parseInt(episode));

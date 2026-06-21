@@ -932,6 +932,32 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
       }
     }
 
+    // Resolve MovieBox max episode count for locking check
+    const subjectId = String(tvId).startsWith('mb_') ? tvId.replace('mb_', '') : null;
+    let resolvedSubjectId = subjectId;
+    const cleanTitle = (title || '').replace(/\[.*?\]/g, '').trim();
+    if (!resolvedSubjectId && cleanTitle) {
+      const match = await findMovieBoxMatch(cleanTitle, year, 'tv');
+      if (match) {
+        resolvedSubjectId = match.subject_id || match.id || match.subjectId;
+      }
+    }
+
+    let movieBoxMaxEp = null;
+    if (resolvedSubjectId) {
+      try {
+        const res = await fetch(`${NODE_PROXY}/api/moviebox/seasons/${resolvedSubjectId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const mbSeasons = data.seasons || [];
+          const currentSeason = mbSeasons.find(s => s.se === parseInt(seasonNumber));
+          movieBoxMaxEp = currentSeason ? (currentSeason.maxEp || 0) : 0;
+        }
+      } catch (e) {
+        console.warn(`[DetailPage loadEpisodes] Failed to fetch MovieBox seasons for ${resolvedSubjectId}:`, e.message);
+      }
+    }
+
     // Pagination calculations
     const allEpisodes = season.episodes || [];
     const totalEpisodes = allEpisodes.length;
@@ -991,13 +1017,38 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
     if (isMobile) {
       // ==== Premium Mobile Hotstar-style episode list ====
       const episodesHTML = pageEpisodes.map((ep, i) => {
-        const isUnaired = !ep.air_date || ep.air_date > todayStr;
-        const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
-        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+        const isTmdbUnaired = !ep.air_date || ep.air_date > todayStr;
+        const isMovieBoxLocked = movieBoxMaxEp !== null && ep.episode_number > movieBoxMaxEp;
+        const isLocked = isTmdbUnaired || isMovieBoxLocked;
+        
+        let statusText = '';
+        if (isLocked) {
+          if (isTmdbUnaired) {
+            const formattedDate = ep.air_date 
+              ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+              : 'Soon';
+            statusText = `Coming ${formattedDate}`;
+          } else {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const airDate = new Date(ep.air_date);
+            airDate.setHours(0, 0, 0, 0);
+            
+            const diffTime = today.getTime() - airDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 0 && diffDays <= 2) {
+              statusText = 'Coming Soon';
+            } else {
+              statusText = 'Not on MovieBox yet';
+            }
+          }
+        }
 
-        let cardClass = isUnaired ? 'mobile-episode-row unaired' : 'mobile-episode-row';
+        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+        let cardClass = isLocked ? 'mobile-episode-row unaired' : 'mobile-episode-row';
         const globalIndex = startIndex + i;
-        const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+        const routeStr = isLocked ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
 
         // Watch history progress mapping
         const progressItem = history.find(item => item.id === tvId && parseInt(item.season) === parseInt(seasonNumber) && parseInt(item.episode) === parseInt(ep.episode_number));
@@ -1015,11 +1066,11 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
         const stillSrc = ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>');
 
         return `
-          <div class="${cardClass}" ${routeStr} data-index="${globalIndex}">
+          <div class="${cardClass}" ${routeStr} data-index="${globalIndex}" data-status-text="${statusText}">
             <div class="mobile-ep-thumb-wrapper">
               <img class="mobile-ep-thumb" data-src="${stillSrc}" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Episode ${ep.episode_number} still" />
               <span class="mobile-ep-duration">${durationStr}</span>
-              ${isUnaired ? `
+              ${isLocked ? `
                 <div class="mobile-ep-lock">
                   <i data-lucide="lock" style="width:14px;height:14px;"></i>
                 </div>
@@ -1029,9 +1080,11 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
             <div class="mobile-ep-details">
               <div class="mobile-ep-meta-title">
                 <h3 class="mobile-ep-title">S${seasonNumber} E${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}</h3>
+                ${isLocked ? `<span style="color:#00a8e1; font-weight:700; font-size:11px; margin-top:2px; display:block;">${statusText}</span>` : ''}
               </div>
               <p class="mobile-ep-description">${ep.overview || 'No description available.'}</p>
               <div class="mobile-ep-actions">
+                ${!isLocked ? `
                 <button class="mobile-ep-action-btn ep-play-btn" data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}" title="Play Episode ${ep.episode_number}" aria-label="Play Episode ${ep.episode_number}">
                   <i data-lucide="play"></i>
                 </button>
@@ -1041,6 +1094,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
                 <button class="mobile-ep-action-btn ep-watchlist-btn" title="Save Episode ${ep.episode_number}" aria-label="Save Episode ${ep.episode_number}">
                   <i data-lucide="bookmark"></i>
                 </button>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -1053,7 +1107,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
       listEl.querySelectorAll('.mobile-episode-row').forEach(row => {
         row.addEventListener('click', (e) => {
           if (row.classList.contains('unaired')) {
-            showToast('This episode has not aired yet.', 'calendar');
+            showToast(row.dataset.statusText || 'This episode is not available yet.', 'calendar');
             return;
           }
           if (e.target.closest('.mobile-ep-action-btn')) return; // handled by button logic
@@ -1174,18 +1228,43 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
     } else {
       // ==== Standard Desktop Grid ====
       const episodesHTML = pageEpisodes.map(ep => {
-        const isUnaired = !ep.air_date || ep.air_date > todayStr;
-        const formattedDate = ep.air_date ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Soon';
-        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+        const isTmdbUnaired = !ep.air_date || ep.air_date > todayStr;
+        const isMovieBoxLocked = movieBoxMaxEp !== null && ep.episode_number > movieBoxMaxEp;
+        const isLocked = isTmdbUnaired || isMovieBoxLocked;
+        
+        let statusText = '';
+        if (isLocked) {
+          if (isTmdbUnaired) {
+            const formattedDate = ep.air_date 
+              ? new Date(ep.air_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+              : 'Soon';
+            statusText = `Coming ${formattedDate}`;
+          } else {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const airDate = new Date(ep.air_date);
+            airDate.setHours(0, 0, 0, 0);
+            
+            const diffTime = today.getTime() - airDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 0 && diffDays <= 2) {
+              statusText = 'Coming Soon';
+            } else {
+              statusText = 'Not on MovieBox yet';
+            }
+          }
+        }
 
-        const cardClass = isUnaired ? 'episode-card unaired' : 'episode-card';
-        const routeStr = isUnaired ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
+        const epKey = `${tvId}_S${seasonNumber}_E${ep.episode_number}`;
+        const cardClass = isLocked ? 'episode-card unaired' : 'episode-card';
+        const routeStr = isLocked ? '' : `data-route="/watch/tv/${tvId}?s=${seasonNumber}&e=${ep.episode_number}"`;
 
         return `
-          <div class="${cardClass}" ${routeStr}>
+          <div class="${cardClass}" ${routeStr} data-status-text="${statusText}">
             <div class="episode-still-container">
               <img src="${ep.still_path ? img.still(ep.still_path) : 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><rect fill="%231a1a2e" width="320" height="180"/><text x="160" y="95" text-anchor="middle" fill="%234a4a5e" font-size="14">No Image</text></svg>')}" alt="Episode ${ep.episode_number}" loading="lazy" />
-              ${isUnaired ? `
+              ${isLocked ? `
                 <div class="episode-lock-overlay">
                   <i data-lucide="lock" style="width:16px;height:16px;"></i>
                 </div>
@@ -1195,13 +1274,13 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
               <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                 <div class="episode-number">
                   Episode ${ep.episode_number}
-                  ${isUnaired ? `<span style="color:#00a8e1; font-weight:700; margin-left:8px; font-size:11px;">Coming ${formattedDate}</span>` : ''}
+                  ${isLocked ? `<span style="color:#00a8e1; font-weight:700; margin-left:8px; font-size:11px;">${statusText}</span>` : ''}
                 </div>
               </div>
               <div class="episode-name">${ep.name || ''}</div>
               <div class="episode-overview">${ep.overview || 'No description available.'}</div>
               
-              ${isUnaired ? `
+              ${isTmdbUnaired ? `
                 <button class="notify-btn" data-ep-key="${epKey}" data-title="${ep.name || ''}" data-airdate="${ep.air_date || 'Soon'}">
                   <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
                   <span>Notify Me</span>
@@ -1277,7 +1356,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
           }
 
           if (card.classList.contains('unaired')) {
-            showToast('This episode has not aired yet.', 'calendar');
+            showToast(card.dataset.statusText || 'This episode is not available yet.', 'calendar');
             return;
           }
 
@@ -1420,16 +1499,42 @@ function showTvSelectionModal(mediaId, title, year, seasons, callback) {
     episodeSelect.innerHTML = `<option value="" style="background: #141419;">Loading episodes...</option>`;
 
     try {
-      const seasonDetails = await getSeasonDetails(mediaId, seasonNum, cleanTitle, year);
+      let subjectId = String(mediaId).startsWith('mb_') ? mediaId.replace('mb_', '') : null;
+      if (!subjectId && cleanTitle) {
+        const match = await findMovieBoxMatch(cleanTitle, year, 'tv');
+        if (match) {
+          subjectId = match.subject_id || match.id || match.subjectId;
+        }
+      }
+
+      const [seasonDetails, mbSeasonsRes] = await Promise.all([
+        getSeasonDetails(mediaId, seasonNum, cleanTitle, year),
+        subjectId ? fetch(`${NODE_PROXY}/api/moviebox/seasons/${subjectId}`).catch(() => null) : null
+      ]);
+
       const eps = seasonDetails.episodes || [];
       const todayStr = new Date().toISOString().slice(0, 10);
       
-      const releasedEps = eps.filter(ep => ep.air_date && ep.air_date <= todayStr);
+      let movieBoxMaxEp = null;
+      if (mbSeasonsRes && mbSeasonsRes.ok) {
+        const mbSeasonsData = await mbSeasonsRes.json();
+        const mbSeasons = mbSeasonsData.seasons || [];
+        const currentSeason = mbSeasons.find(s => s.se === parseInt(seasonNum));
+        if (currentSeason) {
+          movieBoxMaxEp = currentSeason.maxEp || 0;
+        }
+      }
+
+      const availableEps = eps.filter(ep => {
+        const isAired = ep.air_date && ep.air_date <= todayStr;
+        const existsInMovieBox = movieBoxMaxEp === null || ep.episode_number <= movieBoxMaxEp;
+        return isAired && existsInMovieBox;
+      });
       
-      if (releasedEps.length === 0) {
-        episodeSelect.innerHTML = `<option value="" style="background: #141419;">No released episodes</option>`;
+      if (availableEps.length === 0) {
+        episodeSelect.innerHTML = `<option value="" style="background: #141419;">No available episodes</option>`;
       } else {
-        episodeSelect.innerHTML = releasedEps.map(ep => `
+        episodeSelect.innerHTML = availableEps.map(ep => `
           <option value="${ep.episode_number}" style="background: #141419; color: #fff;">Episode ${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}</option>
         `).join('');
         episodeSelect.disabled = false;
