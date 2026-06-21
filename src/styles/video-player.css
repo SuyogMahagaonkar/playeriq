@@ -1104,10 +1104,15 @@ video::-webkit-media-controls-overlay-cast-button {
   -webkit-appearance: slider-vertical !important;
 }
 
-/* Hide the mobile-only top title overlay on desktop screens to avoid double top bars and visual clutter */
+/* Desktop-specific overrides for custom player overlays */
 @media (min-width: 768px) {
-  .vp-top-title-overlay {
+  /* Hide the diagnostics HUD button on desktop */
+  #vp-diag-btn {
     display: none !important;
   }
-}
 
+  /* Make the top controls overlay background transparent (no black strip) */
+  .vp-top-title-overlay {
+    background: transparent !important;
+  }
+}
