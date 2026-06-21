@@ -1111,8 +1111,11 @@ video::-webkit-media-controls-overlay-cast-button {
     display: none !important;
   }
 
-  /* Make the top controls overlay background transparent (no black strip) */
+  /* Remove top black strip background gradient on desktop */
+  .mobile-player-container .vp-top-title-overlay,
+  .vp-player .vp-top-title-overlay,
   .vp-top-title-overlay {
     background: transparent !important;
+    background-image: none !important;
   }
 }

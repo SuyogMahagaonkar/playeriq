@@ -7690,3 +7690,17 @@
   }
 }
 
+@media (min-width: 768px) {
+  /* Hide diagnostics HUD icon on desktop */
+  #vp-diag-btn {
+    display: none !important;
+  }
+  /* Remove top black strip background gradient on desktop */
+  .mobile-player-container .vp-top-title-overlay,
+  .vp-player .vp-top-title-overlay,
+  .vp-top-title-overlay {
+    background: transparent !important;
+    background-image: none !important;
+  }
+}
+
