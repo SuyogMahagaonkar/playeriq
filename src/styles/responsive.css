@@ -4248,8 +4248,7 @@
   .mobile-player-container #vp-volume,
   .mobile-player-container .vp-volume-slider,
   .mobile-player-container .vp-volume-group,
-  .mobile-player-container #vp-diag-btn,
-  .mobile-player-container #vp-pip-btn {
+  .mobile-player-container #vp-diag-btn {
     display: none !important;
   }
 
@@ -4616,10 +4615,7 @@
     background: transparent !important;
   }
 
-  /* Hide pip from mobile (not useful) */
-  .mobile-player-container #vp-pip-btn {
-    display: none !important;
-  }
+
 
   /* Lock controls button - now inside options row, hide old absolute-positioned one */
   .mobile-player-container .vp-lock-btn {
