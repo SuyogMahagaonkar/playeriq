@@ -1103,3 +1103,11 @@ video::-webkit-media-controls-overlay-cast-button {
   padding: 0 !important;
   -webkit-appearance: slider-vertical !important;
 }
+
+/* Hide the mobile-only top title overlay on desktop screens to avoid double top bars and visual clutter */
+@media (min-width: 768px) {
+  .vp-top-title-overlay {
+    display: none !important;
+  }
+}
+
