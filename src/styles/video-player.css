@@ -1105,6 +1105,95 @@ video::-webkit-media-controls-overlay-cast-button {
   -webkit-appearance: slider-vertical !important;
 }
 
+/* Style top overlay elements (buttons, pill group, title pill) to look exactly like the bottom control options */
+.vp-top-title-overlay .vp-top-back,
+.vp-top-title-overlay .vp-top-fs-circle,
+.vp-top-title-overlay .vp-top-pip-circle,
+.vp-top-title-overlay .vp-overlay-pill-group,
+.vp-top-title-overlay .vp-title-pill {
+  background: rgba(0, 0, 0, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s, background-color 0.25s, border-color 0.25s !important;
+}
+
+/* Individual button layout overrides for top bar circle buttons */
+.vp-top-title-overlay .vp-top-back,
+.vp-top-title-overlay .vp-top-fs-circle,
+.vp-top-title-overlay .vp-top-pip-circle {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Specific styling for the top title pill */
+.vp-top-title-overlay .vp-title-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 8px 24px !important;
+  height: 40px !important;
+  border-radius: 32px !important;
+  box-sizing: border-box !important;
+}
+
+/* Joined pill group dimensions on desktop */
+.vp-top-title-overlay .vp-overlay-pill-group {
+  height: 40px !important;
+  border-radius: 32px !important;
+}
+
+.vp-top-title-overlay .vp-top-back svg,
+.vp-top-title-overlay .vp-top-fs-circle svg,
+.vp-top-title-overlay .vp-top-pip-circle svg,
+.vp-top-title-overlay .vp-overlay-pill-group svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Hover micro-interactions for top buttons */
+.vp-top-title-overlay .vp-top-back:hover,
+.vp-top-title-overlay .vp-top-fs-circle:hover,
+.vp-top-title-overlay .vp-top-pip-circle:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-2px) scale(1.08) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7) !important;
+}
+
+.vp-top-title-overlay .vp-top-back:active,
+.vp-top-title-overlay .vp-top-fs-circle:active,
+.vp-top-title-overlay .vp-top-pip-circle:active {
+  transform: scale(0.95) !important;
+}
+
+.vp-top-title-overlay .vp-title-text {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  padding: 0 !important;
+  line-height: normal !important;
+}
+
+.vp-top-title-overlay .vp-title-ep-badge {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  background: var(--accent, #a855f7) !important;
+}
+
 /* Desktop-specific overrides for custom player overlays */
 @media (min-width: 768px) {
   /* Hide the diagnostics HUD button on desktop */
@@ -1118,5 +1207,24 @@ video::-webkit-media-controls-overlay-cast-button {
   .vp-top-title-overlay {
     background: transparent !important;
     background-image: none !important;
+  }
+}
+
+/* Mobile-specific adjustments for top bar overlays */
+@media (max-width: 767px) {
+  .vp-top-title-overlay .vp-top-back,
+  .vp-top-title-overlay .vp-top-fs-circle,
+  .vp-top-title-overlay .vp-top-pip-circle {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .vp-top-title-overlay .vp-title-pill {
+    height: 44px !important;
+    padding: 6px 18px !important;
+  }
+
+  .vp-top-title-overlay .vp-overlay-pill-group {
+    height: 44px !important;
   }
 }

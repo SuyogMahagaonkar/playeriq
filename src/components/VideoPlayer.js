@@ -444,7 +444,9 @@ export function createVideoPlayer(container, streamData, {
           </button>
         </div>
         <div class="vp-top-title-center">
-          <span class="vp-title-text" id="vp-title-text">Embed Player</span>
+          <div class="vp-title-pill">
+            <span class="vp-title-text" id="vp-title-text">Embed Player</span>
+          </div>
         </div>
         <div class="vp-top-right-group" style="display: flex; gap: 12px; align-items: center;">
           <button class="vp-btn vp-overlay-btn vp-top-pip-circle" id="vp-top-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
@@ -577,8 +579,10 @@ export function createVideoPlayer(container, streamData, {
 
       <!-- Center title -->
       <div class="vp-top-title-center">
-        <span class="vp-title-text" id="vp-title-text">Now Playing</span>
-        <span class="vp-title-ep-badge" id="vp-title-ep-badge" style="display:none"></span>
+        <div class="vp-title-pill">
+          <span class="vp-title-text" id="vp-title-text">Now Playing</span>
+          <span class="vp-title-ep-badge" id="vp-title-ep-badge" style="display:none"></span>
+        </div>
       </div>
 
       <!-- Right actions (PiP + Fullscreen) -->
