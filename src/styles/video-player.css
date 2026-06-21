@@ -718,8 +718,9 @@
   text-transform: uppercase;
 }
 
-/* Fullscreen circle */
-.vp-top-fs-circle {
+/* Fullscreen & PiP circle */
+.vp-top-fs-circle,
+.vp-top-pip-circle {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -727,11 +728,13 @@
   border: 1px solid rgba(255,255,255,0.14) !important;
   backdrop-filter: blur(12px);
 }
-.vp-top-fs-circle:hover {
-  background: rgba(255,255,255,0.15) !important;
+.vp-top-fs-circle:hover,
+.vp-top-pip-circle:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
   transform: scale(1.08) !important;
 }
-.vp-top-fs-circle:active {
+.vp-top-fs-circle:active,
+.vp-top-pip-circle:active {
   transform: scale(0.96) !important;
 }
 

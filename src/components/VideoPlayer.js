@@ -446,10 +446,15 @@ export function createVideoPlayer(container, streamData, {
         <div class="vp-top-title-center">
           <span class="vp-title-text" id="vp-title-text">Embed Player</span>
         </div>
-        <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
-          <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        </button>
+        <div class="vp-top-right-group" style="display: flex; gap: 12px; align-items: center;">
+          <button class="vp-btn vp-overlay-btn vp-top-pip-circle" id="vp-top-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
+          </button>
+          <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+            <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+        </div>
       `;
       player.appendChild(titleOverlay);
       titleOverlay.classList.add('visible');
@@ -458,6 +463,11 @@ export function createVideoPlayer(container, streamData, {
         e.stopPropagation();
         if (window.history.length > 1) window.history.back();
         else window.location.hash = '#/';
+      });
+
+      container.querySelector('#vp-top-pip-btn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        container.querySelector('#vp-pip-btn')?.click();
       });
 
       const topFsBtn = container.querySelector('#vp-top-fs-btn');
@@ -571,11 +581,16 @@ export function createVideoPlayer(container, streamData, {
         <span class="vp-title-ep-badge" id="vp-title-ep-badge" style="display:none"></span>
       </div>
 
-      <!-- Fullscreen button — right -->
-      <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
-        <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-        <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-      </button>
+      <!-- Right actions (PiP + Fullscreen) -->
+      <div class="vp-top-right-group" style="display: flex; gap: 12px; align-items: center;">
+        <button class="vp-btn vp-overlay-btn vp-top-pip-circle" id="vp-top-pip-btn" title="Picture in Picture" aria-label="Toggle Picture-in-Picture">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="11" y="9" width="10" height="7" rx="1" fill="currentColor" opacity="0.3"/></svg>
+        </button>
+        <button class="vp-btn vp-overlay-btn vp-top-fs-circle" id="vp-top-fs-btn" title="Fullscreen" aria-label="Toggle Fullscreen">
+          <svg class="vp-top-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <svg class="vp-top-fs-shrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      </div>
     `;
     player.appendChild(titleOverlay);
 
@@ -586,6 +601,13 @@ export function createVideoPlayer(container, streamData, {
         e.stopPropagation();
         if (window.history.length > 1) window.history.back();
         else window.location.hash = '#/';
+      });
+    }
+    const _topPip = container.querySelector('#vp-top-pip-btn');
+    if (_topPip) {
+      _topPip.addEventListener('click', e => {
+        e.stopPropagation();
+        container.querySelector('#vp-pip-btn')?.click();
       });
     }
     const _topCast = container.querySelector('#vp-top-cast-btn');

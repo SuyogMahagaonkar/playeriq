@@ -4248,7 +4248,8 @@
   .mobile-player-container #vp-volume,
   .mobile-player-container .vp-volume-slider,
   .mobile-player-container .vp-volume-group,
-  .mobile-player-container #vp-diag-btn {
+  .mobile-player-container #vp-diag-btn,
+  .mobile-player-container #vp-pip-btn {
     display: none !important;
   }
 
