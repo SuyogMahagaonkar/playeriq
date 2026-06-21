@@ -1389,7 +1389,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
 
   } catch (err) {
     console.error('Failed to load episodes:', err);
-    listEl.innerHTML = '<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes.</p>';
+    listEl.innerHTML = `<p style="color:var(--text-muted);padding:var(--space-md)">Failed to load episodes: ${err.message || err}<br/><small style="font-size:10px;color:rgba(255,255,255,0.4);">${err.stack || ''}</small></p>`;
   }
 }
 
