@@ -32,6 +32,57 @@ function dispatchStatusChange(id, status) {
   window.dispatchEvent(new CustomEvent('download-status-change', { detail: { id, status } }));
 }
 
+const DB_NAME = 'playeriq_web_downloads';
+const STORE_NAME = 'videos';
+const activeWebDownloads = {}; // id -> AbortController
+
+function _openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function _saveVideoToDB(id, blob) {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put(blob, id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function _getVideoFromDB(id) {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function _deleteVideoFromDB(id) {
+  const db = await _openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export const DownloadManager = {
 
   async getSettings() {
@@ -50,7 +101,7 @@ export const DownloadManager = {
     console.log(`[DownloadManager] Starting: ${title} (${id})`);
 
     if (!Capacitor.isNativePlatform()) {
-      this.mockWebDownload(id, type, title, posterPath);
+      this.realWebDownload(id, type, title, posterPath);
       return;
     }
 
@@ -248,28 +299,97 @@ export const DownloadManager = {
   },
 
 
-  // Web mock for browser testing
-  mockWebDownload(id, type, title, posterPath) {
+  // Real browser download using chunked streams and IndexedDB storage
+  async realWebDownload(id, type, title, posterPath) {
     const data = getDownloadsData();
-    data[id] = { id, type, title, posterPath, progress: 0, status: 'DOWNLOADING', timestamp: Date.now() };
-    saveDownloadsData(data);
+    if (data[id] && data[id].status === 'COMPLETED') return;
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      const cur = getDownloadsData();
-      if (!cur[id] || cur[id].status !== 'DOWNLOADING') { clearInterval(interval); return; }
-      progress += Math.floor(Math.random() * 6) + 3;
-      if (progress >= 100) {
-        cur[id].progress = 100;
-        cur[id].status = 'COMPLETED';
-        clearInterval(interval);
-        dispatchStatusChange(id, 'COMPLETED');
-      } else {
-        cur[id].progress = progress;
-        dispatchProgress(id, progress);
+    data[id] = {
+      id, type, title, posterPath,
+      progress: 0,
+      status: 'DOWNLOADING',
+      totalSize: 0,
+      timestamp: Date.now()
+    };
+    saveDownloadsData(data);
+    dispatchStatusChange(id, 'DOWNLOADING');
+
+    const controller = new AbortController();
+    activeWebDownloads[id] = controller;
+
+    try {
+      // Step 1: Resolve the actual stream URL from our production API
+      const streamUrl = await this._resolveStreamUrl(id, type);
+
+      // Step 2: Fetch and read chunks via stream reader
+      const response = await fetch(streamUrl, { signal: controller.signal });
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+      const reader = response.body.getReader();
+      const contentLength = +response.headers.get('Content-Length') || 0;
+
+      let receivedLength = 0;
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        receivedLength += value.length;
+
+        const pct = contentLength > 0 ? Math.min(99, Math.round((receivedLength / contentLength) * 100)) : 50;
+
+        // Save incremental progress
+        const cur = getDownloadsData();
+        if (cur[id] && cur[id].status === 'DOWNLOADING') {
+          cur[id].progress = pct;
+          cur[id].totalSize = contentLength;
+          saveDownloadsData(cur);
+          dispatchProgress(id, pct);
+        }
       }
-      saveDownloadsData(cur);
-    }, 600);
+
+      // Show "Saving…" state briefly
+      const savingData = getDownloadsData();
+      if (savingData[id]) {
+        savingData[id].progress = 99;
+        savingData[id].status = 'SAVING';
+        saveDownloadsData(savingData);
+        dispatchProgress(id, 99, 'SAVING');
+        dispatchStatusChange(id, 'SAVING');
+      }
+
+      // Step 3: Combine chunks and store in IndexedDB
+      const videoBlob = new Blob(chunks, { type: 'video/mp4' });
+      await _saveVideoToDB(id, videoBlob);
+
+      // Mark complete
+      const finalData = getDownloadsData();
+      if (finalData[id]) {
+        finalData[id].status = 'COMPLETED';
+        finalData[id].progress = 100;
+        saveDownloadsData(finalData);
+        dispatchProgress(id, 100, 'COMPLETED');
+        dispatchStatusChange(id, 'COMPLETED');
+      }
+
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        console.log(`[DownloadManager] Web download paused/aborted: ${id}`);
+        return;
+      }
+      console.error('[DownloadManager] Desktop download failed:', e);
+      alert(`Download failed: ${e.message || e}`);
+      const cur = getDownloadsData();
+      if (cur[id]) {
+        cur[id].status = 'ERROR';
+        saveDownloadsData(cur);
+        dispatchStatusChange(id, 'ERROR');
+      }
+    } finally {
+      delete activeWebDownloads[id];
+    }
   },
 
   async pause(id) {
@@ -278,6 +398,10 @@ export const DownloadManager = {
       data[id].status = 'PAUSED';
       saveDownloadsData(data);
       dispatchStatusChange(id, 'PAUSED');
+      if (activeWebDownloads[id]) {
+        activeWebDownloads[id].abort();
+        delete activeWebDownloads[id];
+      }
     }
   },
 
@@ -302,6 +426,16 @@ export const DownloadManager = {
         await Filesystem.deleteFile({ path: item.fileName, directory: Directory.Data });
       } catch (e) {
         console.warn('[DownloadManager] File already removed:', e.message);
+      }
+    } else if (!Capacitor.isNativePlatform()) {
+      try {
+        await _deleteVideoFromDB(id);
+      } catch (e) {
+        console.warn('[DownloadManager] Failed to delete video from DB:', e);
+      }
+      if (activeWebDownloads[id]) {
+        activeWebDownloads[id].abort();
+        delete activeWebDownloads[id];
       }
     }
 
@@ -340,15 +474,25 @@ export const DownloadManager = {
   async getOfflineUrl(id) {
     const data = getDownloadsData();
     const item = data[id];
-    if (!item || item.status !== 'COMPLETED' || !item.fileName) return null;
+    if (!item || item.status !== 'COMPLETED') return null;
 
     if (Capacitor.isNativePlatform()) {
+      if (!item.fileName) return null;
       try {
         const uri = await Filesystem.getUri({ path: item.fileName, directory: Directory.Data });
         return Capacitor.convertFileSrc(uri.uri);
       } catch (e) {
         console.error('[DownloadManager] Failed to get URI:', e);
         return null;
+      }
+    } else {
+      try {
+        const blob = await _getVideoFromDB(id);
+        if (blob) {
+          return URL.createObjectURL(blob);
+        }
+      } catch (e) {
+        console.error('[DownloadManager] Failed to get local video blob:', e);
       }
     }
     return null;
