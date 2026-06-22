@@ -86,8 +86,12 @@ function saveCacheToDisk() {
 
 function getCached(key) {
   const entry = cache.get(key);
-  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
   if (entry) {
+    const isStable = entry.data && entry.data.provider === 'MovieBox';
+    const ttl = isStable ? CACHE_TTL : 5 * 60 * 1000; // 12 hours for MovieBox streams, 5 minutes for scrapers/embeds (which have transient URLs)
+    if (Date.now() - entry.ts < ttl) return entry.data;
+
+    // Expired
     cache.delete(key);
     saveCacheToDisk();
   }

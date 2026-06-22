@@ -7,6 +7,7 @@
 
 import asyncio
 import logging
+import time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -72,11 +73,38 @@ tv_listings_cache = {}
 
 async def _get_episode_streams(client, subject_id: str, season: int, episode: int):
     """Fetch streams for a specific TV episode, utilizing cache to avoid redundant API queries."""
-    cache_entry = tv_listings_cache.setdefault(subject_id, {"metadata": {}, "episodes": {}, "fetched_pages": set()})
+    now = time.time()
+    episode_key = (season, episode)
+    print(f"[DEBUG] _get_episode_streams: subject_id={subject_id}, season={season}, episode={episode}")
+
+    # Cache expiration logic:
+    # 1. More than 10 minutes old (600s)
+    # 2. OR the target episode is missing and the cache entry is more than 60 seconds old
+    cache_entry = tv_listings_cache.get(subject_id)
+    if cache_entry:
+        is_expired = False
+        if now - cache_entry.get("last_fetched", 0) > 600:
+            is_expired = True
+        elif episode_key not in cache_entry.get("episodes", {}) and now - cache_entry.get("last_fetched", 0) > 60:
+            is_expired = True
+            
+        if is_expired:
+            print(f"[DEBUG] Expiring stale cache entry for subject_id={subject_id}")
+            log.warning("[Cache Invalidation] Expiring TV listings cache for subject %s S%dE%d", subject_id, season, episode)
+            tv_listings_cache.pop(subject_id, None)
+            cache_entry = None
+
+    if not cache_entry:
+        cache_entry = tv_listings_cache.setdefault(subject_id, {
+            "metadata": {},
+            "episodes": {},
+            "fetched_pages": set(),
+            "last_fetched": now
+        })
     
     # Check if we already cached this episode
-    episode_key = (season, episode)
     if episode_key in cache_entry["episodes"]:
+        print(f"[DEBUG] Cache Hit! Serving S{season}E{episode}")
         log.warning("[Cache Hit] Serving TV stream for subject %s S%dE%d from memory", subject_id, season, episode)
         return cache_entry["metadata"], [cache_entry["episodes"][episode_key]]
 
@@ -84,6 +112,7 @@ async def _get_episode_streams(client, subject_id: str, season: int, episode: in
     if cache_entry["fetched_pages"]:
         max_cached_season = max((se for se, ep in cache_entry["episodes"].keys()), default=0)
         if season < max_cached_season:
+            print(f"[DEBUG] Overshot earlier: season {season} < max_cached_season {max_cached_season}. Episode does not exist.")
             return {}, []
 
     MAX_PAGES = 20
@@ -98,8 +127,10 @@ async def _get_episode_streams(client, subject_id: str, season: int, episode: in
                 "page": page,
                 "perPage": 20,
             }
+            print(f"[DEBUG] Fetching page {page} for subject_id={subject_id}")
             raw = await client.get_from_api(RESOURCE_PATH, params=params)
             items = raw.get("list") or raw.get("mediaFiles") or raw.get("streams") or []
+            print(f"[DEBUG] Page {page} fetched. Items count: {len(items)}")
 
             if not items:
                 break  # No more pages
@@ -122,18 +153,24 @@ async def _get_episode_streams(client, subject_id: str, season: int, episode: in
 
             # Check if our target episode is now in the cache
             if episode_key in cache_entry["episodes"]:
+                print(f"[DEBUG] Target episode found on page {page}!")
                 return cache_entry["metadata"], [cache_entry["episodes"][episode_key]]
 
             # Optimization: if all episodes on this page are past our target season, stop
             max_season_on_page = max((f.get("se") or 0) for f in items)
             if max_season_on_page > season:
+                print(f"[DEBUG] max_season_on_page {max_season_on_page} > target season {season}. Stopping page fetch.")
                 break
 
         except Exception as e:
+            print(f"[DEBUG] Error fetching page {page}: {e}")
             log.warning("Failed to fetch page %d for episode streams: %s", page, e)
             break
 
+    print(f"[DEBUG] Stream not found after checking pages. Returning empty list.")
     return {}, []
+
+
 
 
 def pick_best(files: list) -> dict | None:
