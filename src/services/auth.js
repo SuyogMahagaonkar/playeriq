@@ -211,8 +211,12 @@ export async function saveProgress(media) {
 }
 
 export async function getWatchHistory() {
-  if (currentUser) {
-    return await fetchWatchHistory(currentUser.uid);
+  if (currentUser && navigator.onLine) {
+    try {
+      return await fetchWatchHistory(currentUser.uid);
+    } catch (e) {
+      console.warn('[Auth] Failed to fetch online watch history:', e);
+    }
   }
   return getProgress();
 }
