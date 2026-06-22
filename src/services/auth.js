@@ -61,22 +61,24 @@ function notifyListeners() {
   listeners.forEach(fn => fn(currentUser));
 }
 
-// ---- Bootstrap auth listener ----
-export function initAuth() {
-  onAuthChange(async (user) => {
-    currentUser = user;
+// ---- Asynchronous background user session initialization ----
+async function syncUserSession(user) {
+  try {
+    // Persist user profile
+    await saveUserProfile(user.uid, {
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      lastLogin: new Date().toISOString()
+    });
+  } catch (e) {
+    console.warn('[Auth] Failed to save user profile:', e);
+  }
 
-    if (user) {
-      // Persist user profile
-      await saveUserProfile(user.uid, {
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        lastLogin: new Date().toISOString()
-      });
-
-      // Sync settings to localStorage for synchronous access in API calls
-      const prefs = await getSettings(user.uid);
+  try {
+    // Sync settings to localStorage for synchronous access in API calls
+    const prefs = await getSettings(user.uid);
+    if (prefs) {
       localStorage.setItem('piq_safesearch', prefs.safeSearch ? 'true' : 'false');
       localStorage.setItem('piq_theme_color', prefs.themeColor || 'red');
       localStorage.setItem('piq_theme_dark', prefs.themeDark ? 'oled' : 'default');
@@ -86,19 +88,35 @@ export function initAuth() {
       localStorage.setItem('piq_sub_color', prefs.subtitleColor || '#ffffff');
       localStorage.setItem('piq_sub_bg_opacity', String(prefs.subtitleBgOpacity ?? 0.5));
       localStorage.setItem('piq_quality', prefs.quality || 'auto');
-
       // Apply the user's customized theme instantly
       applyGlobalTheme();
+    }
+  } catch (e) {
+    console.warn('[Auth] Failed to sync user settings:', e);
+  }
 
-      // Migrate any existing localStorage history to Firestore
-      const localHistory = getProgress();
-      if (localHistory.length > 0) {
-        console.log('[Auth] Migrating local watch history to Firestore...');
-        for (const item of localHistory) {
-          await saveProgressToCloud(user.uid, item);
-        }
-        clearProgressLocal();
+  try {
+    // Migrate any existing localStorage history to Firestore
+    const localHistory = getProgress();
+    if (localHistory.length > 0) {
+      console.log('[Auth] Migrating local watch history to Firestore...');
+      for (const item of localHistory) {
+        await saveProgressToCloud(user.uid, item);
       }
+      clearProgressLocal();
+    }
+  } catch (e) {
+    console.warn('[Auth] Failed to migrate watch history:', e);
+  }
+}
+
+// ---- Bootstrap auth listener ----
+export function initAuth() {
+  onAuthChange(async (user) => {
+    currentUser = user;
+
+    if (user) {
+      syncUserSession(user);
     } else {
       // User logged out - clear all user-specific settings so they don't bleed into guest/other sessions
       localStorage.removeItem('piq_safesearch');
