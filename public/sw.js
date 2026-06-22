@@ -2,15 +2,8 @@ const CACHE_NAME = 'playeriq-v18';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/src/main.js',
   '/manifest.json',
-  '/icon.svg',
-  '/src/styles/variables.css',
-  '/src/styles/base.css',
-  '/src/styles/animations.css',
-  '/src/styles/sidebar.css',
-  '/src/styles/navbar.css',
-  '/src/styles/responsive.css'
+  '/icon.svg'
 ];
 
 // Install Event — cache structural app shell files
@@ -156,7 +149,7 @@ self.addEventListener('fetch', (event) => {
       // Otherwise fetch dynamically over network
       return fetch(req)
         .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
             return networkResponse;
           }
 
