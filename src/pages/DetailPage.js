@@ -52,44 +52,45 @@ async function setupDownloadButton(btn, downloadId, type, title, posterPath) {
     
     // Check if it is a detail button or episode button
     const isDetailBtn = btn.classList.contains('detail-btn');
+    const hasText = isDetailBtn || btn.classList.contains('desktop-ep-download-btn');
     
     if (status === 'DOWNLOADING' || status === 'SAVING') {
       btn.classList.add('downloading');
       const text = status === 'SAVING' ? 'Saving…' : `Downloading (${progress}%)`;
       btn.innerHTML = `
-        <svg class="progress-ring" width="20" height="20" style="transform: rotate(-90deg); margin-right: ${isDetailBtn ? '8px' : '0'};">
+        <svg class="progress-ring" width="20" height="20" style="transform: rotate(-90deg); margin-right: ${hasText ? '8px' : '0'};">
           <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.1)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10"/>
           <circle class="progress-ring-bar" stroke="var(--primary, #a855f7)" stroke-width="2" fill="transparent" r="8" cx="10" cy="10" 
             stroke-dasharray="50.2" stroke-dashoffset="${50.2 - (50.2 * progress) / 100}"/>
         </svg>
-        <span>${isDetailBtn ? text : ''}</span>
+        <span>${hasText ? text : ''}</span>
       `;
       btn.title = status === 'SAVING' ? 'Saving to device...' : `Downloading... ${progress}%`;
     } else if (status === 'COMPLETED') {
       btn.classList.add('completed');
       btn.innerHTML = `
-        <i data-lucide="check-circle" style="color:#10b981; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
-        <span>${isDetailBtn ? 'Downloaded' : ''}</span>
+        <i data-lucide="check-circle" style="color:#10b981; width:18px; height:18px; margin-right: ${hasText ? '8px' : '0'};"></i>
+        <span>${hasText ? 'Downloaded' : ''}</span>
       `;
       btn.title = 'Downloaded';
     } else if (status === 'PAUSED') {
       btn.classList.add('paused');
       btn.innerHTML = `
-        <i data-lucide="play-circle" style="color:#fbbf24; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
-        <span>${isDetailBtn ? 'Paused' : ''}</span>
+        <i data-lucide="play-circle" style="color:#fbbf24; width:18px; height:18px; margin-right: ${hasText ? '8px' : '0'};"></i>
+        <span>${hasText ? 'Paused' : ''}</span>
       `;
       btn.title = 'Paused';
     } else if (status === 'EXPIRED') {
       btn.classList.add('expired');
       btn.innerHTML = `
-        <i data-lucide="alert-circle" style="color:#ef4444; width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
-        <span>${isDetailBtn ? 'License Expired' : ''}</span>
+        <i data-lucide="alert-circle" style="color:#ef4444; width:18px; height:18px; margin-right: ${hasText ? '8px' : '0'};"></i>
+        <span>${hasText ? 'License Expired' : ''}</span>
       `;
       btn.title = 'License Expired - Tap to Renew';
     } else {
       btn.innerHTML = `
-        <i data-lucide="download" style="width:18px; height:18px; margin-right: ${isDetailBtn ? '8px' : '0'};"></i>
-        <span>${isDetailBtn ? 'Download' : ''}</span>
+        <i data-lucide="download" style="width:18px; height:18px; margin-right: ${hasText ? '8px' : '0'};"></i>
+        <span>${hasText ? 'Download' : ''}</span>
       `;
       btn.title = 'Download';
     }
@@ -412,7 +413,7 @@ export async function renderDetailPage({ params, container }) {
                   <i data-lucide="users" style="width:18px;height:18px"></i>
                   <span>Watch Together</span>
                 </button>
-                ${!isTV && window.innerWidth <= 767 ? `
+                ${!isTV ? `
                   <button class="detail-btn detail-btn-secondary detail-btn-download" id="detail-download-btn">
                     <i data-lucide="download" style="width:18px;height:18px"></i>
                     <span id="detail-download-btn-text">Download</span>
@@ -653,7 +654,7 @@ export async function renderDetailPage({ params, container }) {
       }
     });
 
-    if (!isTV && window.innerWidth <= 767) {
+    if (!isTV) {
       const downloadBtn = document.getElementById('detail-download-btn');
       if (downloadBtn) {
         const posterPath = data.poster_path ? img.poster(data.poster_path, 'w500') : '';
@@ -1286,6 +1287,12 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
                   <span>Notify Me</span>
                 </button>
               ` : ''}
+              ${!isLocked ? `
+                <button class="desktop-ep-download-btn" data-ep-index="${allEpisodes.indexOf(ep)}" title="Download Episode ${ep.episode_number}" aria-label="Download Episode ${ep.episode_number}">
+                  <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                  <span>Download</span>
+                </button>
+              ` : ''}
             </div>
           </div>
         `;
@@ -1350,7 +1357,7 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
 
       listEl.querySelectorAll('.episode-card').forEach(card => {
         card.addEventListener('click', (e) => {
-          if (e.target.closest('.notify-btn')) {
+          if (e.target.closest('.notify-btn') || e.target.closest('.desktop-ep-download-btn')) {
             e.stopPropagation();
             return;
           }
@@ -1363,6 +1370,18 @@ async function loadEpisodes(tvId, seasonNumber, title = null, year = null, pageN
           const route = card.dataset.route;
           if (route) window.location.hash = route;
         });
+      });
+
+      // Initialize desktop episode download buttons
+      listEl.querySelectorAll('.desktop-ep-download-btn').forEach(btn => {
+        const epIndex = parseInt(btn.dataset.epIndex);
+        const ep = season.episodes[epIndex];
+        if (ep) {
+          const downloadId = `tv_${tvId}_s${seasonNumber}_e${ep.episode_number}`;
+          const stillSrc = ep.still_path ? img.still(ep.still_path) : '';
+          const epTitle = `S${seasonNumber} E${ep.episode_number}: ${ep.name || 'Episode ' + ep.episode_number}`;
+          setupDownloadButton(btn, downloadId, 'tv', epTitle, stillSrc);
+        }
       });
     }
 
