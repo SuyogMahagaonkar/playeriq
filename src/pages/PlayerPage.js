@@ -568,10 +568,8 @@ async function loadPlayer(id, isTV, season, episode, title, imdbId, posterPath =
     const match = downloads.find(x => x.id === downloadId && x.status === 'COMPLETED');
 
     const playOfflineMatch = async (downloadedMatch) => {
-      let localUrl = '';
-      if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
-        localUrl = await DownloadManager.getOfflineUrl(downloadedMatch.id);
-      } else {
+      let localUrl = await DownloadManager.getOfflineUrl(downloadedMatch.id);
+      if (!localUrl) {
         // Fallback demo video for web
         localUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
       }

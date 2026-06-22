@@ -139,17 +139,6 @@ export function renderDownloadsPage(ctx) {
   window.scrollTo(0, 0);
   updateSidebarActive?.();
 
-  // ---- Not available on web ----
-  if (!Capacitor.isNativePlatform()) {
-    container.innerHTML = `
-      <div class="downloads-native-only">
-        <div class="native-icon">📲</div>
-        <h2>Android App Required</h2>
-        <p>Offline downloads are only available in the native Android app for secure sandboxed playback.</p>
-      </div>
-    `;
-    return;
-  }
 
   // ---- Build the page shell ----
   const page = document.createElement('div');
