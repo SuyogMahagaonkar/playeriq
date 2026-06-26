@@ -7,6 +7,7 @@ import { getSettings, saveSettings, clearAllWatchHistory, getGlobalConfig, saveG
 import { navigate, getCurrentPath } from '../services/router.js';
 import { refreshSidebarNav } from './Sidebar.js';
 import { showCustomConfirm, showCustomAlert } from './CustomDialog.js';
+import { DownloadManager } from '../services/download.js';
 
 let parentalPin = '';
 
@@ -428,17 +429,37 @@ export async function openSettingsDrawer() {
   });
 
   // Purge cache
-  drawer.querySelector('#drawer-btn-purge-cache')?.addEventListener('click', () => {
-    const itemsToKeep = ['piq_safesearch', 'piq_theme_color', 'piq_theme_dark', 'piq_seek_interval', 'piq_skip_recaps', 'piq_sub_size', 'piq_sub_color', 'piq_sub_bg_opacity', 'piq_sub_position', 'piq_quality'];
-    const keys = Object.keys(localStorage);
-    for (const key of keys) {
-      if (!itemsToKeep.includes(key) && !key.startsWith('firebase:')) {
-        localStorage.removeItem(key);
-      }
-    }
+  drawer.querySelector('#drawer-btn-purge-cache')?.addEventListener('click', async () => {
+    const purgeBtn = drawer.querySelector('#drawer-btn-purge-cache');
     const gaugeEl = drawer.querySelector('#drawer-cache-size-gauge');
-    if (gaugeEl) gaugeEl.textContent = '0.00 MB';
-    showToast('🧹 Cache purged successfully!');
+    if (!purgeBtn || purgeBtn.disabled) return;
+
+    const originalHTML = purgeBtn.innerHTML;
+    purgeBtn.disabled = true;
+    purgeBtn.innerHTML = `<span class="load-more-spinner" style="width:10px;height:10px;border-width:2px;display:inline-block;margin:0"></span>`;
+
+    try {
+      let startBytes = 0;
+      try {
+        const est = await DownloadManager.getStorageEstimate();
+        const downloadedBytes = await DownloadManager.getDownloadedBytes();
+        startBytes = Math.max(0, est.usage - downloadedBytes);
+      } catch (err) {}
+
+      await DownloadManager.purgeCacheStorage();
+
+      if (gaugeEl) {
+        animateGaugeDown(gaugeEl, startBytes);
+      }
+      showToast('🧹 Cache purged successfully!');
+    } catch (e) {
+      showToast('❌ Failed to clear cache');
+    } finally {
+      setTimeout(() => {
+        purgeBtn.disabled = false;
+        purgeBtn.innerHTML = originalHTML;
+      }, 900);
+    }
   });
 
   // SafeSearch filter toggling
@@ -496,12 +517,48 @@ export async function openSettingsDrawer() {
     navigate('/');
   });
 
+  const formatSize = (bytes) => {
+    if (!bytes) return '0.00 MB';
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const animateGaugeDown = (gaugeEl, startBytes) => {
+    const duration = 800; // ms
+    const startTime = performance.now();
+    
+    const update = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - (1 - progress) * (1 - progress);
+      const currentBytes = Math.max(0, startBytes - (startBytes * ease));
+      
+      gaugeEl.textContent = formatSize(currentBytes);
+      
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        gaugeEl.textContent = '0.00 MB';
+      }
+    };
+    requestAnimationFrame(update);
+  };
+
   // Estimate cache
-  const baseVal = 4.2; 
-  const variableVal = Math.random() * 2.5;
-  const total = (baseVal + variableVal).toFixed(2);
-  const gaugeEl = drawer.querySelector('#drawer-cache-size-gauge');
-  if (gaugeEl) gaugeEl.textContent = `${total} MB`;
+  const estimateCacheFootprint = async () => {
+    const gaugeEl = drawer.querySelector('#drawer-cache-size-gauge');
+    if (!gaugeEl) return;
+    
+    try {
+      const est = await DownloadManager.getStorageEstimate();
+      const downloadedBytes = await DownloadManager.getDownloadedBytes();
+      const cacheBytes = Math.max(0, est.usage - downloadedBytes);
+      gaugeEl.textContent = formatSize(cacheBytes);
+    } catch (err) {
+      gaugeEl.textContent = '0.00 MB';
+    }
+  };
+  estimateCacheFootprint();
 
   // Wire Editable Display Name Actions inside Settings Drawer
   const editNameBtn = drawer.querySelector('#drawer-edit-name-btn');

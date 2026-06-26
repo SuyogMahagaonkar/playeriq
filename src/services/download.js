@@ -471,6 +471,77 @@ export const DownloadManager = {
     return { usage: 2e9, quota: total, totalDisk: total, freeSpace: 28e9 };
   },
 
+  async getDownloadedBytes() {
+    if (Capacitor.isNativePlatform()) {
+      const items = await this.list();
+      let total = 0;
+      for (const item of items) {
+        if (item.status === 'COMPLETED' && item.fileName) {
+          try {
+            const stat = await Filesystem.stat({
+              path: item.fileName,
+              directory: Directory.Data
+            });
+            total += stat.size || 0;
+          } catch (e) {}
+        }
+      }
+      return total;
+    } else {
+      try {
+        const db = await _openDB();
+        return new Promise((resolve) => {
+          const transaction = db.transaction(STORE_NAME, 'readonly');
+          const store = transaction.objectStore(STORE_NAME);
+          let total = 0;
+          const request = store.openCursor();
+          request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              const blob = cursor.value;
+              if (blob && blob.size) {
+                total += blob.size;
+              }
+              cursor.continue();
+            } else {
+              resolve(total);
+            }
+          };
+          request.onerror = () => {
+            resolve(0);
+          };
+        });
+      } catch (e) {
+        return 0;
+      }
+    }
+  },
+
+  async purgeCacheStorage() {
+    if (window.caches) {
+      try {
+        const keys = await window.caches.keys();
+        for (const key of keys) {
+          await window.caches.delete(key);
+        }
+      } catch (e) {
+        console.error('[DownloadManager] Failed to clear Cache Storage:', e);
+      }
+    }
+    const itemsToKeep = [
+      'piq_safesearch', 'piq_theme_color', 'piq_theme_dark', 
+      'piq_seek_interval', 'piq_skip_recaps', 'piq_sub_size', 
+      'piq_sub_color', 'piq_sub_bg_opacity', 'piq_sub_position', 'piq_quality'
+    ];
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      if (!itemsToKeep.includes(key) && !key.startsWith('firebase:')) {
+        localStorage.removeItem(key);
+      }
+    }
+  },
+
+
   async getOfflineUrl(id) {
     const data = getDownloadsData();
     const item = data[id];

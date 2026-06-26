@@ -184,18 +184,24 @@ export function renderDownloadsPage(ctx) {
   // ---- Storage bar ----
   async function renderStorageBar() {
     try {
-      const est     = await DownloadManager.getStorageEstimate();
-      const usedPct = Math.min(100, Math.round((est.usage / est.totalDisk) * 100));
+      const est             = await DownloadManager.getStorageEstimate();
+      const downloadedBytes = await DownloadManager.getDownloadedBytes();
+      const usedPct         = Math.min(100, Math.round((downloadedBytes / est.totalDisk) * 100));
       storageBar.style.display = 'block';
       storageBar.innerHTML = `
         <div class="storage-bar-row">
-          <span><strong>${_formatSize(est.usage)}</strong> PlayerIQ</span>
+          <span><strong>${_formatSize(downloadedBytes)}</strong> Downloaded</span>
           <span><strong>${_formatSize(est.freeSpace)}</strong> free</span>
         </div>
         <div class="storage-bar-track">
-          <div class="storage-bar-fill" style="width:${usedPct}%"></div>
+          <div class="storage-bar-fill" style="width: 0%;"></div>
         </div>
       `;
+      // Trigger smooth width micro-animation
+      const fillEl = storageBar.querySelector('.storage-bar-fill');
+      setTimeout(() => {
+        if (fillEl) fillEl.style.width = `${usedPct}%`;
+      }, 50);
     } catch (e) { /* ignore */ }
   }
   renderStorageBar();

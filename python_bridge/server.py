@@ -29,6 +29,20 @@ from moviebox_api.v3.core import (
     Homepage,
     DownloadableCaptionFileDetails
 )
+from moviebox_api.v3.urls import MAIN_PAGE_PATH
+
+# Monkey-patch MovieBoxHttpClient.__aenter__ to automatically pre-warm the guest token
+_orig_aenter = MovieBoxHttpClient.__aenter__
+
+async def _patched_aenter(self):
+    await _orig_aenter(self)
+    try:
+        await self.get(MAIN_PAGE_PATH)
+    except Exception as e:
+        log.warning("Failed to auto-authenticate MovieBox client: %s", e)
+    return self
+
+MovieBoxHttpClient.__aenter__ = _patched_aenter
 
 
 def run_async(coro):

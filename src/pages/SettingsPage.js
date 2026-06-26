@@ -449,8 +449,8 @@ export async function renderSettingsPage({ container }) {
                   <div id="storage-bar-free" style="background:#22c55e; width:0%; transition:width 0.3s;"></div>
                 </div>
                 <div class="storage-legend" style="display:flex; gap:12px; font-size:11px; color:var(--text-muted);">
-                  <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span> PlayerIQ</div>
-                  <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#555;"></span> Other Apps</div>
+                  <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span> Downloads</div>
+                  <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#555;"></span> App Cache</div>
                   <div style="display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e;"></span> Free</div>
                 </div>
               </div>
@@ -1134,14 +1134,45 @@ export async function renderSettingsPage({ container }) {
     previewEl.style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
   };
 
-  const estimateCacheFootprint = () => {
+  const formatSize = (bytes) => {
+    if (!bytes) return '0.00 MB';
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const animateGaugeDown = (gaugeEl, startBytes) => {
+    const duration = 800; // ms
+    const startTime = performance.now();
+    
+    const update = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - (1 - progress) * (1 - progress);
+      const currentBytes = Math.max(0, startBytes - (startBytes * ease));
+      
+      gaugeEl.textContent = formatSize(currentBytes);
+      
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        gaugeEl.textContent = '0.00 MB';
+      }
+    };
+    requestAnimationFrame(update);
+  };
+
+  const estimateCacheFootprint = async () => {
     const gaugeEl = container.querySelector('#cache-size-gauge');
     if (!gaugeEl) return;
     
-    const baseVal = 4.2; 
-    const variableVal = Math.random() * 2.5;
-    const total = (baseVal + variableVal).toFixed(2);
-    gaugeEl.textContent = `${total} MB`;
+    try {
+      const est = await DownloadManager.getStorageEstimate();
+      const downloadedBytes = await DownloadManager.getDownloadedBytes();
+      const cacheBytes = Math.max(0, est.usage - downloadedBytes);
+      gaugeEl.textContent = formatSize(cacheBytes);
+    } catch (err) {
+      gaugeEl.textContent = '0.00 MB';
+    }
   };
 
   // Wire general preference change listeners
@@ -1220,18 +1251,41 @@ export async function renderSettingsPage({ container }) {
 
   // Wire cache purger footprint action
   estimateCacheFootprint();
-  container.querySelector('#btn-purge-cache')?.addEventListener('click', () => {
-    const itemsToKeep = ['piq_safesearch', 'piq_theme_color', 'piq_theme_dark', 'piq_seek_interval', 'piq_skip_recaps', 'piq_sub_size', 'piq_sub_color', 'piq_sub_bg_opacity', 'piq_sub_position', 'piq_quality'];
-    const keys = Object.keys(localStorage);
-    for (const key of keys) {
-      if (!itemsToKeep.includes(key) && !key.startsWith('firebase:')) {
-        localStorage.removeItem(key);
-      }
-    }
-    
+  container.querySelector('#btn-purge-cache')?.addEventListener('click', async () => {
+    const purgeBtn = container.querySelector('#btn-purge-cache');
     const gaugeEl = container.querySelector('#cache-size-gauge');
-    if (gaugeEl) gaugeEl.textContent = '0.00 MB';
-    showToast('🧹 Cache purged successfully!');
+    if (!purgeBtn || purgeBtn.disabled) return;
+
+    const originalHTML = purgeBtn.innerHTML;
+    purgeBtn.disabled = true;
+    purgeBtn.innerHTML = `<span class="load-more-spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;margin:0 6px 0 0;vertical-align:middle;"></span> Purging...`;
+
+    try {
+      let startBytes = 0;
+      try {
+        const est = await DownloadManager.getStorageEstimate();
+        const downloadedBytes = await DownloadManager.getDownloadedBytes();
+        startBytes = Math.max(0, est.usage - downloadedBytes);
+      } catch (err) {}
+
+      await DownloadManager.purgeCacheStorage();
+
+      if (gaugeEl) {
+        animateGaugeDown(gaugeEl, startBytes);
+      }
+      showToast('🧹 Cache purged successfully!');
+      
+      if (typeof updateDownloadDashboard === 'function') {
+        updateDownloadDashboard();
+      }
+    } catch (e) {
+      showToast('❌ Failed to clear cache');
+    } finally {
+      setTimeout(() => {
+        purgeBtn.disabled = false;
+        purgeBtn.innerHTML = originalHTML;
+      }, 900);
+    }
   });
 
   const safesearchCheckbox = container.querySelector('#pref-safesearch');
@@ -1490,14 +1544,15 @@ export async function renderSettingsPage({ container }) {
 
       // Storage Estimate
       const est = await DownloadManager.getStorageEstimate();
+      const downloadedBytes = await DownloadManager.getDownloadedBytes();
       const formatGB = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(1);
       
       if (storageText) {
         storageText.textContent = `${formatGB(est.freeSpace)} GB free of ${formatGB(est.totalDisk)} GB`;
       }
 
-      const playerPct = (est.usage / est.totalDisk) * 100;
-      const otherPct = (est.otherApps / est.totalDisk) * 100;
+      const playerPct = (downloadedBytes / est.totalDisk) * 100;
+      const otherPct = (Math.max(0, est.usage - downloadedBytes) / est.totalDisk) * 100;
       const freePct = (est.freeSpace / est.totalDisk) * 100;
 
       if (barPlayer) barPlayer.style.width = `${playerPct}%`;
