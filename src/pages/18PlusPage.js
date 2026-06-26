@@ -9,6 +9,7 @@ import { navigate } from '../services/router.js';
 
 let currentTab = 'all';
 let isLoading = false;
+let loadedMore = false;
 
 const TABS = [
   { id: 'all', name: '🔥 All Adult Content' },
@@ -26,6 +27,7 @@ export async function render18PlusPage({ container }) {
 
   isLoading = false;
   currentTab = 'all';
+  loadedMore = false;
 
   container.innerHTML = `
     <div class="movie-grid-page adult-zone-page animate-fade-in">
@@ -46,6 +48,13 @@ export async function render18PlusPage({ container }) {
       </div>
 
       <div class="movie-grid stagger-children" id="adult-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px;"></div>
+      
+      <div id="adult-load-more-container" style="display: none; justify-content: center; margin: 30px 0 10px;">
+        <button id="adult-load-more-btn" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: var(--text-normal); padding: 10px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+          <span>Load More Adult Content</span>
+          <div id="adult-load-more-spinner" class="load-more-btn-spinner" style="display: none; width: 14px; height: 14px; border-width: 2px;"></div>
+        </button>
+      </div>
     </div>
     ${createFooter()}
   `;
@@ -70,26 +79,46 @@ export async function render18PlusPage({ container }) {
       document.querySelectorAll('#adult-tabs .genre-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
       currentTab = pill.dataset.tab;
+      loadedMore = false;
       await loadAdultContent();
     });
   });
 
+  // Load More Button Click
+  const loadMoreBtn = document.getElementById('adult-load-more-btn');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', async () => {
+      const spinner = document.getElementById('adult-load-more-spinner');
+      if (spinner) spinner.style.display = 'inline-block';
+      loadMoreBtn.disabled = true;
+      loadedMore = true;
+      await loadAdultContent(true);
+    });
+  }
+
   if (window.lucide) window.lucide.createIcons();
 }
 
-async function loadAdultContent() {
-  if (isLoading) return;
+async function loadAdultContent(append = false) {
   isLoading = true;
 
   const grid = document.getElementById('adult-grid');
-  if (grid) {
+  const loadMoreContainer = document.getElementById('adult-load-more-container');
+  const loadMoreBtn = document.getElementById('adult-load-more-btn');
+  const loadMoreSpinner = document.getElementById('adult-load-more-spinner');
+
+  if (!append && grid) {
     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><div class="load-more-spinner" style="margin: 0 auto 15px;"></div>Decrypting SafeSearch Bypass...</div>';
   }
 
   try {
     let searchQueries = [];
     if (currentTab === 'all') {
-      searchQueries = ['vivamax', 'ullu', 'kooku', 'primeplay', 'jav', 'hentai', 'sexa'];
+      if (append) {
+        searchQueries = ['kooku', 'hentai', 'sexa'];
+      } else {
+        searchQueries = ['vivamax', 'ullu', 'primeplay', 'jav'];
+      }
     } else if (currentTab === 'vivamax') {
       searchQueries = ['vivamax', 'sulutan', 'bula', 'higop'];
     } else if (currentTab === 'indian') {
@@ -106,6 +135,14 @@ async function loadAdultContent() {
     const seenIds = new Set();
     const mergedResults = [];
 
+    // If appending, preserve already rendered ids
+    if (append && grid) {
+      grid.querySelectorAll('.movie-card').forEach(card => {
+        const cleanId = card.dataset.id || card.id;
+        if (cleanId) seenIds.add(cleanId.replace('mb_', ''));
+      });
+    }
+
     responses.forEach(res => {
       if (res.results) {
         res.results.forEach(item => {
@@ -120,29 +157,56 @@ async function loadAdultContent() {
 
     if (!grid) return;
 
-    if (mergedResults.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No adult content found. Check server connections.</div>';
-    } else {
-      // Map and render cards (ignoring SafeSearch blocks here since we are in the explicit bypass screen!)
-      const cards = mergedResults.map(m => {
-        const typeStr = String(m.subjectType || m.type) === '2' ? 'tv' : 'movie';
-        const mapped = {
-          id: `mb_${m.subject_id || m.id || m.subjectId}`,
-          title: m.title,
-          poster_path: m.cover?.url || m.cover_url || m.poster_path,
-          vote_average: m.imdbRate || m.rating || null,
-          release_date: m.releaseDate || m.release_date || m.year,
-        };
-        return createMovieCard(mapped, typeStr);
-      }).join('');
+    const cards = mergedResults.map(m => {
+      const typeStr = String(m.subjectType || m.type) === '2' ? 'tv' : 'movie';
+      const mapped = {
+        id: `mb_${m.subject_id || m.id || m.subjectId}`,
+        title: m.title,
+        poster_path: m.cover?.url || m.cover_url || m.poster_path,
+        vote_average: m.imdbRate || m.rating || null,
+        release_date: m.releaseDate || m.release_date || m.year,
+      };
+      return createMovieCard(mapped, typeStr);
+    }).join('');
 
-      grid.innerHTML = cards;
-      attachCardClicks(grid);
+    if (append) {
+      if (mergedResults.length > 0) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cards;
+        while (tempDiv.firstChild) {
+          grid.appendChild(tempDiv.firstChild);
+        }
+        attachCardClicks(grid);
+      }
+    } else {
+      if (mergedResults.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No adult content found. Check server connections.</div>';
+      } else {
+        grid.innerHTML = cards;
+        attachCardClicks(grid);
+      }
+    }
+
+    // Toggle Load More button container visibility
+    if (loadMoreContainer) {
+      if (currentTab === 'all' && !loadedMore && mergedResults.length > 0) {
+        loadMoreContainer.style.display = 'flex';
+      } else {
+        loadMoreContainer.style.display = 'none';
+      }
     }
   } catch (err) {
     console.error('Failed to load adult catalog:', err);
-    if (grid) grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Failed to decrypt adult library. Please refresh.</div>';
+    if (!append && grid) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Failed to decrypt adult library. Please refresh.</div>';
+    }
   }
 
+  if (loadMoreBtn) {
+    loadMoreBtn.disabled = false;
+  }
+  if (loadMoreSpinner) {
+    loadMoreSpinner.style.display = 'none';
+  }
   isLoading = false;
 }

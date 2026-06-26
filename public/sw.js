@@ -1,4 +1,4 @@
-const CACHE_NAME = 'playeriq-v19';
+const CACHE_NAME = 'playeriq-v20';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -137,6 +137,46 @@ self.addEventListener('fetch', (event) => {
               const cachedTime = new Date(dateHeader).getTime();
               if (!isNaN(cachedTime)) {
                 isExpired = (Date.now() - cachedTime) > 24 * 60 * 60 * 1000;
+              }
+            }
+            if (!isExpired) {
+              return cachedResponse;
+            }
+            // If expired, wait for network, fallback to cache if offline
+            return fetchPromise.then(res => res || cachedResponse);
+          }
+
+          return fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // 3b. Stale-While-Revalidate caching for MovieBox search and home listings to reduce API traffic
+  if (
+    url.pathname.startsWith('/api/moviebox/search') || 
+    url.pathname.startsWith('/api/moviebox/home')
+  ) {
+    event.respondWith(
+      caches.open('playeriq-moviebox-listings').then((cache) => {
+        return cache.match(req).then((cachedResponse) => {
+          const fetchPromise = fetch(req).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(req, networkResponse.clone());
+            }
+            return networkResponse;
+          }).catch(() => null);
+
+          if (cachedResponse) {
+            const dateHeader = cachedResponse.headers.get('date');
+            let isExpired = false;
+            if (dateHeader) {
+              const cachedTime = new Date(dateHeader).getTime();
+              if (!isNaN(cachedTime)) {
+                // Expire searches after 2 hours, home after 6 hours
+                const expiryLimit = url.pathname.includes('/search') ? 2 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
+                isExpired = (Date.now() - cachedTime) > expiryLimit;
               }
             }
             if (!isExpired) {

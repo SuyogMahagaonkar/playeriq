@@ -30,6 +30,30 @@ from moviebox_api.v3.core import (
     DownloadableCaptionFileDetails
 )
 from moviebox_api.v3.urls import MAIN_PAGE_PATH
+import threading
+
+class SimpleTTLCache:
+    def __init__(self, ttl_seconds):
+        self.ttl = ttl_seconds
+        self.cache = {}
+        self.lock = threading.Lock()
+
+    def get(self, key):
+        with self.lock:
+            if key in self.cache:
+                val, expiry = self.cache[key]
+                if time.time() < expiry:
+                    return val
+                else:
+                    del self.cache[key]
+            return None
+
+    def set(self, key, val):
+        with self.lock:
+            self.cache[key] = (val, time.time() + self.ttl)
+
+search_cache = SimpleTTLCache(ttl_seconds=14400) # 4 hours
+home_cache = SimpleTTLCache(ttl_seconds=86400)   # 24 hours
 
 # Monkey-patch MovieBoxHttpClient.__aenter__ to automatically pre-warm the guest token
 _orig_aenter = MovieBoxHttpClient.__aenter__
@@ -236,6 +260,11 @@ def search_moviebox():
     if not q:
         return jsonify({"error": "Missing query parameter 'q'"}), 400
 
+    cache_key = f"search-{media_type}-{q}"
+    cached_res = search_cache.get(cache_key)
+    if cached_res is not None:
+        return jsonify(cached_res)
+
     async def fetch():
         results = []
         async with MovieBoxHttpClient() as client:
@@ -275,7 +304,9 @@ def search_moviebox():
 
     try:
         results = run_async(fetch())
-        return jsonify({"results": results, "query": q, "type": media_type})
+        res_data = {"results": results, "query": q, "type": media_type}
+        search_cache.set(cache_key, res_data)
+        return jsonify(res_data)
     except Exception as e:
         log.error("Search failed: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -520,6 +551,11 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
 @app.route("/api/moviebox/home")
 def get_moviebox_home():
     """Fetch native MovieBox homepage (curated rows and banners)."""
+    cache_key = "home_data"
+    cached_res = home_cache.get(cache_key)
+    if cached_res is not None:
+        return jsonify(cached_res)
+
     try:
         async def fetch():
             async with MovieBoxHttpClient() as client:
@@ -527,6 +563,7 @@ def get_moviebox_home():
                 return await home.get_content()
                 
         raw = run_async(fetch())
+        home_cache.set(cache_key, raw)
         return jsonify(raw)
     except Exception as e:
         log.error("Home fetch error: %s", e, exc_info=True)
