@@ -77,10 +77,41 @@ async function handleRoute() {
         container.className = 'page-content page-enter';
         // Scroll to top
         window.scrollTo({ top: 0 });
-        // Execute handler
-        const cleanup = await route.handler({ params, query, container });
-        if (typeof cleanup === 'function') {
-          currentCleanup = cleanup;
+        // Execute handler with safe fallback to catch module load/chunk errors
+        try {
+          const cleanup = await route.handler({ params, query, container });
+          if (typeof cleanup === 'function') {
+            currentCleanup = cleanup;
+          }
+        } catch (err) {
+          console.error('Routing/loading error:', err);
+          
+          // Check if this is a chunk load / dynamically imported module fetch error
+          const isChunkLoadError = 
+            err.name === 'TypeError' || 
+            err.message?.toLowerCase().includes('failed to fetch dynamically imported module') ||
+            err.message?.toLowerCase().includes('chunkloaderror') ||
+            err.message?.toLowerCase().includes('error loading');
+            
+          if (isChunkLoadError) {
+            // Auto-reload to fetch the updated index.html and assets
+            const lastReload = sessionStorage.getItem('piq_chunk_reload');
+            const now = Date.now();
+            if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+              sessionStorage.setItem('piq_chunk_reload', String(now));
+              window.location.reload();
+              return;
+            }
+          }
+          
+          container.innerHTML = `
+            <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; text-align: center; padding: 40px;">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--danger, #ef4444)" stroke-width="1.5" style="width: 64px; height: 64px; margin-bottom: 20px; color: var(--danger, #ef4444);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div class="empty-state-title" style="font-size: 20px; font-weight: 600; color: var(--text-normal, #f3f4f6); margin-bottom: 8px;">Application Update Required</div>
+              <div class="empty-state-text" style="font-size: 14px; color: var(--text-dim, #9ca3af); max-width: 320px; margin: 0 auto 20px; line-height: 1.5;">A new version of the app is available. Please reload to apply updates.</div>
+              <button onclick="window.location.reload()" class="btn btn-primary" style="background: var(--accent, #a855f7); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 15px rgba(168,85,247,0.3);">Reload App</button>
+            </div>
+          `;
         }
       }
       return;
