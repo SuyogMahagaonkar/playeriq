@@ -1,4 +1,4 @@
-const CACHE_NAME = 'playeriq-v18';
+const CACHE_NAME = 'playeriq-v19';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -38,6 +38,29 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
+
+  // 0. Network-First for HTML documents (index.html, root) to prevent stale chunk errors on updates
+  if (req.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(req)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const cacheCopy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(req, cacheCopy);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(req).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return caches.match('/');
+          });
+        })
+    );
+    return;
+  }
 
   // 1. Cache-First for TMDB images (immutable poster/backdrop paths)
   if (url.hostname.includes('image.tmdb.org')) {
