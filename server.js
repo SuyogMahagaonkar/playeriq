@@ -643,10 +643,21 @@ async function findMovieBoxMatch(title, year, type) {
         }
       }
 
-      // Pass 3: Look for exact title match (even if year differs)
+      // Pass 3: Look for exact title match (even if year differs, but within safety limits)
       for (const item of results) {
         const cleanedItem = cleanTitleForMatch(item.title);
         if (cleanedTarget === cleanedItem) {
+          if (year) {
+            const itemYear = (item.release_date || item.year || '').slice(0, 4);
+            const y1 = parseInt(year);
+            const y2 = parseInt(itemYear);
+            if (!isNaN(y1) && !isNaN(y2)) {
+              const maxDiff = type === 'movie' ? 2 : 5;
+              if (Math.abs(y1 - y2) > maxDiff) {
+                continue; // Skip due to large year difference
+              }
+            }
+          }
           setCache(cacheKey, item);
           return item;
         }

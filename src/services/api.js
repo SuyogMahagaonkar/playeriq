@@ -772,7 +772,16 @@ export async function findMovieBoxMatch(title, year, type) {
       for (const item of results) {
         const cleanedItem = cleanTitleForMatch(item.title);
         const itemYear = (item.releaseDate || item.release_date || item.year || '').slice(0, 4);
-        const yearMatches = !year || !itemYear || year === itemYear;
+        
+        let yearMatches = false;
+        if (!year || !itemYear) {
+          yearMatches = true;
+        } else {
+          const y1 = parseInt(year);
+          const y2 = parseInt(itemYear);
+          const maxDiff = type === 'movie' ? 2 : 5;
+          yearMatches = !isNaN(y1) && !isNaN(y2) && Math.abs(y1 - y2) <= maxDiff;
+        }
         
         if (yearMatches && (cleanedTarget === cleanedItem || cleanedTarget.includes(cleanedItem) || cleanedItem.includes(cleanedTarget))) {
           cache[cacheKey] = item;
