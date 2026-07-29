@@ -1012,8 +1012,8 @@ app.get('/api/stream/movie/:tmdbId', async (req, res) => {
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
-      if (!isHevc || hevcSupport || movieBoxResult.transcoded) {
-        console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p${movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
+      if (!isHevc || hevcSupport || movieBoxResult.transcoded || movieBoxResult.type === 'dash') {
+        console.log(`[MovieBox] Success for movie ${tmdbId}: ${movieBoxResult.resolution}p${movieBoxResult.type === 'dash' ? ' (DASH)' : movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
         setCache(cacheKey, movieBoxResult);
         return res.json(movieBoxResult);
       } else {
@@ -1115,8 +1115,8 @@ app.get('/api/stream/tv/:tmdbId/:season/:episode', async (req, res) => {
     if (movieBoxResult) {
       const isHevc = String(movieBoxResult.codec || '').toLowerCase().includes('hevc') || 
                      String(movieBoxResult.codec || '').toLowerCase().includes('h265');
-      if (!isHevc || hevcSupport || movieBoxResult.transcoded) {
-        console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p${movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
+      if (!isHevc || hevcSupport || movieBoxResult.transcoded || movieBoxResult.type === 'dash') {
+        console.log(`[MovieBox] Success for TV ${tmdbId} S${season}E${episode}: ${movieBoxResult.resolution}p${movieBoxResult.type === 'dash' ? ' (DASH)' : movieBoxResult.transcoded ? ' (transcoding to H.264)' : ''}`);
         setCache(cacheKey, movieBoxResult);
         return res.json(movieBoxResult);
       } else {

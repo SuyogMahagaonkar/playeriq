@@ -29,8 +29,23 @@ from moviebox_api.v3.core import (
     Homepage,
     DownloadableCaptionFileDetails
 )
-from moviebox_api.v3.urls import MAIN_PAGE_PATH
+from moviebox_api.v3.urls import MAIN_PAGE_PATH, PLAY_INFO_PATH
 import threading
+
+def _parse_sign_cookie(cookie_str):
+    if not cookie_str:
+        return "", "", ""
+    params = {}
+    for part in str(cookie_str).split(";"):
+        part = part.strip()
+        if "=" in part:
+            k, v = part.split("=", 1)
+            params[k.strip()] = v.strip()
+    return (
+        params.get("CloudFront-Policy", ""),
+        params.get("CloudFront-Signature", ""),
+        params.get("CloudFront-Key-Pair-Id", "")
+    )
 
 class SimpleTTLCache:
     def __init__(self, ttl_seconds):
@@ -449,8 +464,28 @@ def get_movie_stream_by_id(subject_id: str):
     try:
         async def fetch():
             async with MovieBoxHttpClient() as client:
+                # 1. Try dynamic DASH play-info endpoint first
+                try:
+                    params = {"subjectId": str(subject_id)}
+                    raw_play = await client.get_from_api(PLAY_INFO_PATH, params=params)
+                    streams = raw_play.get("streams") or []
+                    if streams and streams[0].get("url"):
+                        st = streams[0]
+                        st_id = st.get("id")
+                        captions = []
+                        if st_id:
+                            try:
+                                captions_downloader = DownloadableCaptionFileDetails(client)
+                                captions_raw = await captions_downloader.get_content(str(subject_id), st_id)
+                                captions = captions_raw.get("extCaptions") or []
+                            except Exception as e:
+                                log.warning("Failed to fetch captions via play-info: %s", e)
+                        return "dash", raw_play, st, captions
+                except Exception as e:
+                    log.warning("Movie play-info failed, trying legacy resource path: %s", e)
+
+                # 2. Fall back to legacy resource path
                 raw, files = await _get_streams(client, subject_id, None)
-                
                 best = pick_best(files)
                 captions = []
                 if best and best.get("resourceId"):
@@ -460,15 +495,55 @@ def get_movie_stream_by_id(subject_id: str):
                         captions = captions_raw.get("extCaptions") or []
                     except Exception as e:
                         log.warning("Failed to fetch captions: %s", e)
-                        
-                return raw, files, captions
+                return "legacy", raw, (best, files), captions
 
-        raw, files, captions = run_async(fetch())
+        mode, raw, stream_data, captions = run_async(fetch())
 
-        if not files:
+        if mode == "dash":
+            policy, signature, key_pair_id = _parse_sign_cookie(stream_data.get("signCookie", ""))
+            dash_url = stream_data.get("url")
+            if policy and signature and key_pair_id:
+                sep = "&" if "?" in dash_url else "?"
+                dash_url = f"{dash_url}{sep}Policy={policy}&Signature={signature}&Key-Pair-Id={key_pair_id}"
+            return jsonify({
+                "provider": "MovieBox",
+                "title": raw.get("title") or stream_data.get("title", ""),
+                "subject_id": subject_id,
+                "type": "dash",
+                "url": dash_url,
+                "policy": policy,
+                "signature": signature,
+                "keyPairId": key_pair_id,
+                "resolution": 1080,
+                "format": "DASH",
+                "codec": stream_data.get("codecName") or "hevc",
+                "duration": stream_data.get("duration"),
+                "all_streams": [
+                    {
+                        "url": dash_url,
+                        "resolution": 1080,
+                        "format": "DASH",
+                        "codec": stream_data.get("codecName") or "hevc",
+                        "policy": policy,
+                        "signature": signature,
+                        "keyPairId": key_pair_id
+                    }
+                ],
+                "subtitles": [
+                    {
+                        "id": c.get("id"),
+                        "lan": c.get("lan"),
+                        "label": c.get("lanName"),
+                        "url": c.get("url")
+                    } for c in captions
+                ]
+            })
+
+        # Legacy fallback
+        best, files = stream_data
+        if not files or not best:
             return jsonify({"error": "No stream files found"}), 404
 
-        best = pick_best(files)
         best_fmt = format_file(best)
         duration_secs = raw.get("durationSeconds") or best.get("duration") or None
         return jsonify({
@@ -501,8 +576,28 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
     try:
         async def fetch():
             async with MovieBoxHttpClient() as client:
+                # 1. Try dynamic DASH play-info endpoint first
+                try:
+                    params = {"subjectId": str(subject_id), "se": season, "ep": episode}
+                    raw_play = await client.get_from_api(PLAY_INFO_PATH, params=params)
+                    streams = raw_play.get("streams") or []
+                    if streams and streams[0].get("url"):
+                        st = streams[0]
+                        st_id = st.get("id")
+                        captions = []
+                        if st_id:
+                            try:
+                                captions_downloader = DownloadableCaptionFileDetails(client)
+                                captions_raw = await captions_downloader.get_content(str(subject_id), st_id)
+                                captions = captions_raw.get("extCaptions") or []
+                            except Exception as e:
+                                log.warning("Failed to fetch captions via play-info: %s", e)
+                        return "dash", raw_play, st, captions
+                except Exception as e:
+                    log.warning("TV play-info failed, trying legacy resource path: %s", e)
+
+                # 2. Fall back to legacy resource path
                 raw, files = await _get_episode_streams(client, subject_id, season, episode)
-                
                 best = pick_best(files)
                 captions = []
                 if best and best.get("resourceId"):
@@ -512,21 +607,62 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
                         captions = captions_raw.get("extCaptions") or []
                     except Exception as e:
                         log.warning("Failed to fetch captions: %s", e)
-                        
-                return raw, files, captions
+                return "legacy", raw, (best, files), captions
 
-        raw, files, captions = run_async(fetch())
+        mode, raw, stream_data, captions = run_async(fetch())
 
-        if not files:
+        if mode == "dash":
+            policy, signature, key_pair_id = _parse_sign_cookie(stream_data.get("signCookie", ""))
+            dash_url = stream_data.get("url")
+            if policy and signature and key_pair_id:
+                sep = "&" if "?" in dash_url else "?"
+                dash_url = f"{dash_url}{sep}Policy={policy}&Signature={signature}&Key-Pair-Id={key_pair_id}"
+            return jsonify({
+                "provider": "MovieBox",
+                "title": raw.get("title") or stream_data.get("title", ""),
+                "season": season,
+                "episode": episode,
+                "subject_id": subject_id,
+                "type": "dash",
+                "url": dash_url,
+                "policy": policy,
+                "signature": signature,
+                "keyPairId": key_pair_id,
+                "resolution": 1080,
+                "format": "DASH",
+                "codec": stream_data.get("codecName") or "hevc",
+                "duration": stream_data.get("duration"),
+                "all_streams": [
+                    {
+                        "url": dash_url,
+                        "resolution": 1080,
+                        "format": "DASH",
+                        "codec": stream_data.get("codecName") or "hevc",
+                        "policy": policy,
+                        "signature": signature,
+                        "keyPairId": key_pair_id
+                    }
+                ],
+                "subtitles": [
+                    {
+                        "id": c.get("id"),
+                        "lan": c.get("lan"),
+                        "label": c.get("lanName"),
+                        "url": c.get("url")
+                    } for c in captions
+                ]
+            })
+
+        # Legacy fallback
+        best, files = stream_data
+        if not files or not best:
             return jsonify({"error": "No stream files found"}), 404
 
-        best = pick_best(files)
         best_fmt = format_file(best)
         duration_secs = best_fmt.get("duration") or None
         return jsonify({
             "provider": "MovieBox",
             "title": raw.get("title") or raw.get("subjectTitle", ""),
-
             "season": season,
             "episode": episode,
             "subject_id": subject_id,
@@ -546,6 +682,7 @@ def get_tv_stream_by_id(subject_id: str, season: int, episode: int):
             ]
         })
     except Exception as e:
+        log.error("TV fetch by ID error: %s", e, exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/moviebox/home")

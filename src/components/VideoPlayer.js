@@ -11,6 +11,20 @@ import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import Hls from 'hls.js';
 
+function ensureDashJsLoaded() {
+  if (window.dashjs) return Promise.resolve();
+  if (window._dashjsLoadingPromise) return window._dashjsLoadingPromise;
+
+  window._dashjsLoadingPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/dashjs@4.7.4/dist/dash.all.min.js';
+    script.onload = () => resolve();
+    script.onerror = (err) => reject(err);
+    document.head.appendChild(script);
+  });
+  return window._dashjsLoadingPromise;
+}
+
 /**
  * Renders a custom HTML5 video player with full controls
  * @param {HTMLElement} container - The wrapper element
@@ -1784,6 +1798,40 @@ export function createVideoPlayer(container, streamData, {
         }, { once: true });
       }
       video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
+    } else if (streamData.type === 'dash' || streamData.url?.includes('.mpd')) {
+      ensureDashJsLoaded().then(() => {
+        const dashPlayer = window.dashjs.MediaPlayer().create();
+        dashPlayer.initialize(video, streamData.url, true);
+
+        const policy = streamData.policy;
+        const signature = streamData.signature;
+        const keyPairId = streamData.keyPairId;
+
+        if (policy && signature && keyPairId) {
+          dashPlayer.addRequestInterceptor((req) => {
+            if (req.url && req.url.includes('hakunaymatata.com') && !req.url.includes('Policy=')) {
+              const sep = req.url.includes('?') ? '&' : '?';
+              req.url = `${req.url}${sep}Policy=${policy}&Signature=${signature}&Key-Pair-Id=${keyPairId}`;
+            }
+            return Promise.resolve(req);
+          });
+        }
+
+        video._dashPlayer = dashPlayer;
+        loader.style.display = 'none';
+
+        if (startTime > 0) video.currentTime = startTime;
+        video.play().catch(err => console.log('[DASH Autoplay] Blocked or interrupted:', err));
+
+        dashPlayer.on(window.dashjs.MediaPlayer.events.ERROR, (e) => {
+          console.error('[DASH] Fatal error:', e);
+          clearTimeout(watchdogTimeout);
+          if (onFatalError) onFatalError();
+        });
+      }).catch(err => {
+        console.error('[DASH] Failed to load dashjs library:', err);
+        if (onFatalError) onFatalError();
+      });
     }
   }
 
@@ -3112,6 +3160,12 @@ export function createVideoPlayer(container, streamData, {
       if (hls && !preserveVideo) {
         hls.destroy();
         hls = null;
+      }
+      if (video && video._dashPlayer && !preserveVideo) {
+        try {
+          video._dashPlayer.reset();
+          video._dashPlayer = null;
+        } catch (e) {}
       }
 
       window.removeEventListener('keydown', onKeyDown);
