@@ -478,10 +478,14 @@ export async function renderWatchPartyPage({ params, container }) {
       console.warn('[WatchParty] Failed to auto-rejoin party:', joinErr);
     }
 
-    // Detect HEVC support — query the browser directly via canPlayType().
-    // Chrome 108+ on Windows/macOS with Media Foundation hardware support CAN play H.265.
-    const supportsHEVC = document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') !== '' ||
-                         document.createElement('video').canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '';
+    // Use MediaSource.isTypeSupported() — NOT canPlayType — for accurate HEVC/MSE detection.
+    // canPlayType returns 'maybe' on Edge/Chrome even without HEVC Video Extensions,
+    // but dash.js uses MSE which requires MediaSource.isTypeSupported to actually work.
+    const supportsHEVC = typeof MediaSource !== 'undefined' && (
+      MediaSource.isTypeSupported('video/mp4; codecs="hev1.1.6.L150.90"') ||
+      MediaSource.isTypeSupported('video/mp4; codecs="hvc1"') ||
+      MediaSource.isTypeSupported('video/mp4; codecs="hev1"')
+    );
 
     // Resolve the media ID from either Dashboard-created parties (mediaId) or Detail-page parties (id).
     // IMPORTANT: Dashboard search stores raw MovieBox subject_id (e.g. "c7as1f86k") without the "mb_" prefix.

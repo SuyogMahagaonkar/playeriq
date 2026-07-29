@@ -1800,17 +1800,19 @@ export function createVideoPlayer(container, streamData, {
       video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
     } else if (streamData.type === 'dash' || streamData.url?.includes('.mpd')) {
       // ── HEVC codec gate ───────────────────────────────────────────────────────
-      // MovieBox DASH streams are exclusively HEVC (H.265). Chrome/Firefox on
-      // Windows cannot decode HEVC via MSE without hardware support.
-      // Check codec support BEFORE loading dash.js to avoid a slow failure.
-      const _tv = document.createElement('video');
-      const canPlayHevc =
-        _tv.canPlayType('video/mp4; codecs="hev1.1.6.L150.90"') !== '' ||
-        _tv.canPlayType('video/mp4; codecs="hvc1"') !== '' ||
-        _tv.canPlayType('video/mp4; codecs="hev1"') !== '';
+      // MovieBox DASH streams are exclusively HEVC (H.265). Use MediaSource.isTypeSupported()
+      // NOT canPlayType() — canPlayType returns 'maybe' on Edge/Chrome even when HEVC
+      // cannot actually be decoded via MSE (which is what dash.js uses).
+      const canPlayHevc = typeof MediaSource !== 'undefined' && (
+        MediaSource.isTypeSupported('video/mp4; codecs="hev1.1.6.L150.90"') ||
+        MediaSource.isTypeSupported('video/mp4; codecs="hvc1"') ||
+        MediaSource.isTypeSupported('video/mp4; codecs="hev1"')
+      );
+
+      console.log(`[DASH] HEVC MSE support: ${canPlayHevc}`);
 
       if (!canPlayHevc) {
-        console.warn('[DASH] Browser does not support HEVC — skipping DASH, triggering fallback immediately.');
+        console.warn('[DASH] Browser MSE does not support HEVC — skipping DASH, triggering fallback immediately.');
         clearTimeout(watchdogTimeout);
         if (onFatalError) onFatalError();
       } else {
