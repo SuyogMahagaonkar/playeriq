@@ -1799,39 +1799,61 @@ export function createVideoPlayer(container, streamData, {
       }
       video.play().catch(err => console.log('[Native HLS Autoplay] Blocked or interrupted:', err));
     } else if (streamData.type === 'dash' || streamData.url?.includes('.mpd')) {
-      ensureDashJsLoaded().then(() => {
-        const dashPlayer = window.dashjs.MediaPlayer().create();
-        dashPlayer.initialize(video, streamData.url, true);
+      // ── HEVC codec gate ───────────────────────────────────────────────────────
+      // MovieBox DASH streams are exclusively HEVC (H.265). Chrome/Firefox on
+      // Windows cannot decode HEVC via MSE without hardware support.
+      // Check codec support BEFORE loading dash.js to avoid a slow failure.
+      const _tv = document.createElement('video');
+      const canPlayHevc =
+        _tv.canPlayType('video/mp4; codecs="hev1.1.6.L150.90"') !== '' ||
+        _tv.canPlayType('video/mp4; codecs="hvc1"') !== '' ||
+        _tv.canPlayType('video/mp4; codecs="hev1"') !== '';
 
-        const policy = streamData.policy;
-        const signature = streamData.signature;
-        const keyPairId = streamData.keyPairId;
+      if (!canPlayHevc) {
+        console.warn('[DASH] Browser does not support HEVC — skipping DASH, triggering fallback immediately.');
+        clearTimeout(watchdogTimeout);
+        if (onFatalError) onFatalError();
+      } else {
+        ensureDashJsLoaded().then(() => {
+          const dashPlayer = window.dashjs.MediaPlayer().create();
 
-        if (policy && signature && keyPairId) {
-          dashPlayer.addRequestInterceptor((req) => {
-            if (req.url && req.url.includes('hakunaymatata.com') && !req.url.includes('Policy=')) {
-              const sep = req.url.includes('?') ? '&' : '?';
-              req.url = `${req.url}${sep}Policy=${policy}&Signature=${signature}&Key-Pair-Id=${keyPairId}`;
-            }
-            return Promise.resolve(req);
+          // Suppress verbose dash.js internal logs
+          dashPlayer.updateSettings({ debug: { logLevel: 0 } });
+
+          const policy    = streamData.policy;
+          const signature = streamData.signature;
+          const keyPairId = streamData.keyPairId;
+
+          if (policy && signature && keyPairId) {
+            dashPlayer.addRequestInterceptor((req) => {
+              if (req.url && req.url.includes('hakunaymatata.com') && !req.url.includes('Policy=')) {
+                const sep = req.url.includes('?') ? '&' : '?';
+                req.url = `${req.url}${sep}Policy=${encodeURIComponent(policy)}&Signature=${encodeURIComponent(signature)}&Key-Pair-Id=${encodeURIComponent(keyPairId)}`;
+              }
+              return Promise.resolve(req);
+            });
+          }
+
+          dashPlayer.initialize(video, streamData.url, true);
+          video._dashPlayer = dashPlayer;
+          loader.style.display = 'none';
+
+          if (startTime > 0) video.currentTime = startTime;
+          video.play().catch(err => console.log('[DASH Autoplay] Blocked or interrupted:', err));
+
+          dashPlayer.on(window.dashjs.MediaPlayer.events.ERROR, (e) => {
+            // Only act on fatal errors (e.g. network failure, codec mismatch)
+            const fatal = e?.error?.severity === 2 || e?.error?.code >= 20;
+            if (!fatal) return;
+            console.error('[DASH] Fatal error:', e);
+            clearTimeout(watchdogTimeout);
+            if (onFatalError) onFatalError();
           });
-        }
-
-        video._dashPlayer = dashPlayer;
-        loader.style.display = 'none';
-
-        if (startTime > 0) video.currentTime = startTime;
-        video.play().catch(err => console.log('[DASH Autoplay] Blocked or interrupted:', err));
-
-        dashPlayer.on(window.dashjs.MediaPlayer.events.ERROR, (e) => {
-          console.error('[DASH] Fatal error:', e);
-          clearTimeout(watchdogTimeout);
+        }).catch(err => {
+          console.error('[DASH] Failed to load dashjs library:', err);
           if (onFatalError) onFatalError();
         });
-      }).catch(err => {
-        console.error('[DASH] Failed to load dashjs library:', err);
-        if (onFatalError) onFatalError();
-      });
+      }
     }
   }
 

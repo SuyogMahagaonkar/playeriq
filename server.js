@@ -176,12 +176,17 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
     if (!data.url) throw new Error('MovieBox returned no URL');
 
     // ── DASH pass-through ─────────────────────────────────────────────────────
-    // If the Python bridge already resolved a DASH stream, return it as-is.
-    // The DASH URL is pre-signed (CloudFront) and must NOT be wrapped in the
-    // segment proxy — the browser fetches segments directly with the policy.
+    // MovieBox DASH streams are exclusively HEVC (H.265). Only pass them to the
+    // client if the client explicitly supports HEVC. Chrome/Firefox on Windows
+    // send hevc=false — they will fall through to the legacy MP4 path below.
     if (data.type === 'dash') {
-      console.log(`[MovieBox] Received DASH stream for ${type} ${tmdbId}. Passing through directly.`);
-      return data;
+      if (hevcSupport) {
+        console.log(`[MovieBox] Received DASH (HEVC) stream for ${type} ${tmdbId}. Client supports HEVC — passing through.`);
+        return data;
+      } else {
+        console.log(`[MovieBox] Received DASH (HEVC) stream for ${type} ${tmdbId} but client does NOT support HEVC. Trying legacy MP4 path.`);
+        // Fall through to legacy all_streams/resource path below
+      }
     }
 
     const allStreams = data.all_streams || [];
