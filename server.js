@@ -175,6 +175,15 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
     const { data } = await axios.get(bridgeUrl, { timeout: 25000 });
     if (!data.url) throw new Error('MovieBox returned no URL');
 
+    // ── DASH pass-through ─────────────────────────────────────────────────────
+    // If the Python bridge already resolved a DASH stream, return it as-is.
+    // The DASH URL is pre-signed (CloudFront) and must NOT be wrapped in the
+    // segment proxy — the browser fetches segments directly with the policy.
+    if (data.type === 'dash') {
+      console.log(`[MovieBox] Received DASH stream for ${type} ${tmdbId}. Passing through directly.`);
+      return data;
+    }
+
     const allStreams = data.all_streams || [];
     
     // Prioritize H.264 streams to avoid client playback issues and VPS CPU overhead.
