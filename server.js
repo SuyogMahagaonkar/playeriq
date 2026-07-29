@@ -153,6 +153,17 @@ async function getMovieBoxStream(type, tmdbId, season, episode, hevcSupport = tr
 
     // Check if it's a MovieBox-only direct subject_id (prefixed with mb_)
     if (String(tmdbId).startsWith('mb_')) {
+      // ── Fast-path for non-HEVC clients ────────────────────────────────────────
+      // MovieBox exclusively provides HEVC (H.265) DASH streams.
+      // Chrome/Firefox/Edge without HEVC extensions send hevc=false.
+      // Calling the Python bridge for these clients wastes ~2-3 seconds only to
+      // discover there's no usable stream. Skip immediately and fall through to
+      // the iframe scraper providers which work on all browsers.
+      if (!hevcSupport) {
+        console.log(`[MovieBox] ${tmdbId} — client does NOT support HEVC, skipping MovieBox bridge (DASH-only content).`);
+        return null;
+      }
+
       const subjectId = tmdbId.replace('mb_', '');
       bridgeUrl = type === 'movie'
         ? `${PYTHON_BRIDGE_URL}/api/moviebox/stream/movie/${subjectId}`
